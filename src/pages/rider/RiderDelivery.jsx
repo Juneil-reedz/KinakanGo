@@ -4,17 +4,7 @@ import { useRider } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
 import Card from '../../components/Card';
 import Button from '../../components/Button';
-import { MapContainer, TileLayer, Marker, Popup, Polyline } from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import L from 'leaflet';
-
-// Fix for default marker icons in React Leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+import DeliveryMap3D from '../../components/DeliveryMap3D';
 
 export default function RiderDelivery() {
   const { orderId } = useParams();
@@ -131,10 +121,6 @@ export default function RiderDelivery() {
   };
 
   const statusInfo = getStatusInfo();
-  const currentRoute = orderStatus === 'heading_to_restaurant' ? routeToRestaurant : routeToCustomer;
-  const mapCenter = orderStatus === 'heading_to_restaurant'
-    ? order.restaurant.location
-    : order.customer.location;
 
   return (
     <div className="space-y-4 xs:space-y-6">
@@ -174,59 +160,28 @@ export default function RiderDelivery() {
         </div>
       </Card>
 
-      {/* Map */}
-      <Card>
-        <h3 className="text-base xs:text-lg md:text-xl font-bold mb-3 xs:mb-4">Route Navigation</h3>
-        <div className="rounded-lg overflow-hidden border border-secondary-200 mb-4">
-          <MapContainer
-            center={[mapCenter.lat, mapCenter.lng]}
-            zoom={14}
-            style={{ height: '300px', width: '100%' }}
-            className="xs:!h-[350px] md:!h-[400px]"
-          >
-            <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
-            />
-
-            {/* Rider Location */}
-            <Marker position={[riderLocation.lat, riderLocation.lng]}>
-              <Popup>
-                <strong>Your Location</strong>
-                <br />
-                Rider: {rider?.name}
-              </Popup>
-            </Marker>
-
-            {/* Restaurant Location */}
-            <Marker position={[order.restaurant.location.lat, order.restaurant.location.lng]}>
-              <Popup>
-                <strong>{order.restaurant.name}</strong>
-                <br />
-                {order.restaurant.address}
-              </Popup>
-            </Marker>
-
-            {/* Customer Location */}
-            <Marker position={[order.customer.location.lat, order.customer.location.lng]}>
-              <Popup>
-                <strong>{order.customer.name}</strong>
-                <br />
-                {order.customer.address}
-              </Popup>
-            </Marker>
-
-            {/* Route */}
-            <Polyline
-              positions={currentRoute}
-              color="#F4991A"
-              weight={4}
-              opacity={0.7}
-            />
-          </MapContainer>
+      {/* 3D Map */}
+      <Card className="overflow-hidden" style={{ padding: 0 }}>
+        <div className="p-4 pb-0">
+          <h3 className="text-base xs:text-lg md:text-xl font-bold">
+            {orderStatus === 'heading_to_restaurant' ? '🏪 Navigate to Restaurant' : '🏠 Navigate to Customer'}
+          </h3>
         </div>
-
-        <div className="flex flex-col xs:flex-row gap-2">
+        <div style={{ height: 420, margin: '12px 0 0 0', borderRadius: '0 0 12px 12px', overflow: 'hidden' }}>
+          <DeliveryMap3D
+            restaurantLocation={{ ...order.restaurant.location, name: order.restaurant.name }}
+            customerLocation={{ ...order.customer.location, address: order.customer.address }}
+            riderLocation={riderLocation}
+            route={orderStatus === 'heading_to_restaurant'
+              ? routeToRestaurant.map(([lat, lng]) => ({ lat, lng }))
+              : routeToCustomer.map(([lat, lng]) => ({ lat, lng }))
+            }
+            mode="rider"
+            riderName={rider?.name || 'You'}
+            eta={order.estimatedTime.replace(' min', '')}
+          />
+        </div>
+        <div className="p-3 flex flex-col xs:flex-row gap-2">
           <Button variant="primary" size="sm" className="flex-1" onClick={handleNavigate}>
             📍 Open in Maps
           </Button>

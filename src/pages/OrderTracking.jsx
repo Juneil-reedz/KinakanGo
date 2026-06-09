@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNotification } from '../context/NotificationContext';
 import Card from '../components/Card';
 import Button from '../components/Button';
-import DeliveryMap from '../components/DeliveryMap';
+import DeliveryMap3D from '../components/DeliveryMap3D';
 import { mockSocket, generateRoute, mockLocations } from '../services/mockSocket';
 
 export default function OrderTracking() {
@@ -325,35 +325,29 @@ export default function OrderTracking() {
                   </div>
                 )}
 
-                {/* Live Delivery Map */}
+                {/* Live 3D Delivery Map */}
                 {order.riderLocation && order.route && !isDelivered && (
                   <div className="mb-6">
                     <div className="flex items-center justify-between mb-3">
-                      <h4 className="font-semibold">Live Tracking</h4>
+                      <h4 className="font-semibold">Live 3D Tracking</h4>
                       <div className="flex items-center space-x-2">
                         <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-success text-white">
                           <span className="w-2 h-2 bg-white rounded-full mr-2 animate-pulse"></span>
                           Live
                         </span>
-                        {order.deliveryProgress > 0 && (
-                          <span className="text-sm text-secondary-600">
-                            {Math.round(order.deliveryProgress)}% complete
-                          </span>
-                        )}
                       </div>
                     </div>
-                    <div className="h-96 rounded-lg overflow-hidden border-2 border-secondary-200">
-                      <DeliveryMap
+                    <div className="h-[480px] rounded-xl overflow-hidden shadow-2xl" style={{ borderRadius: '16px' }}>
+                      <DeliveryMap3D
                         restaurantLocation={order.restaurantLocation}
                         customerLocation={order.customerLocation}
                         riderLocation={order.riderLocation}
                         route={order.route}
+                        mode="customer"
+                        riderName={order.driver?.name || 'Your Rider'}
+                        eta={order.estimatedTime ? order.estimatedTime.replace(' min', '') : null}
+                        progress={order.deliveryProgress}
                       />
-                    </div>
-                    <div className="mt-3 bg-primary-50 border border-primary-200 rounded-lg p-3">
-                      <p className="text-sm text-secondary-700">
-                        Your delivery driver is on the way! Track their real-time location on the map above.
-                      </p>
                     </div>
                   </div>
                 )}
