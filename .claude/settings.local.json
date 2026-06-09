@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install:*)",
+      "Bash(npm run dev:*)",
+      "mcp__ide__getDiagnostics",
+      "Bash(copy \"C:\\Users\\TO GOD BE THE GLORY\\Downloads\\KINAKAN.gif\" \"C:\\Food Delivery Web App\\public\\assets\\KINAKAN.gif\")",
+      "Bash(find:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}
