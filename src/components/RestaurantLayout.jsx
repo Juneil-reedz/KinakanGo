@@ -3,140 +3,96 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
 import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, LogOut, ChevronLeft, ChevronRight, Store } from 'lucide-react';
-import Button from './Button';
+
+const NAV = [
+  { path:'/owner/dashboard', label:'Dashboard', icon:LayoutDashboard },
+  { path:'/owner/orders',    label:'Orders',    icon:ShoppingBag },
+  { path:'/owner/menu',      label:'Menu',      icon:UtensilsCrossed },
+  { path:'/owner/reports',   label:'Reports',   icon:BarChart3 },
+];
 
 export default function RestaurantLayout({ children }) {
   const location = useLocation();
-  const navigate = useNavigate();
+  const navigate  = useNavigate();
   const { restaurant, logout } = useRestaurant();
   const { showSuccess } = useNotification();
-  const [isSidebarOpen, setIsSidebarOpen] = useState(true);
+  const [collapsed, setCollapsed] = useState(false);
 
-  const handleLogout = () => {
-    logout();
-    showSuccess('Logged out successfully');
-    navigate('/owner/login');
-  };
+  const isActive = (p) => location.pathname === p;
 
-  const navLinks = [
-    { path: '/owner/dashboard', label: 'Dashboard', icon: LayoutDashboard },
-    { path: '/owner/orders', label: 'Orders', icon: ShoppingBag },
-    { path: '/owner/menu', label: 'Menu', icon: UtensilsCrossed },
-    { path: '/owner/reports', label: 'Reports', icon: BarChart3 },
-  ];
-
-  const isActive = (path) => location.pathname === path;
+  const handleLogout = () => { logout(); showSuccess('Logged out'); navigate('/owner/login'); };
 
   return (
-    <div className="min-h-screen bg-[#F5F5F0] flex">
+    <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className={`fixed left-0 top-0 h-full bg-white shadow-sm transition-all duration-300 z-50 ${isSidebarOpen ? 'w-64' : 'w-20'}`}>
+      <aside className={`glass-dark flex-shrink-0 relative transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
+        style={{ borderRight:'1px solid rgba(255,255,255,.07)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
-          <div className="h-20 flex items-center justify-between px-5 border-b border-gray-100">
-            {isSidebarOpen ? (
-              <Link to="/owner/dashboard" className="flex items-center gap-3">
-                <div className="w-12 h-12 bg-gradient-to-br from-rose-400 to-orange-500 rounded-xl flex items-center justify-center shadow-md">
-                  <Store className="w-7 h-7 text-white" />
-                </div>
-                <div>
-                  <h1 className="font-bold text-lg leading-tight text-gray-900">
-                    {restaurant?.name || 'Restaurant'}
-                  </h1>
-                  <p className="text-xs text-gray-500">Dashboard Portal</p>
-                </div>
-              </Link>
-            ) : (
-              <div className="w-12 h-12 bg-gradient-to-br from-rose-400 to-orange-500 rounded-xl flex items-center justify-center mx-auto shadow-md">
-                <Store className="w-7 h-7 text-white" />
+          <div className={`p-5 flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}
+            style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+            <div className="w-12 h-12 btn-glow-orange rounded-2xl flex items-center justify-center flex-shrink-0">
+              <Store className="w-6 h-6 text-white" />
+            </div>
+            {!collapsed && (
+              <div>
+                <p className="text-white font-heading font-bold text-sm truncate">{restaurant?.name || 'Restaurant'}</p>
+                <p className="text-forest-200/50 text-xs">Owner Portal</p>
               </div>
             )}
           </div>
 
-          {/* Navigation */}
-          <nav className="flex-1 px-4 py-6 space-y-2">
-            {navLinks.map((link) => {
-              const Icon = link.icon;
-              const active = isActive(link.path);
-              return (
-                <Link
-                  key={link.path}
-                  to={link.path}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
-                    active
-                      ? 'bg-gradient-to-r from-rose-400 to-orange-500 text-white shadow-md'
-                      : 'text-gray-700 hover:bg-orange-50 hover:text-rose-500'
-                  }`}
-                  title={!isSidebarOpen ? link.label : ''}
-                >
-                  <Icon className="w-5 h-5 flex-shrink-0" />
-                  {isSidebarOpen && (
-                    <span className="font-medium text-sm">{link.label}</span>
-                  )}
-                </Link>
-              );
-            })}
+          {/* Nav */}
+          <nav className="flex-1 px-3 py-5 space-y-1">
+            {NAV.map(({ path, label, icon:Icon }) => (
+              <Link key={path} to={path} title={collapsed ? label : ''}
+                className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
+                  ${collapsed ? 'justify-center' : ''}
+                  ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:glass hover:text-white'}`}>
+                <Icon className="w-5 h-5 flex-shrink-0" />
+                {!collapsed && <span>{label}</span>}
+              </Link>
+            ))}
           </nav>
 
-          {/* User Section */}
-          <div className="p-4 border-t border-gray-100">
-            {isSidebarOpen ? (
-              <div className="mb-3 px-4 py-3 bg-gradient-to-br from-orange-50 to-rose-50 rounded-xl border border-orange-100">
-                <p className="font-semibold text-sm text-gray-900 truncate">{restaurant?.name}</p>
-                <p className="text-xs text-gray-600 truncate mt-0.5">{restaurant?.email}</p>
+          {/* User */}
+          <div className="px-3 pb-5 space-y-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)', paddingTop:'1rem' }}>
+            {!collapsed && restaurant && (
+              <div className="glass rounded-xl px-3 py-2.5 mb-2">
+                <p className="text-white text-xs font-semibold truncate">{restaurant.name}</p>
+                <p className="text-forest-200/50 text-xs truncate">{restaurant.email}</p>
               </div>
-            ) : null}
-            <button
-              onClick={handleLogout}
-              className={`flex items-center gap-3 w-full px-4 py-3 rounded-xl text-gray-700 hover:bg-red-50 hover:text-red-600 transition-colors ${!isSidebarOpen ? 'justify-center' : ''}`}
-              title={!isSidebarOpen ? 'Logout' : ''}
-            >
-              <LogOut className="w-5 h-5 flex-shrink-0" />
-              {isSidebarOpen && <span className="font-medium text-sm">Logout</span>}
+            )}
+            <button onClick={handleLogout} title={collapsed ? 'Logout' : ''}
+              className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-forest-200/50 hover:text-red-400 hover:glass text-sm transition-all ${collapsed ? 'justify-center' : ''}`}>
+              <LogOut className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Logout'}
             </button>
           </div>
 
-          {/* Toggle Button */}
-          <button
-            onClick={() => setIsSidebarOpen(!isSidebarOpen)}
-            className="absolute -right-3 top-24 w-6 h-6 bg-white border-2 border-orange-200 rounded-full flex items-center justify-center hover:bg-orange-50 transition-colors shadow-sm"
-          >
-            {isSidebarOpen ? (
-              <ChevronLeft className="w-4 h-4 text-orange-600" />
-            ) : (
-              <ChevronRight className="w-4 h-4 text-orange-600" />
-            )}
+          {/* Collapse toggle */}
+          <button onClick={() => setCollapsed(c=>!c)}
+            className="absolute -right-3 top-24 w-6 h-6 glass rounded-full flex items-center justify-center hover:glass-orange transition-all z-10">
+            {collapsed ? <ChevronRight className="w-3.5 h-3.5 text-forest-200" /> : <ChevronLeft className="w-3.5 h-3.5 text-forest-200" />}
           </button>
         </div>
       </aside>
 
-      {/* Main Content */}
-      <div className={`flex-1 transition-all duration-300 ${isSidebarOpen ? 'ml-64' : 'ml-20'}`}>
-        {/* Top Bar */}
-        <header className="h-20 bg-white shadow-sm flex items-center justify-between px-8 border-b border-gray-100">
+      {/* Main */}
+      <div className="flex-1 flex flex-col min-w-0">
+        {/* Top bar */}
+        <header className="glass-dark px-6 py-4 flex items-center justify-between flex-shrink-0"
+          style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">
-              {navLinks.find(link => isActive(link.path))?.label || 'Dashboard'}
-            </h2>
-            <p className="text-sm text-gray-500 mt-0.5">Your recent transaction activity and all</p>
+            <h2 className="text-white font-heading font-bold">{NAV.find(n => isActive(n.path))?.label || 'Dashboard'}</h2>
+            <p className="text-forest-200/50 text-xs">Your recent activity</p>
           </div>
-          <div className="flex items-center gap-4">
-            <div className="flex items-center gap-3 px-4 py-2 bg-gray-50 rounded-xl">
-              <div className="w-10 h-10 bg-gradient-to-br from-rose-400 to-orange-500 rounded-full flex items-center justify-center text-white font-bold text-sm shadow-sm">
-                {restaurant?.name?.charAt(0) || 'R'}
-              </div>
-              <div className="text-sm">
-                <p className="font-semibold text-gray-900">{restaurant?.name || 'Restaurant'}</p>
-                <p className="text-xs text-gray-500">{restaurant?.email}</p>
-              </div>
+          <div className="flex items-center gap-2">
+            <div className="w-9 h-9 btn-glow-orange rounded-xl flex items-center justify-center font-bold text-white text-sm">
+              {restaurant?.name?.charAt(0) || 'R'}
             </div>
           </div>
         </header>
-
-        {/* Page Content */}
-        <main className="p-8">
-          {children}
-        </main>
+        <main className="flex-1 p-5 md:p-6 overflow-auto">{children}</main>
       </div>
     </div>
   );

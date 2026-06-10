@@ -2,168 +2,98 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { useNotification } from '../../context/NotificationContext';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
+import { Mail, Lock, Eye, EyeOff, ChevronRight, ArrowLeft, Store } from 'lucide-react';
 
 export default function RestaurantLogin() {
   const navigate = useNavigate();
   const { login } = useRestaurant();
   const { showSuccess, showError } = useNotification();
 
-  const [formData, setFormData] = useState({
-    email: 'owner@pizzapalace.com',
-    password: 'demo123',
-  });
+  const [form, setForm]         = useState({ email:'owner@pizzapalace.com', password:'demo123' });
+  const [showPass, setShowPass] = useState(false);
+  const [errors, setErrors]     = useState({});
+  const [loading, setLoading]   = useState(false);
 
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
+  const set = (f) => (e) => { setForm(p => ({...p,[f]:e.target.value})); setErrors(er => ({...er,[f]:''})); };
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
-  };
-
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = () => {
+    const e = {};
+    if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Valid email required';
+    if (!form.password || form.password.length < 6) e.password = 'Minimum 6 characters';
+    setErrors(e); return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
+    if (!validate()) return;
+    setLoading(true);
     try {
-      const result = await login(formData.email, formData.password);
-
-      if (result.success) {
-        showSuccess('Welcome back! Redirecting to dashboard...');
-        setTimeout(() => {
-          navigate('/owner/dashboard');
-        }, 1000);
-      } else {
-        showError(result.error || 'Login failed. Please try again.');
-        setIsSubmitting(false);
-      }
-    } catch (error) {
-      console.error('Login error:', error);
-      showError('An error occurred. Please try again.');
-      setIsSubmitting(false);
-    }
+      const result = await login(form.email, form.password);
+      if (result.success) { showSuccess('Welcome back!'); setTimeout(() => navigate('/owner/dashboard'), 800); }
+      else { showError(result.error || 'Login failed'); setLoading(false); }
+    } catch { showError('An error occurred'); setLoading(false); }
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-secondary-50 py-12 px-4">
-      <div className="max-w-md w-full">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-primary-600 text-white rounded-full mb-4 text-3xl">
-            🍽️
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-8">
+      <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
+      <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
+
+      <div className="w-full max-w-md relative z-10 animate-fade-up">
+        <Link to="/login" className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </Link>
+
+        <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>
+          <div className="flex flex-col items-center mb-7">
+            <div className="w-16 h-16 btn-glow-orange rounded-2xl flex items-center justify-center mb-3 animate-breathe">
+              <Store className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-heading font-bold text-white">Restaurant Portal</h1>
+            <p className="text-forest-200/60 text-sm mt-1">Manage your restaurant</p>
           </div>
-          <h1 className="text-3xl font-heading font-bold mb-2">Restaurant Portal</h1>
-          <p className="text-secondary-600">Sign in to manage your restaurant</p>
-        </div>
 
-        {/* Login Card */}
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
+          <div className="glass-green rounded-xl px-4 py-3 mb-5">
+            <p className="text-forest-200 text-xs"><span className="font-semibold text-white">Demo:</span> owner@pizzapalace.com / demo123</p>
+          </div>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.email ? 'border-error' : 'border-secondary-300'
-                }`}
-                placeholder="owner@restaurant.com"
-              />
-              {errors.email && <p className="text-error text-sm mt-1">{errors.email}</p>}
+              <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Email</label>
+              <div className="relative">
+                <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                <input type="email" value={form.email} onChange={set('email')} placeholder="owner@example.com"
+                  className={`w-full input-glass pl-10 pr-4 py-3 text-sm ${errors.email ? 'border-red-500/50' : ''}`} />
+              </div>
+              {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
             </div>
-
-            {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Password *
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.password ? 'border-error' : 'border-secondary-300'
-                }`}
-                placeholder="Enter your password"
-              />
-              {errors.password && <p className="text-error text-sm mt-1">{errors.password}</p>}
+              <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                <input type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')} placeholder="••••••"
+                  className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.password ? 'border-red-500/50' : ''}`} />
+                <button type="button" onClick={() => setShowPass(s=>!s)} className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200">
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
 
-            {/* Demo Info */}
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
-              <p className="text-xs text-blue-800">
-                <strong>Demo Credentials:</strong><br />
-                Email: owner@pizzapalace.com<br />
-                Password: demo123
-              </p>
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Signing In...' : 'Sign In'}
-            </Button>
-
-            {/* Links */}
-            <div className="text-center space-y-2">
-              <p className="text-sm text-secondary-600">
-                <Link to="/forgot-password" className="text-primary-600 hover:underline">
-                  Forgot your password?
-                </Link>
-              </p>
-              <p className="text-sm text-secondary-600">
-                Don't have an account?{' '}
-                <Link to="/restaurant/register" className="text-primary-600 hover:underline">
-                  Register your restaurant
-                </Link>
-              </p>
-              <p className="text-sm text-secondary-600">
-                <Link to="/" className="text-primary-600 hover:underline">
-                  ← Back to customer site
-                </Link>
-              </p>
-            </div>
+            <button type="submit" disabled={loading}
+              className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all
+                ${loading ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+              {loading
+                ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Signing in…</>
+                : <>Sign In <ChevronRight className="w-4 h-4" /></>}
+            </button>
           </form>
-        </Card>
+
+          <p className="text-center text-forest-200/50 text-sm mt-5">
+            Want to partner with us?{' '}
+            <Link to="/restaurant-owner-application" className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">Apply here</Link>
+          </p>
+        </div>
       </div>
     </div>
   );
