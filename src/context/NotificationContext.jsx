@@ -40,8 +40,13 @@ export const NotificationProvider = ({ children }) => {
     addToast(message, 'info', duration);
   }, [addToast]);
 
+  const addNotification = useCallback((message, type = 'info', duration) => {
+    addToast(message, type, duration);
+  }, [addToast]);
+
   const value = {
     addToast,
+    addNotification,
     showSuccess,
     showError,
     showWarning,

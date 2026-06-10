@@ -1,16 +1,7 @@
-export default function Card({
-  children,
-  className = '',
-  hover = false,
-  onClick
-}) {
-  const hoverClass = hover ? 'hover:shadow-card-hover cursor-pointer active:scale-[0.98]' : '';
-
+export default function Card({ children, className = '', hover = false, onClick }) {
   return (
-    <div
-      onClick={onClick}
-      className={`bg-white rounded-lg xs:rounded-xl shadow-card p-3 xs:p-4 md:p-6 transition-all duration-200 ${hoverClass} ${className}`}
-    >
+    <div onClick={onClick}
+      className={`glass rounded-2xl p-5 transition-all duration-200 ${hover ? 'card-3d cursor-pointer hover:glass-green' : ''} ${className}`}>
       {children}
     </div>
   );

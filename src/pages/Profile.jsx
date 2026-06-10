@@ -2,540 +2,293 @@ import { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import { Crown, Store, Bike, ArrowRight, X, Star, MapPin, Phone, Mail, Edit2, Save, Package, TrendingUp, Heart } from 'lucide-react';
+import { Crown, Store, Bike, ArrowRight, X, Mail, Edit2, Package, TrendingUp, Heart, Phone, MapPin, LogOut, Settings, RotateCcw, Receipt, Star } from 'lucide-react';
+
+const DEMO_ORDERS = [
+  {
+    id:'12345', restaurant:'Pizza Palace', restaurantId:1,
+    items:[{id:1,name:'Margherita Pizza',quantity:2,price:12.99},{id:4,name:'Caesar Salad',quantity:1,price:8.99}],
+    total:34.97, status:'delivered', date:'2024-01-15T14:30:00Z',
+  },
+  {
+    id:'12344', restaurant:'Burger House', restaurantId:2,
+    items:[{id:5,name:'Classic Cheeseburger',quantity:1,price:10.99},{id:7,name:'French Fries',quantity:1,price:4.99}],
+    total:19.25, status:'delivered', date:'2024-01-14T12:15:00Z',
+  },
+];
+
+const QUICK_ACTIONS = [
+  { label:'Order History', icon:Package,     color:'from-forest-600 to-forest-700', tab:'orders' },
+  { label:'Track Orders',  icon:TrendingUp,  color:'from-ember-500 to-ember-600',   to:'/orders' },
+  { label:'Favorites',     icon:Heart,       color:'from-forest-500 to-forest-600', to:'/favorites' },
+  { label:'Payments',      icon:Phone,       color:'from-ember-600 to-ember-700',   to:'/payments' },
+  { label:'Addresses',     icon:MapPin,      color:'from-forest-700 to-forest-800', to:'/addresses' },
+  { label:'Support',       icon:Mail,        color:'from-ember-400 to-ember-500',   to:'/customer-service' },
+  { label:'Settings',      icon:Settings,    color:'from-forest-600 to-forest-700', to:'/settings' },
+  { label:'Logout',        icon:LogOut,      color:'from-red-600 to-red-700',       logout:true },
+];
 
 export default function Profile() {
   const navigate = useNavigate();
   const { addToCart, clearCart } = useCart();
-  const { showSuccess, showInfo } = useNotification();
+  const { addNotification } = useNotification();
 
   const [activeTab, setActiveTab] = useState('profile');
-
-  const [user, setUser] = useState({
-    name: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main St, Apt 4B, New York, NY 10001',
-    subscriptionPlan: 'premium',
-    roles: {
-      restaurantOwner: { status: 'approved', restaurantId: 1, restaurantName: 'My Restaurant' },
-      rider: { status: 'approved' },
-    },
-    profileImage: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop',
-  });
-
   const [isEditing, setIsEditing] = useState(false);
-
-  const [orderHistory] = useState([
-    {
-      id: '12345',
-      restaurant: 'Pizza Palace',
-      restaurantId: 1,
-      items: [
-        { id: 1, name: 'Margherita Pizza', quantity: 2, price: 12.99 },
-        { id: 4, name: 'Caesar Salad', quantity: 1, price: 8.99 },
-      ],
-      total: 34.97,
-      status: 'delivered',
-      date: '2024-01-15T14:30:00Z',
+  const [user, setUser] = useState({
+    name:'Juan dela Cruz', email:'juan@example.com', phone:'+63 912 345 6789',
+    address:'123 Main St, Bongao, Tawi-Tawi', subscriptionPlan:'premium',
+    roles:{
+      restaurantOwner:{ status:'approved', restaurantId:1, restaurantName:'My Restaurant' },
+      rider:{ status:'approved' },
     },
-    {
-      id: '12344',
-      restaurant: 'Burger House',
-      restaurantId: 2,
-      items: [
-        { id: 5, name: 'Classic Cheeseburger', quantity: 1, price: 10.99 },
-        { id: 7, name: 'French Fries', quantity: 1, price: 4.99 },
-      ],
-      total: 19.25,
-      status: 'delivered',
-      date: '2024-01-14T12:15:00Z',
-    },
-  ]);
+    profileImage:'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?w=400&h=400&fit=crop',
+  });
+  const [orders] = useState(DEMO_ORDERS);
 
-  const handleSave = () => {
-    setIsEditing(false);
-    showSuccess('Profile updated successfully!');
-  };
+  const totalSpent = orders.reduce((s,o) => s + o.total, 0);
 
-  const handleCancelRole = (roleType) => {
-    const roleName = roleType === 'restaurantOwner' ? 'Restaurant Owner' : 'Rider';
-    const confirmed = window.confirm(
-      `Are you sure you want to cancel your ${roleName} role? This action cannot be undone and you'll need to reapply if you change your mind.`
-    );
-
-    if (confirmed) {
-      setUser(prev => ({
-        ...prev,
-        roles: {
-          ...prev.roles,
-          [roleType]: null
-        }
-      }));
-      showSuccess(`${roleName} role cancelled successfully`);
-    }
-  };
-
-  const getPlanName = (plan) => {
-    const plans = { free: 'Basic', premium: 'Premium', business: 'Business Pro' };
-    return plans[plan] || 'Basic';
-  };
-
-  const getPlanColor = (plan) => {
-    const colors = {
-      free: 'from-gray-400 to-gray-600',
-      premium: 'from-orange-400 to-orange-600',
-      business: 'from-purple-400 to-purple-600'
-    };
-    return colors[plan] || 'from-gray-400 to-gray-600';
-  };
+  const handleSave = () => { setIsEditing(false); addNotification('Profile updated!', 'success'); };
 
   const handleReorder = (order) => {
-    const shouldClear = window.confirm(
-      `This will clear your current cart and add items from ${order.restaurant}. Continue?`
-    );
-    if (!shouldClear) return;
-
+    if (!window.confirm(`Clear cart and reorder from ${order.restaurant}?`)) return;
     clearCart();
-    const restaurant = { id: order.restaurantId, name: order.restaurant };
-    order.items.forEach((item) => {
-      addToCart(item, restaurant);
-    });
-    showSuccess(`Added ${order.items.length} items from your previous order to cart!`);
+    order.items.forEach(item => addToCart(item, { id:order.restaurantId, name:order.restaurant }));
+    addNotification(`Added ${order.items.length} items to cart!`, 'success');
     setTimeout(() => navigate('/cart'), 1000);
   };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      delivered: 'bg-green-100 text-green-700 border border-green-300',
-      cancelled: 'bg-red-100 text-red-700 border border-red-300',
-      refunded: 'bg-purple-100 text-purple-700 border border-purple-300',
-    };
-    return badges[status] || 'bg-blue-100 text-blue-700 border border-blue-300';
+  const handleCancelRole = (role) => {
+    if (!window.confirm(`Cancel your ${role === 'restaurantOwner' ? 'Restaurant Owner' : 'Rider'} role?`)) return;
+    setUser(u => ({ ...u, roles:{ ...u.roles, [role]:null } }));
+    addNotification('Role cancelled', 'info');
   };
 
-  return (
-    <div className="container-custom py-8">
-      <h1 className="text-4xl font-heading font-bold mb-8">My Profile</h1>
+  const statusBadge = (s) => ({
+    delivered:'glass-green text-forest-200', cancelled:'glass-orange text-ember-200', refunded:'text-purple-300'
+  }[s] || 'glass text-forest-200');
 
+  return (
+    <div className="space-y-5 pb-20 lg:pb-0 animate-fade-up">
       {/* Tabs */}
-      <div className="flex space-x-1 mb-8 border-b border-secondary-200">
-        <button
-          onClick={() => setActiveTab('profile')}
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'profile'
-              ? 'border-b-2 border-primary-600 text-primary-600'
-              : 'text-secondary-600 hover:text-primary-600'
-          }`}
-        >
-          Profile
-        </button>
-        <button
-          onClick={() => setActiveTab('orders')}
-          className={`px-6 py-3 font-medium transition-colors ${
-            activeTab === 'orders'
-              ? 'border-b-2 border-primary-600 text-primary-600'
-              : 'text-secondary-600 hover:text-primary-600'
-          }`}
-        >
-          Order History
-        </button>
+      <div className="glass rounded-2xl p-1 flex gap-1">
+        {[{id:'profile',label:'Profile'},{id:'orders',label:'Order History'}].map(({id,label}) => (
+          <button key={id} onClick={() => setActiveTab(id)}
+            className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-all
+              ${activeTab===id ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:text-white'}`}>
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Profile Tab */}
+      {/* PROFILE TAB */}
       {activeTab === 'profile' && (
-        <div className="space-y-8">
-          {/* Profile Header Card */}
-          <Card>
-            <div className="flex flex-col md:flex-row items-center md:items-start gap-6">
-              {/* Avatar */}
+        <div className="space-y-4">
+          {/* Hero card */}
+          <div className="glass card-3d rounded-3xl p-6">
+            <div className="flex flex-col sm:flex-row items-center gap-5">
               <div className="relative flex-shrink-0">
-                <img
-                  src={user.profileImage}
-                  alt={user.name}
-                  className="w-32 h-32 rounded-full object-cover border-4 border-white shadow-lg"
-                />
-                <div className="absolute bottom-0 right-0 w-10 h-10 bg-gradient-to-br from-primary-500 to-primary-600 rounded-full flex items-center justify-center border-4 border-white shadow-lg cursor-pointer hover:scale-110 transition-transform">
-                  <Edit2 className="w-5 h-5 text-white" />
+                <img src={user.profileImage} alt={user.name}
+                  className="w-24 h-24 rounded-2xl object-cover border-2 border-white/15" />
+                <div className="absolute -bottom-2 -right-2 w-8 h-8 btn-glow-green rounded-lg flex items-center justify-center cursor-pointer">
+                  <Edit2 className="w-4 h-4 text-white" />
                 </div>
               </div>
-
-              {/* User Info */}
-              <div className="flex-1 text-center md:text-left">
-                <h2 className="text-3xl font-bold mb-2">{user.name}</h2>
-                <p className="text-secondary-600 mb-4">{user.email}</p>
-
-                {/* Subscription Badge */}
-                <div className={`inline-flex items-center gap-2 px-4 py-2 bg-gradient-to-r ${getPlanColor(user.subscriptionPlan)} rounded-full text-white font-semibold shadow-lg`}>
-                  <Crown className="w-5 h-5" />
-                  <span>{getPlanName(user.subscriptionPlan)} Member</span>
-                  <Link to="/upgrade" className="ml-2 bg-white/20 hover:bg-white/30 px-3 py-1 rounded-full text-xs transition-colors">
-                    Upgrade
-                  </Link>
+              <div className="flex-1 text-center sm:text-left">
+                <h2 className="text-xl font-heading font-bold text-white mb-0.5">{user.name}</h2>
+                <p className="text-forest-200/60 text-sm mb-3">{user.email}</p>
+                <div className="inline-flex items-center gap-1.5 btn-glow-orange px-3 py-1.5 rounded-full text-white text-xs font-semibold">
+                  <Crown className="w-3.5 h-3.5" />
+                  {user.subscriptionPlan === 'premium' ? 'Premium' : 'Basic'} Member
                 </div>
               </div>
-
-              {/* Order Statistics */}
-              <div className="flex gap-6 text-center">
-                <div>
-                  <p className="text-3xl font-bold text-primary-600">{orderHistory.length}</p>
-                  <p className="text-xs text-secondary-600">Orders</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-primary-600">
-                    ${orderHistory.reduce((sum, order) => sum + order.total, 0).toFixed(0)}
-                  </p>
-                  <p className="text-xs text-secondary-600">Spent</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-primary-600">8</p>
-                  <p className="text-xs text-secondary-600">Favorites</p>
-                </div>
+              <div className="flex gap-5 text-center">
+                {[
+                  { val: orders.length, label:'Orders' },
+                  { val:`₱${totalSpent.toFixed(0)}`, label:'Spent' },
+                  { val:'8', label:'Favs' },
+                ].map(({val,label}) => (
+                  <div key={label}>
+                    <p className="text-xl font-heading font-bold text-ember-400">{val}</p>
+                    <p className="text-forest-200/50 text-xs">{label}</p>
+                  </div>
+                ))}
               </div>
-            </div>
-          </Card>
-
-          {/* Quick Actions Grid */}
-          <div>
-            <h3 className="text-2xl font-bold mb-4">Quick Actions</h3>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              <button
-                onClick={() => setActiveTab('orders')}
-                className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500"
-              >
-                <div className="w-14 h-14 bg-gradient-to-br from-blue-400 to-blue-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <Package className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Order History</p>
-              </button>
-
-              <Link to="/orders" className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-green-400 to-green-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <TrendingUp className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Track Orders</p>
-              </Link>
-
-              <Link to="/customer-service" className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-purple-400 to-purple-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <Mail className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Customer Service</p>
-              </Link>
-
-              <Link to="/upgrade" className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-orange-400 to-orange-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <Crown className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Upgrade Account</p>
-              </Link>
-
-              <button className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-pink-400 to-pink-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <Heart className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Favorites</p>
-              </button>
-
-              <button className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-indigo-400 to-indigo-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <Phone className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Payments</p>
-              </button>
-
-              <Link to="/settings" className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-primary-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-gray-400 to-gray-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <Edit2 className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-gray-900 text-sm">Settings</p>
-              </Link>
-
-              <button className="bg-white rounded-2xl p-6 shadow-md hover:shadow-xl transition-all hover:scale-105 group border-2 border-transparent hover:border-red-500">
-                <div className="w-14 h-14 bg-gradient-to-br from-red-400 to-red-600 rounded-2xl flex items-center justify-center mb-3 mx-auto group-hover:scale-110 transition-transform">
-                  <MapPin className="w-7 h-7 text-white" />
-                </div>
-                <p className="font-semibold text-red-600 text-sm">Logout</p>
-              </button>
             </div>
           </div>
 
-          {/* Roles & Dashboards */}
+          {/* Quick actions */}
+          <div>
+            <p className="text-white font-semibold mb-3">Quick Actions</p>
+            <div className="grid grid-cols-4 gap-3">
+              {QUICK_ACTIONS.map(({ label, icon:Icon, color, tab, to, logout }) => (
+                <button key={label}
+                  onClick={() => {
+                    if (logout) { addNotification('Signed out', 'info'); navigate('/welcome'); }
+                    else if (tab) setActiveTab(tab);
+                    else navigate(to);
+                  }}
+                  className="glass card-3d rounded-2xl p-3 flex flex-col items-center gap-2 hover:glass-green transition-all group">
+                  <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
+                    <Icon className="w-5 h-5 text-white" />
+                  </div>
+                  <p className={`text-xs font-medium text-center leading-tight ${logout ? 'text-red-400' : 'text-forest-100/70'}`}>{label}</p>
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Role dashboards */}
           {(user.roles.restaurantOwner || user.roles.rider) && (
             <div>
-              <h3 className="text-2xl font-bold mb-4">My Dashboards</h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <p className="text-white font-semibold mb-3">My Dashboards</p>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                 {user.roles.restaurantOwner && (
-                  <div className="relative bg-gradient-to-br from-orange-500 to-orange-600 rounded-3xl p-8 text-white shadow-xl overflow-hidden group hover:shadow-2xl transition-all">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
-
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                          <Store className="w-8 h-8 text-white" />
-                        </div>
-                        {user.roles.restaurantOwner.status === 'approved' && (
-                          <button
-                            onClick={() => handleCancelRole('restaurantOwner')}
-                            className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
-                            title="Cancel role"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        )}
+                  <div className="glass-orange card-3d rounded-2xl p-5 relative overflow-hidden">
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-ember-500/20 rounded-full -translate-y-10 translate-x-10" />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-12 h-12 glass rounded-xl flex items-center justify-center">
+                        <Store className="w-6 h-6 text-ember-400" />
                       </div>
-
-                      <h4 className="text-2xl font-bold mb-2">Restaurant Owner</h4>
                       {user.roles.restaurantOwner.status === 'approved' && (
-                        <>
-                          <p className="text-white/90 mb-6">{user.roles.restaurantOwner.restaurantName}</p>
-                          <Link to="/owner/dashboard">
-                            <button className="w-full bg-white text-orange-600 font-semibold py-3 rounded-xl hover:bg-orange-50 transition-colors flex items-center justify-center gap-2 group">
-                              Open Dashboard
-                              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                          </Link>
-                        </>
-                      )}
-                      {user.roles.restaurantOwner.status === 'pending' && (
-                        <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 mt-4">
-                          <p className="text-sm">⏳ Application under review. We'll notify you within 2-5 business days.</p>
-                        </div>
+                        <button onClick={() => handleCancelRole('restaurantOwner')}
+                          className="w-7 h-7 glass rounded-full flex items-center justify-center text-white/60 hover:text-white">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
+                    <p className="text-white font-bold">Restaurant Owner</p>
+                    {user.roles.restaurantOwner.status === 'approved' ? (
+                      <>
+                        <p className="text-forest-200/60 text-xs mb-3">{user.roles.restaurantOwner.restaurantName}</p>
+                        <Link to="/owner/dashboard"
+                          className="w-full glass text-white text-sm font-semibold py-2 rounded-xl flex items-center justify-center gap-1.5 hover:glass-green transition-all">
+                          Open Dashboard <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      </>
+                    ) : (
+                      <p className="text-forest-200/60 text-xs mt-2">⏳ Application under review</p>
+                    )}
                   </div>
                 )}
-
                 {user.roles.rider && (
-                  <div className="relative bg-gradient-to-br from-blue-500 to-blue-600 rounded-3xl p-8 text-white shadow-xl overflow-hidden group hover:shadow-2xl transition-all">
-                    <div className="absolute top-0 right-0 w-32 h-32 bg-white/10 rounded-full -translate-y-16 translate-x-16"></div>
-                    <div className="absolute bottom-0 left-0 w-24 h-24 bg-white/10 rounded-full translate-y-12 -translate-x-12"></div>
-
-                    <div className="relative z-10">
-                      <div className="flex items-center justify-between mb-4">
-                        <div className="w-16 h-16 bg-white/20 rounded-2xl flex items-center justify-center backdrop-blur-sm">
-                          <Bike className="w-8 h-8 text-white" />
-                        </div>
-                        {user.roles.rider.status === 'approved' && (
-                          <button
-                            onClick={() => handleCancelRole('rider')}
-                            className="w-8 h-8 bg-white/20 hover:bg-white/30 rounded-full flex items-center justify-center transition-colors"
-                            title="Cancel role"
-                          >
-                            <X className="w-5 h-5" />
-                          </button>
-                        )}
+                  <div className="glass card-3d rounded-2xl p-5 relative overflow-hidden"
+                    style={{ borderColor:'rgba(45,138,87,.3)' }}>
+                    <div className="absolute top-0 right-0 w-20 h-20 bg-forest-500/20 rounded-full -translate-y-10 translate-x-10" />
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="w-12 h-12 glass-green rounded-xl flex items-center justify-center">
+                        <Bike className="w-6 h-6 text-forest-300" />
                       </div>
-
-                      <h4 className="text-2xl font-bold mb-2">Rider</h4>
                       {user.roles.rider.status === 'approved' && (
-                        <>
-                          <p className="text-white/90 mb-6">Delivery Partner</p>
-                          <Link to="/rider/dashboard">
-                            <button className="w-full bg-white text-blue-600 font-semibold py-3 rounded-xl hover:bg-blue-50 transition-colors flex items-center justify-center gap-2 group">
-                              Open Dashboard
-                              <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
-                            </button>
-                          </Link>
-                        </>
-                      )}
-                      {user.roles.rider.status === 'pending' && (
-                        <div className="bg-white/20 backdrop-blur-sm rounded-xl p-4 mt-4">
-                          <p className="text-sm">⏳ Application under review. We'll notify you within 2-5 business days.</p>
-                        </div>
+                        <button onClick={() => handleCancelRole('rider')}
+                          className="w-7 h-7 glass rounded-full flex items-center justify-center text-white/60 hover:text-white">
+                          <X className="w-3.5 h-3.5" />
+                        </button>
                       )}
                     </div>
+                    <p className="text-white font-bold">Rider</p>
+                    {user.roles.rider.status === 'approved' ? (
+                      <>
+                        <p className="text-forest-200/60 text-xs mb-3">Delivery Partner</p>
+                        <Link to="/rider/dashboard"
+                          className="w-full glass text-white text-sm font-semibold py-2 rounded-xl flex items-center justify-center gap-1.5 hover:glass-green transition-all">
+                          Open Dashboard <ArrowRight className="w-4 h-4" />
+                        </Link>
+                      </>
+                    ) : (
+                      <p className="text-forest-200/60 text-xs mt-2">⏳ Application under review</p>
+                    )}
                   </div>
                 )}
               </div>
             </div>
           )}
 
-          {/* Personal Information */}
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-            {/* Personal Information */}
-            <Card>
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-2xl font-semibold">Personal Information</h3>
-                {!isEditing ? (
-                  <Button variant="outline" onClick={() => setIsEditing(true)}>
-                    Edit Profile
-                  </Button>
-                ) : (
-                  <div className="space-x-2">
-                    <Button variant="outline" onClick={() => setIsEditing(false)}>
-                      Cancel
-                    </Button>
-                    <Button onClick={handleSave}>Save</Button>
+          {/* Edit profile */}
+          <div className="glass rounded-2xl p-5">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-semibold">Personal Info</p>
+              {!isEditing
+                ? <button onClick={() => setIsEditing(true)} className="glass text-forest-200 text-xs px-3 py-1.5 rounded-lg hover:glass-green transition-all">Edit</button>
+                : <div className="flex gap-2">
+                    <button onClick={() => setIsEditing(false)} className="glass text-forest-200 text-xs px-3 py-1.5 rounded-lg">Cancel</button>
+                    <button onClick={handleSave} className="btn-glow-green text-white text-xs px-3 py-1.5 rounded-lg">Save</button>
                   </div>
-                )}
-              </div>
-
-              <div className="space-y-6">
-                <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-2">
-                    Full Name
-                  </label>
-                  <input
-                    type="text"
-                    value={user.name}
-                    onChange={(e) => setUser({ ...user, name: e.target.value })}
+              }
+            </div>
+            <div className="space-y-3">
+              {[
+                { label:'Full Name', field:'name', type:'text' },
+                { label:'Email',     field:'email', type:'email' },
+                { label:'Phone',     field:'phone', type:'tel' },
+                { label:'Address',   field:'address', type:'text' },
+              ].map(({ label, field, type }) => (
+                <div key={field}>
+                  <p className="text-forest-200/50 text-xs mb-1">{label}</p>
+                  <input type={type} value={user[field]}
+                    onChange={e => setUser(u => ({ ...u, [field]:e.target.value }))}
                     disabled={!isEditing}
-                    className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-secondary-100 disabled:cursor-not-allowed"
-                  />
+                    className={`w-full input-glass py-2 text-sm ${isEditing ? '' : 'opacity-70 cursor-not-allowed'}`} />
                 </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-2">
-                    Email Address
-                  </label>
-                  <input
-                    type="email"
-                    value={user.email}
-                    onChange={(e) => setUser({ ...user, email: e.target.value })}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-secondary-100 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-2">
-                    Phone Number
-                  </label>
-                  <input
-                    type="tel"
-                    value={user.phone}
-                    onChange={(e) => setUser({ ...user, phone: e.target.value })}
-                    disabled={!isEditing}
-                    className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-secondary-100 disabled:cursor-not-allowed"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-secondary-700 mb-2">
-                    Delivery Address
-                  </label>
-                  <textarea
-                    value={user.address}
-                    onChange={(e) => setUser({ ...user, address: e.target.value })}
-                    disabled={!isEditing}
-                    rows={3}
-                    className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 disabled:bg-secondary-100 disabled:cursor-not-allowed"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Order Statistics */}
-            <Card>
-              <h3 className="text-xl font-semibold mb-4">Order Statistics</h3>
-              <div className="grid grid-cols-3 gap-6 text-center">
-                <div>
-                  <p className="text-3xl font-bold text-primary-600">{orderHistory.length}</p>
-                  <p className="text-secondary-600 text-sm">Total Orders</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-primary-600">
-                    ${orderHistory.reduce((sum, order) => sum + order.total, 0).toFixed(2)}
-                  </p>
-                  <p className="text-secondary-600 text-sm">Total Spent</p>
-                </div>
-                <div>
-                  <p className="text-3xl font-bold text-primary-600">8</p>
-                  <p className="text-secondary-600 text-sm">Favorites</p>
-                </div>
-              </div>
-            </Card>
+              ))}
+            </div>
           </div>
         </div>
       )}
 
-      {/* Order History Tab */}
+      {/* ORDERS TAB */}
       {activeTab === 'orders' && (
-        <div className="space-y-6">
-          {orderHistory.length === 0 ? (
-            <Card>
-              <div className="text-center py-12">
-                <div className="text-6xl mb-4">📦</div>
-                <h3 className="text-2xl font-semibold mb-2">No orders yet</h3>
-                <p className="text-secondary-600 mb-6">Start ordering to see your history here</p>
-                <Link to="/restaurants">
-                  <Button size="lg">Browse Restaurants</Button>
-                </Link>
-              </div>
-            </Card>
+        <div className="space-y-4">
+          {orders.length === 0 ? (
+            <div className="glass rounded-3xl py-16 flex flex-col items-center gap-3">
+              <span className="text-5xl">📦</span>
+              <p className="text-white font-semibold">No orders yet</p>
+              <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white text-sm px-5 py-2.5 rounded-xl mt-2">Browse Food</button>
+            </div>
           ) : (
-            <>
-              <div className="flex items-center justify-between mb-4">
-                <p className="text-secondary-600">
-                  Showing {orderHistory.length} order{orderHistory.length !== 1 ? 's' : ''}
-                </p>
+            orders.map((order, idx) => (
+              <div key={order.id} className="glass card-3d rounded-2xl p-5 animate-fade-up" style={{ animationDelay:`${idx*60}ms` }}>
+                <div className="flex items-start justify-between mb-3">
+                  <div>
+                    <p className="text-white font-semibold">Order #{order.id}</p>
+                    <p className="text-forest-200/60 text-xs mt-0.5">{order.restaurant}</p>
+                    <p className="text-forest-200/40 text-xs">{new Date(order.date).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' })}</p>
+                  </div>
+                  <div className="text-right">
+                    <p className="text-ember-400 font-heading font-bold text-lg">₱{order.total.toFixed(2)}</p>
+                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(order.status)}`}>
+                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="glass-dark rounded-xl p-3 mb-3">
+                  {order.items.map((item, i) => (
+                    <div key={i} className="flex justify-between text-xs py-0.5">
+                      <span className="text-forest-200/70">{item.quantity}× {item.name}</span>
+                      <span className="text-forest-100 font-medium">₱{(item.price * item.quantity).toFixed(2)}</span>
+                    </div>
+                  ))}
+                </div>
+
+                <div className="flex gap-2">
+                  <button onClick={() => handleReorder(order)}
+                    className="flex items-center gap-1.5 glass hover:glass-orange text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
+                    <RotateCcw className="w-3.5 h-3.5" /> Reorder
+                  </button>
+                  <Link to={`/restaurant/${order.restaurantId}`}
+                    className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
+                    <Store className="w-3.5 h-3.5" /> Restaurant
+                  </Link>
+                  <button className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
+                    <Star className="w-3.5 h-3.5" /> Rate
+                  </button>
+                  <button className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
+                    <Receipt className="w-3.5 h-3.5" /> Receipt
+                  </button>
+                </div>
               </div>
-
-              {orderHistory.map((order) => (
-                <Card key={order.id}>
-                  <div className="flex flex-col md:flex-row md:items-start md:justify-between mb-4 pb-4 border-b border-secondary-200">
-                    <div className="flex-1 mb-4 md:mb-0">
-                      <div className="flex items-center space-x-3 mb-2">
-                        <h3 className="text-xl font-semibold">Order #{order.id}</h3>
-                        <span
-                          className={`px-3 py-1 rounded-full text-xs font-medium ${getStatusBadge(
-                            order.status
-                          )}`}
-                        >
-                          {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                        </span>
-                      </div>
-                      <p className="text-secondary-600 mb-1">{order.restaurant}</p>
-                      <p className="text-sm text-secondary-500">
-                        {new Date(order.date).toLocaleDateString('en-US', {
-                          year: 'numeric',
-                          month: 'long',
-                          day: 'numeric',
-                          hour: '2-digit',
-                          minute: '2-digit',
-                        })}
-                      </p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-2xl font-bold text-primary-600">
-                        ${order.total.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mb-4">
-                    <h4 className="font-semibold mb-2">Items:</h4>
-                    <ul className="space-y-1">
-                      {order.items.map((item, idx) => (
-                        <li key={idx} className="text-secondary-700 flex justify-between">
-                          <span>
-                            {item.quantity}x {item.name}
-                          </span>
-                          <span className="font-medium">
-                            ${(item.price * item.quantity).toFixed(2)}
-                          </span>
-                        </li>
-                      ))}
-                    </ul>
-                  </div>
-
-                  <div className="flex flex-wrap gap-3">
-                    <Button variant="primary" onClick={() => handleReorder(order)}>
-                      🔁 Reorder
-                    </Button>
-                    <Link to={`/restaurant/${order.restaurantId}`}>
-                      <Button variant="outline">View Restaurant</Button>
-                    </Link>
-                    <Button variant="outline">⭐ Rate & Review</Button>
-                    <Button variant="outline">📄 View Receipt</Button>
-                  </div>
-                </Card>
-              ))}
-            </>
+            ))
           )}
         </div>
       )}

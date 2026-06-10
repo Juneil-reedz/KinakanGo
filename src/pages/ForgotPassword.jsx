@@ -1,175 +1,92 @@
 import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { Mail, ArrowLeft, Utensils, ChevronRight, Check } from 'lucide-react';
 
 export default function ForgotPassword() {
-  const { showSuccess, showError } = useNotification();
-
-  const [email, setEmail] = useState('');
-  const [error, setError] = useState('');
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [emailSent, setEmailSent] = useState(false);
-
-  const validateEmail = () => {
-    if (!email.trim()) {
-      setError('Email is required');
-      return false;
-    }
-    if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Email is invalid');
-      return false;
-    }
-    return true;
-  };
+  const navigate = useNavigate();
+  const { addNotification } = useNotification();
+  const [email, setEmail]       = useState('');
+  const [error, setError]       = useState('');
+  const [loading, setLoading]   = useState(false);
+  const [sent, setSent]         = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateEmail()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
-    try {
-      // Simulate API call
-      await new Promise((resolve) => setTimeout(resolve, 1500));
-
-      setEmailSent(true);
-      showSuccess('Password reset link sent! Check your email.');
-    } catch (error) {
-      console.error('Forgot password error:', error);
-      showError('Failed to send reset link. Please try again.');
-    } finally {
-      setIsSubmitting(false);
-    }
+    if (!email.trim()) { setError('Email is required'); return; }
+    if (!/\S+@\S+\.\S+/.test(email)) { setError('Invalid email address'); return; }
+    setLoading(true);
+    await new Promise(r => setTimeout(r, 1500));
+    setLoading(false);
+    setSent(true);
+    addNotification('Password reset link sent!', 'success');
   };
 
-  if (emailSent) {
-    return (
-      <div className="container-custom py-16">
-        <div className="max-w-md mx-auto">
-          <Card>
-            <div className="text-center py-8">
-              <div className="w-16 h-16 bg-success rounded-full mx-auto mb-4 flex items-center justify-center">
-                <svg
-                  className="w-8 h-8 text-white"
-                  fill="none"
-                  stroke="currentColor"
-                  viewBox="0 0 24 24"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M5 13l4 4L19 7"
-                  />
-                </svg>
+  return (
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-8">
+      <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
+      <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
+
+      <div className="w-full max-w-md relative z-10 animate-fade-up">
+        <button onClick={() => navigate('/login')}
+          className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back to Login
+        </button>
+
+        <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>
+          {sent ? (
+            <div className="text-center py-4">
+              <div className="w-16 h-16 btn-glow-green rounded-2xl flex items-center justify-center mx-auto mb-4">
+                <Check className="w-8 h-8 text-white" />
               </div>
-              <h2 className="text-2xl font-heading font-bold mb-3">Check Your Email</h2>
-              <p className="text-secondary-600 mb-2">
-                We've sent a password reset link to:
-              </p>
-              <p className="text-primary-600 font-medium mb-6">{email}</p>
-              <p className="text-sm text-secondary-600 mb-8">
-                Click the link in the email to reset your password. The link will expire in 24
-                hours.
-              </p>
+              <h2 className="text-xl font-heading font-bold text-white mb-2">Check Your Email</h2>
+              <p className="text-forest-200/60 text-sm mb-2">We've sent a reset link to:</p>
+              <p className="text-ember-400 font-semibold mb-5">{email}</p>
+              <p className="text-forest-200/50 text-xs mb-8">The link expires in 24 hours.</p>
               <div className="space-y-3">
-                <Link to="/login">
-                  <Button size="lg" className="w-full">
-                    Back to Login
-                  </Button>
-                </Link>
-                <button
-                  onClick={() => {
-                    setEmailSent(false);
-                    setEmail('');
-                  }}
-                  className="w-full text-primary-600 hover:text-primary-700 font-medium"
-                >
+                <button onClick={() => navigate('/login')} className="w-full btn-glow-orange text-white font-bold py-3.5 rounded-xl">
+                  Back to Login
+                </button>
+                <button onClick={() => { setSent(false); setEmail(''); }}
+                  className="w-full glass text-forest-200 py-3 rounded-xl text-sm hover:glass-green transition-all">
                   Resend Email
                 </button>
               </div>
             </div>
-          </Card>
+          ) : (
+            <>
+              <div className="flex flex-col items-center mb-7">
+                <div className="w-16 h-16 btn-glow-green rounded-2xl flex items-center justify-center mb-3">
+                  <Utensils className="w-8 h-8 text-white" />
+                </div>
+                <h1 className="text-2xl font-heading font-bold text-white">Forgot Password?</h1>
+                <p className="text-forest-200/60 text-sm mt-1 text-center">Enter your email to receive reset instructions</p>
+              </div>
+
+              <form onSubmit={handleSubmit} className="space-y-4">
+                <div>
+                  <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Email Address</label>
+                  <div className="relative">
+                    <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                    <input type="email" value={email}
+                      onChange={e => { setEmail(e.target.value); setError(''); }}
+                      placeholder="you@example.com"
+                      className={`w-full input-glass pl-10 pr-4 py-3 text-sm ${error ? 'border-red-500/50' : ''}`} />
+                  </div>
+                  {error && <p className="text-red-400 text-xs mt-1">{error}</p>}
+                </div>
+
+                <button type="submit" disabled={loading}
+                  className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all
+                    ${loading ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+                  {loading
+                    ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Sending…</>
+                    : <>Send Reset Link <ChevronRight className="w-4 h-4" /></>}
+                </button>
+              </form>
+            </>
+          )}
         </div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="container-custom py-16">
-      <div className="max-w-md mx-auto">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-primary-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-white text-3xl font-bold">FD</span>
-          </div>
-          <h1 className="text-3xl font-heading font-bold mb-2">Forgot Password?</h1>
-          <p className="text-secondary-600">
-            No worries! Enter your email and we'll send you reset instructions.
-          </p>
-        </div>
-
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-6">
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Email Address
-              </label>
-              <input
-                type="email"
-                value={email}
-                onChange={(e) => {
-                  setEmail(e.target.value);
-                  setError('');
-                }}
-                placeholder="john.doe@example.com"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  error ? 'border-error' : 'border-secondary-300'
-                }`}
-              />
-              {error && <p className="text-error text-sm mt-1">{error}</p>}
-            </div>
-
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Sending...' : 'Send Reset Link'}
-            </Button>
-          </form>
-
-          {/* Back to Login */}
-          <div className="mt-6 text-center">
-            <Link
-              to="/login"
-              className="text-sm text-primary-600 hover:text-primary-700 font-medium inline-flex items-center space-x-1"
-            >
-              <svg
-                className="w-4 h-4"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M15 19l-7-7 7-7"
-                />
-              </svg>
-              <span>Back to Login</span>
-            </Link>
-          </div>
-        </Card>
       </div>
     </div>
   );

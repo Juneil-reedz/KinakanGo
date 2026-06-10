@@ -1,141 +1,75 @@
-import { Link, useParams } from 'react-router-dom';
-import Button from '../components/Button';
-import Card from '../components/Card';
+import { useParams, useNavigate } from 'react-router-dom';
+import { CheckCircle, Package, Clock, ShoppingBag, MapPin } from 'lucide-react';
 
 export default function OrderConfirmation() {
   const { orderId } = useParams();
+  const navigate    = useNavigate();
 
-  // In a real app, you would fetch the order details here
-  // For now, we'll use mock data
-  const orderDetails = {
-    id: orderId,
-    estimatedTime: '30-40',
-    restaurant: 'Pizza Palace',
-    total: 45.99,
-  };
+  const order = { id: orderId, estimatedTime:'30-40', restaurant:'Pizza Palace', total:45.99 };
 
   return (
-    <div className="container-custom py-8">
-      <div className="max-w-2xl mx-auto">
-        {/* Success Message */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-20 h-20 bg-success rounded-full mb-4">
-            <svg
-              className="w-12 h-12 text-white"
-              fill="none"
-              stroke="currentColor"
-              viewBox="0 0 24 24"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={3}
-                d="M5 13l4 4L19 7"
-              />
-            </svg>
+    <div className="min-h-screen flex items-center justify-center px-4 py-10 relative">
+      <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
+      <div className="orb w-72 h-72 bg-ember-500/10 bottom-0 right-0" />
+
+      <div className="w-full max-w-lg relative z-10 space-y-4 animate-fade-up">
+        {/* Success */}
+        <div className="glass card-3d rounded-3xl p-8 text-center">
+          <div className="relative inline-flex mb-4">
+            <div className="w-20 h-20 btn-glow-green rounded-3xl flex items-center justify-center animate-breathe">
+              <CheckCircle className="w-10 h-10 text-white" />
+            </div>
+            <div className="absolute inset-0 rounded-3xl animate-pulse-ring" style={{ background:'rgba(45,138,87,.4)' }} />
           </div>
-          <h1 className="text-4xl font-heading font-bold mb-2">Order Placed!</h1>
-          <p className="text-xl text-secondary-600">
-            Thank you for your order. Your food will arrive soon!
-          </p>
+          <h1 className="text-2xl font-heading font-bold text-white mb-2">Order Placed!</h1>
+          <p className="text-forest-200/60 text-sm">Your food is on its way. Hang tight!</p>
         </div>
 
-        {/* Order Details */}
-        <Card className="mb-6">
-          <div className="border-b border-secondary-200 pb-4 mb-4">
-            <h2 className="text-2xl font-semibold mb-2">Order Details</h2>
-            <div className="flex items-center justify-between">
-              <span className="text-secondary-600">Order ID</span>
-              <span className="font-mono font-bold text-primary-600">#{orderDetails.id}</span>
-            </div>
-          </div>
-
-          <div className="space-y-4">
-            <div className="flex items-center justify-between">
-              <span className="text-secondary-700">Restaurant</span>
-              <span className="font-semibold">{orderDetails.restaurant}</span>
-            </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-secondary-700">Estimated Delivery Time</span>
-              <span className="font-semibold text-primary-600">
-                {orderDetails.estimatedTime} minutes
+        {/* Details */}
+        <div className="glass rounded-2xl p-5 space-y-3">
+          <p className="text-white font-semibold mb-1">Order Details</p>
+          {[
+            { label:'Order ID',    val:`#${order.id}`,           icon:Package },
+            { label:'Restaurant',  val:order.restaurant,          icon:ShoppingBag },
+            { label:'ETA',         val:`${order.estimatedTime} min`, icon:Clock },
+            { label:'Total',       val:`₱${order.total.toFixed(2)}`, icon:null },
+          ].map(({ label, val, icon:Icon }) => (
+            <div key={label} className="flex items-center justify-between py-1.5"
+              style={{ borderBottom:'1px solid rgba(255,255,255,.05)' }}>
+              <span className="text-forest-200/60 text-sm flex items-center gap-2">
+                {Icon && <Icon className="w-4 h-4 text-forest-300/50" />}{label}
               </span>
+              <span className={`font-semibold text-sm ${label==='Total' ? 'text-ember-400' : 'text-white'}`}>{val}</span>
             </div>
-
-            <div className="flex items-center justify-between">
-              <span className="text-secondary-700">Total Amount</span>
-              <span className="font-bold text-xl">${orderDetails.total.toFixed(2)}</span>
-            </div>
-          </div>
-        </Card>
-
-        {/* What's Next */}
-        <Card className="mb-6">
-          <h3 className="text-xl font-semibold mb-4">What's Next?</h3>
-          <div className="space-y-4">
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-bold">
-                1
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold mb-1">Order Confirmation</h4>
-                <p className="text-sm text-secondary-600">
-                  The restaurant is preparing your order
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-bold">
-                2
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold mb-1">Out for Delivery</h4>
-                <p className="text-sm text-secondary-600">
-                  A delivery driver will pick up your order
-                </p>
-              </div>
-            </div>
-
-            <div className="flex items-start space-x-4">
-              <div className="flex-shrink-0 w-8 h-8 bg-primary-100 text-primary-600 rounded-full flex items-center justify-center font-bold">
-                3
-              </div>
-              <div className="flex-1">
-                <h4 className="font-semibold mb-1">Delivered</h4>
-                <p className="text-sm text-secondary-600">
-                  Enjoy your delicious meal!
-                </p>
-              </div>
-            </div>
-          </div>
-        </Card>
-
-        {/* Actions */}
-        <div className="flex flex-col sm:flex-row gap-4">
-          <Link to={`/order-receipt/${orderId}`} className="flex-1">
-            <Button size="lg" className="w-full">
-              View Receipt
-            </Button>
-          </Link>
-          <Link to="/orders" className="flex-1">
-            <Button variant="outline" size="lg" className="w-full">
-              Track Your Order
-            </Button>
-          </Link>
-          <Link to="/restaurants" className="flex-1">
-            <Button variant="outline" size="lg" className="w-full">
-              Order More Food
-            </Button>
-          </Link>
+          ))}
         </div>
 
-        {/* Email Confirmation Notice */}
-        <div className="mt-8 text-center">
-          <p className="text-sm text-secondary-600">
-            📧 A confirmation email has been sent to your email address.
-          </p>
+        {/* What's next */}
+        <div className="glass rounded-2xl p-5">
+          <p className="text-white font-semibold mb-3">What's Next?</p>
+          <div className="space-y-3">
+            {[
+              { n:'1', text:'Restaurant is preparing your order', color:'btn-glow-green' },
+              { n:'2', text:'A rider will pick up your food',     color:'btn-glow-orange' },
+              { n:'3', text:'Delivered to your door!',            color:'btn-glow-green' },
+            ].map(({ n, text, color }) => (
+              <div key={n} className="flex items-center gap-3">
+                <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>{n}</div>
+                <p className="text-forest-200/70 text-sm">{text}</p>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        <div className="flex gap-3">
+          <button onClick={() => navigate('/orders')}
+            className="flex-1 py-3.5 btn-glow-green text-white font-bold rounded-2xl flex items-center justify-center gap-2">
+            <MapPin className="w-4 h-4" /> Track Order
+          </button>
+          <button onClick={() => navigate('/')}
+            className="flex-1 py-3.5 glass text-forest-100 font-semibold rounded-2xl hover:glass-green transition-all">
+            Back Home
+          </button>
         </div>
       </div>
     </div>

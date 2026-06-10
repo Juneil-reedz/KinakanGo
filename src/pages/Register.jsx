@@ -1,316 +1,181 @@
 import { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { Eye, EyeOff, User, Mail, Phone, Lock, Utensils, ChevronRight, ArrowLeft, Check } from 'lucide-react';
 
 export default function Register() {
   const navigate = useNavigate();
   const { register } = useAuth();
-  const { showSuccess, showError } = useNotification();
+  const { addNotification } = useNotification();
 
-  const [formData, setFormData] = useState({
-    name: '',
-    email: '',
-    phone: '',
-    password: '',
-    confirmPassword: '',
-    agreeToTerms: false,
-  });
+  const [form, setForm] = useState({ name:'', email:'', phone:'', password:'', confirmPassword:'', agreeToTerms:false });
+  const [showPass, setShowPass]     = useState(false);
+  const [showConfirm, setShowConfirm] = useState(false);
+  const [errors, setErrors]         = useState({});
+  const [loading, setLoading]       = useState(false);
 
-  const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    setFormData((prev) => ({
-      ...prev,
-      [name]: type === 'checkbox' ? checked : value,
-    }));
-
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+  const set = (field) => (e) => {
+    const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
+    setForm(f => ({ ...f, [field]: val }));
+    setErrors(er => ({ ...er, [field]: undefined }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
-
-    if (!formData.name.trim()) {
-      newErrors.name = 'Full name is required';
-    } else if (formData.name.trim().length < 2) {
-      newErrors.name = 'Name must be at least 2 characters';
-    }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    if (formData.phone && !/^[\d\s\-\(\)]+$/.test(formData.phone)) {
-      newErrors.phone = 'Phone number is invalid';
-    }
-
-    if (!formData.password) {
-      newErrors.password = 'Password is required';
-    } else if (formData.password.length < 8) {
-      newErrors.password = 'Password must be at least 8 characters';
-    } else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(formData.password)) {
-      newErrors.password = 'Password must contain uppercase, lowercase, and number';
-    }
-
-    if (!formData.confirmPassword) {
-      newErrors.confirmPassword = 'Please confirm your password';
-    } else if (formData.password !== formData.confirmPassword) {
-      newErrors.confirmPassword = 'Passwords do not match';
-    }
-
-    if (!formData.agreeToTerms) {
-      newErrors.agreeToTerms = 'You must agree to the terms and conditions';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
+  const validate = () => {
+    const e = {};
+    if (!form.name.trim() || form.name.trim().length < 2) e.name = 'Name must be at least 2 characters';
+    if (!form.email.trim()) e.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email address';
+    if (form.phone && !/^[\d\s\-()+]+$/.test(form.phone)) e.phone = 'Invalid phone number';
+    if (!form.password) e.password = 'Password is required';
+    else if (form.password.length < 8) e.password = 'Minimum 8 characters';
+    else if (!/(?=.*[a-z])(?=.*[A-Z])(?=.*\d)/.test(form.password)) e.password = 'Needs uppercase, lowercase & number';
+    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    if (!form.agreeToTerms) e.agreeToTerms = 'You must agree to continue';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    setIsSubmitting(true);
-
+    if (!validate()) return;
+    setLoading(true);
     try {
-      await register({
-        name: formData.name,
-        email: formData.email,
-        phone: formData.phone,
-        password: formData.password,
-      });
-      showSuccess('Account created successfully! Welcome!');
+      await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
+      addNotification('Account created! Welcome aboard 🎉', 'success');
       navigate('/');
-    } catch (error) {
-      console.error('Registration error:', error);
-      showError('Failed to create account. Please try again.');
+    } catch {
+      setErrors({ email: 'Email already in use or registration failed' });
     } finally {
-      setIsSubmitting(false);
+      setLoading(false);
     }
   };
 
+  const pwStrength = () => {
+    if (!form.password) return 0;
+    let s = 0;
+    if (form.password.length >= 8) s++;
+    if (/[A-Z]/.test(form.password)) s++;
+    if (/[a-z]/.test(form.password)) s++;
+    if (/\d/.test(form.password)) s++;
+    if (/[^a-zA-Z0-9]/.test(form.password)) s++;
+    return s;
+  };
+  const strength = pwStrength();
+  const strengthColor = ['bg-red-500','bg-red-400','bg-ember-500','bg-forest-400','bg-forest-500'][Math.max(0,strength-1)] || 'bg-forest-800';
+  const strengthLabel = ['','Weak','Fair','Good','Strong','Very Strong'][strength] || '';
+
+  const fields = [
+    { id:'name',            label:'Full Name',        type:'text',     icon:User,  placeholder:'Juan dela Cruz' },
+    { id:'email',           label:'Email Address',    type:'email',    icon:Mail,  placeholder:'you@example.com' },
+    { id:'phone',           label:'Phone (optional)', type:'tel',      icon:Phone, placeholder:'+63 912 345 6789' },
+  ];
+
   return (
-    <div className="container-custom py-16">
-      <div className="max-w-md mx-auto">
-        {/* Logo/Header */}
-        <div className="text-center mb-8">
-          <div className="w-20 h-20 bg-primary-600 rounded-full mx-auto mb-4 flex items-center justify-center">
-            <span className="text-white text-3xl font-bold">FD</span>
+    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-10">
+      <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
+      <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
+
+      <div className="w-full max-w-md relative z-10 animate-fade-up">
+        <button onClick={() => navigate('/welcome')}
+          className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
+          <ArrowLeft className="w-4 h-4" /> Back
+        </button>
+
+        <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>
+          <div className="flex flex-col items-center mb-7">
+            <div className="w-16 h-16 btn-glow-green rounded-2xl flex items-center justify-center mb-3">
+              <Utensils className="w-8 h-8 text-white" />
+            </div>
+            <h1 className="text-2xl font-heading font-bold text-white">Create Account</h1>
+            <p className="text-forest-200/60 text-sm mt-1">Join KinakanGo today</p>
           </div>
-          <h1 className="text-3xl font-heading font-bold mb-2">Create Account</h1>
-          <p className="text-secondary-600">Sign up to start ordering delicious food</p>
-        </div>
 
-        <Card>
-          <form onSubmit={handleSubmit} className="space-y-5">
-            {/* Full Name */}
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Full Name *
-              </label>
-              <input
-                type="text"
-                name="name"
-                value={formData.name}
-                onChange={handleChange}
-                placeholder="John Doe"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.name ? 'border-error' : 'border-secondary-300'
-                }`}
-              />
-              {errors.name && <p className="text-error text-sm mt-1">{errors.name}</p>}
-            </div>
-
-            {/* Email */}
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Email Address *
-              </label>
-              <input
-                type="email"
-                name="email"
-                value={formData.email}
-                onChange={handleChange}
-                placeholder="john.doe@example.com"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.email ? 'border-error' : 'border-secondary-300'
-                }`}
-              />
-              {errors.email && <p className="text-error text-sm mt-1">{errors.email}</p>}
-            </div>
-
-            {/* Phone */}
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Phone Number (Optional)
-              </label>
-              <input
-                type="tel"
-                name="phone"
-                value={formData.phone}
-                onChange={handleChange}
-                placeholder="+1 (555) 123-4567"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.phone ? 'border-error' : 'border-secondary-300'
-                }`}
-              />
-              {errors.phone && <p className="text-error text-sm mt-1">{errors.phone}</p>}
-            </div>
+          <form onSubmit={handleSubmit} className="space-y-4">
+            {fields.map(({ id, label, type, icon: Icon, placeholder }) => (
+              <div key={id}>
+                <label className="block text-forest-200/80 text-xs font-medium mb-1.5">{label}</label>
+                <div className="relative">
+                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                  <input type={type} value={form[id]} onChange={set(id)} placeholder={placeholder}
+                    className={`w-full input-glass pl-10 pr-4 py-3 text-sm ${errors[id] ? 'border-red-500/50' : ''}`} />
+                </div>
+                {errors[id] && <p className="text-red-400 text-xs mt-1">{errors[id]}</p>}
+              </div>
+            ))}
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Password *
-              </label>
-              <input
-                type="password"
-                name="password"
-                value={formData.password}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.password ? 'border-error' : 'border-secondary-300'
-                }`}
-              />
-              {errors.password && <p className="text-error text-sm mt-1">{errors.password}</p>}
-              <p className="text-xs text-secondary-500 mt-1">
-                Must be 8+ characters with uppercase, lowercase, and number
-              </p>
+              <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                <input type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')}
+                  placeholder="••••••••"
+                  className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.password ? 'border-red-500/50' : ''}`} />
+                <button type="button" onClick={() => setShowPass(s=>!s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200 transition-colors">
+                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {form.password && (
+                <div className="mt-2">
+                  <div className="flex gap-1 mb-1">
+                    {[1,2,3,4,5].map(i => (
+                      <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : 'bg-forest-800'}`} />
+                    ))}
+                  </div>
+                  <p className="text-xs text-forest-200/50">{strengthLabel}</p>
+                </div>
+              )}
+              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
             </div>
 
             {/* Confirm Password */}
             <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Confirm Password *
-              </label>
-              <input
-                type="password"
-                name="confirmPassword"
-                value={formData.confirmPassword}
-                onChange={handleChange}
-                placeholder="••••••••"
-                className={`w-full px-4 py-3 border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                  errors.confirmPassword ? 'border-error' : 'border-secondary-300'
-                }`}
-              />
-              {errors.confirmPassword && (
-                <p className="text-error text-sm mt-1">{errors.confirmPassword}</p>
-              )}
+              <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Confirm Password</label>
+              <div className="relative">
+                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')}
+                  placeholder="••••••••"
+                  className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.confirmPassword ? 'border-red-500/50' : ''}`} />
+                <button type="button" onClick={() => setShowConfirm(s=>!s)}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200 transition-colors">
+                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                </button>
+              </div>
+              {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
             </div>
 
-            {/* Terms & Conditions */}
-            <div>
-              <label className="flex items-start">
-                <input
-                  type="checkbox"
-                  name="agreeToTerms"
-                  checked={formData.agreeToTerms}
-                  onChange={handleChange}
-                  className={`w-4 h-4 mt-1 text-primary-600 border-secondary-300 rounded focus:ring-primary-500 ${
-                    errors.agreeToTerms ? 'border-error' : ''
-                  }`}
-                />
-                <span className="ml-2 text-sm text-secondary-700">
-                  I agree to the{' '}
-                  <a href="#" className="text-primary-600 hover:text-primary-700 font-medium">
-                    Terms of Service
-                  </a>{' '}
-                  and{' '}
-                  <a href="#" className="text-primary-600 hover:text-primary-700 font-medium">
-                    Privacy Policy
-                  </a>
-                </span>
-              </label>
-              {errors.agreeToTerms && (
-                <p className="text-error text-sm mt-1">{errors.agreeToTerms}</p>
-              )}
-            </div>
+            {/* Terms */}
+            <label className="flex items-start gap-3 cursor-pointer">
+              <div onClick={() => setForm(f => ({ ...f, agreeToTerms: !f.agreeToTerms }))}
+                className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-all cursor-pointer
+                  ${form.agreeToTerms ? 'btn-glow-green border-transparent' : 'border-forest-600 glass'}`}>
+                {form.agreeToTerms && <Check className="w-3 h-3 text-white" />}
+              </div>
+              <span className="text-forest-200/60 text-xs leading-relaxed">
+                I agree to the <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Terms of Service</span>{' '}
+                and <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Privacy Policy</span>
+              </span>
+            </label>
+            {errors.agreeToTerms && <p className="text-red-400 text-xs">{errors.agreeToTerms}</p>}
 
-            {/* Submit Button */}
-            <Button
-              type="submit"
-              size="lg"
-              className="w-full"
-              disabled={isSubmitting}
-            >
-              {isSubmitting ? 'Creating Account...' : 'Create Account'}
-            </Button>
+            <button type="submit" disabled={loading}
+              className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mt-2
+                ${loading ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+              {loading
+                ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Creating account…</>
+                : <>Create Account <ChevronRight className="w-4 h-4" /></>}
+            </button>
           </form>
 
-          {/* Divider */}
-          <div className="relative my-6">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-secondary-200"></div>
-            </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="px-2 bg-white text-secondary-500">Or sign up with</span>
-            </div>
-          </div>
-
-          {/* Social Sign Up */}
-          <div className="space-y-3">
-            <button
-              type="button"
-              className="w-full px-4 py-3 border border-secondary-300 rounded-lg hover:bg-secondary-50 transition-colors flex items-center justify-center space-x-2"
-            >
-              <svg className="w-5 h-5" viewBox="0 0 24 24">
-                <path
-                  fill="#4285F4"
-                  d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
-                />
-                <path
-                  fill="#34A853"
-                  d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
-                />
-                <path
-                  fill="#FBBC05"
-                  d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z"
-                />
-                <path
-                  fill="#EA4335"
-                  d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z"
-                />
-              </svg>
-              <span>Continue with Google</span>
+          <p className="text-center text-forest-200/50 text-sm mt-5">
+            Already have an account?{' '}
+            <button onClick={() => navigate('/login')} className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">
+              Sign In
             </button>
-
-            <button
-              type="button"
-              className="w-full px-4 py-3 border border-secondary-300 rounded-lg hover:bg-secondary-50 transition-colors flex items-center justify-center space-x-2"
-            >
-              <svg className="w-5 h-5" fill="#1877F2" viewBox="0 0 24 24">
-                <path d="M24 12.073c0-6.627-5.373-12-12-12s-12 5.373-12 12c0 5.99 4.388 10.954 10.125 11.854v-8.385H7.078v-3.47h3.047V9.43c0-3.007 1.792-4.669 4.533-4.669 1.312 0 2.686.235 2.686.235v2.953H15.83c-1.491 0-1.956.925-1.956 1.874v2.25h3.328l-.532 3.47h-2.796v8.385C19.612 23.027 24 18.062 24 12.073z" />
-              </svg>
-              <span>Continue with Facebook</span>
-            </button>
-          </div>
-
-          {/* Login Link */}
-          <div className="mt-6 text-center">
-            <p className="text-sm text-secondary-600">
-              Already have an account?{' '}
-              <Link
-                to="/login"
-                className="text-primary-600 hover:text-primary-700 font-medium"
-              >
-                Login
-              </Link>
-            </p>
-          </div>
-        </Card>
+          </p>
+        </div>
       </div>
     </div>
   );

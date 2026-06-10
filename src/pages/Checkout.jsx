@@ -3,513 +3,243 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import { createOrder } from '../services/api';
-import Card from '../components/Card';
-import Button from '../components/Button';
-import PaymentForm from '../components/PaymentForm';
-import Modal from '../components/Modal';
+import { User, Mail, Phone, MapPin, CreditCard, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck } from 'lucide-react';
 
 export default function Checkout() {
   const navigate = useNavigate();
   const { cartItems, getCartTotal, clearCart } = useCart();
-  const { showSuccess, showError, showInfo } = useNotification();
+  const { addNotification } = useNotification();
 
-  const [formData, setFormData] = useState({
-    fullName: 'John Doe',
-    email: 'john.doe@example.com',
-    phone: '+1 (555) 123-4567',
-    address: '123 Main St',
-    city: 'New York',
-    state: 'NY',
-    zipCode: '10001',
-    apartmentUnit: 'Apt 4B',
-    deliveryInstructions: '',
-    paymentMethod: 'cash',
+  const [form, setForm] = useState({
+    fullName:'Juan dela Cruz', email:'juan@example.com', phone:'+63 912 345 6789',
+    address:'123 Main St', city:'Bongao', zipCode:'7500',
+    apartmentUnit:'', deliveryInstructions:'', paymentMethod:'cash',
   });
-
   const [errors, setErrors] = useState({});
-  const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPaymentModal, setShowPaymentModal] = useState(false);
-  const [paymentResult, setPaymentResult] = useState(null);
+  const [submitting, setSubmitting] = useState(false);
 
-  const subtotal = getCartTotal();
-  const deliveryFee = 2.99;
-  const tax = subtotal * 0.08;
-  const total = subtotal + deliveryFee + tax;
+  const subtotal    = getCartTotal();
+  const deliveryFee = 49;
+  const tax         = subtotal * 0.12;
+  const total       = subtotal + deliveryFee + tax;
 
-  const handleChange = (e) => {
-    const { name, value } = e.target;
-    setFormData((prev) => ({ ...prev, [name]: value }));
-    // Clear error for this field
-    if (errors[name]) {
-      setErrors((prev) => ({ ...prev, [name]: '' }));
-    }
+  const set = (field) => (e) => {
+    setForm(f => ({ ...f, [field]: e.target.value }));
+    setErrors(er => ({ ...er, [field]: undefined }));
   };
 
-  const validateForm = () => {
-    const newErrors = {};
+  const validate = () => {
+    const e = {};
+    if (!form.fullName.trim()) e.fullName = 'Required';
+    if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Valid email required';
+    if (!form.phone.trim()) e.phone = 'Required';
+    if (!form.address.trim()) e.address = 'Required';
+    if (!form.city.trim()) e.city = 'Required';
+    setErrors(e);
+    return Object.keys(e).length === 0;
+  };
 
-    if (!formData.fullName.trim()) {
-      newErrors.fullName = 'Full name is required';
+  const processOrder = async () => {
+    setSubmitting(true);
+    addNotification('Processing your order…', 'info');
+    try {
+      const orderData = {
+        userId:1,
+        restaurantId: cartItems[0]?.restaurantId,
+        restaurant: cartItems[0]?.restaurant,
+        items: cartItems, subtotal, deliveryFee, tax, total,
+        deliveryAddress: `${form.address}${form.apartmentUnit ? ', '+form.apartmentUnit : ''}, ${form.city} ${form.zipCode}`,
+        contactInfo: { name:form.fullName, email:form.email, phone:form.phone },
+        deliveryInstructions: form.deliveryInstructions,
+        paymentMethod: form.paymentMethod,
+      };
+      const order = await createOrder(orderData);
+      addNotification('Order placed successfully!', 'success');
+      clearCart();
+      setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state:{ orderData } }), 1200);
+    } catch {
+      addNotification('Failed to place order. Please try again.', 'error');
+      setSubmitting(false);
     }
-
-    if (!formData.email.trim()) {
-      newErrors.email = 'Email is required';
-    } else if (!/\S+@\S+\.\S+/.test(formData.email)) {
-      newErrors.email = 'Email is invalid';
-    }
-
-    if (!formData.phone.trim()) {
-      newErrors.phone = 'Phone number is required';
-    }
-
-    if (!formData.address.trim()) {
-      newErrors.address = 'Address is required';
-    }
-
-    if (!formData.city.trim()) {
-      newErrors.city = 'City is required';
-    }
-
-    if (!formData.state.trim()) {
-      newErrors.state = 'State is required';
-    }
-
-    if (!formData.zipCode.trim()) {
-      newErrors.zipCode = 'ZIP code is required';
-    } else if (!/^\d{5}(-\d{4})?$/.test(formData.zipCode)) {
-      newErrors.zipCode = 'ZIP code is invalid';
-    }
-
-    setErrors(newErrors);
-    return Object.keys(newErrors).length === 0;
   };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
-
-    if (!validateForm()) {
-      return;
-    }
-
-    // If online payment is selected, show payment modal
-    if (formData.paymentMethod === 'online') {
-      setShowPaymentModal(true);
-      return;
-    }
-
-    // For cash/card on delivery, process order directly
+    if (!validate()) return;
     await processOrder();
   };
 
-  const processOrder = async (paymentData = null) => {
-    setIsSubmitting(true);
-    showInfo('Processing your order...');
-
-    try {
-      const orderData = {
-        userId: 1, // Mock user ID
-        restaurantId: cartItems[0].restaurantId,
-        restaurant: cartItems[0].restaurant,
-        items: cartItems,
-        subtotal,
-        deliveryFee,
-        tax,
-        total,
-        deliveryAddress: `${formData.address}${formData.apartmentUnit ? ', ' + formData.apartmentUnit : ''}, ${formData.city}, ${formData.state} ${formData.zipCode}`,
-        contactInfo: {
-          name: formData.fullName,
-          email: formData.email,
-          phone: formData.phone,
-        },
-        deliveryInstructions: formData.deliveryInstructions,
-        paymentMethod: formData.paymentMethod,
-        paymentDetails: paymentData,
-      };
-
-      const order = await createOrder(orderData);
-
-      // Show success notification
-      showSuccess('Order placed successfully! Redirecting to confirmation page...');
-
-      // Clear cart
-      clearCart();
-
-      // Navigate to confirmation page after a short delay
-      setTimeout(() => {
-        navigate(`/order-confirmation/${order.id}`, {
-          state: { paymentResult: paymentData, orderData }
-        });
-      }, 1500);
-    } catch (error) {
-      console.error('Error creating order:', error);
-      showError('Failed to place order. Please try again.');
-      setIsSubmitting(false);
-    }
-  };
-
-  const handlePaymentSuccess = async (result) => {
-    setPaymentResult(result);
-    setShowPaymentModal(false);
-    showSuccess(`Payment successful! Transaction ID: ${result.transactionId}`);
-    await processOrder(result);
-  };
-
-  const handlePaymentCancel = () => {
-    setShowPaymentModal(false);
-    showInfo('Payment cancelled');
-  };
-
-  // Redirect if cart is empty
-  if (cartItems.length === 0) {
-    return (
-      <div className="min-h-screen bg-secondary-50 flex items-center justify-center px-4">
-        <div className="max-w-md mx-auto text-center">
-          <div className="text-5xl xs:text-6xl mb-4">🛒</div>
-          <h2 className="text-xl xs:text-2xl font-heading font-bold mb-3 xs:mb-4">Your cart is empty</h2>
-          <p className="text-sm xs:text-base text-secondary-600 mb-6 xs:mb-8 px-2">
-            Add items to your cart before checking out.
-          </p>
-          <Link to="/restaurants">
-            <Button size="lg" className="w-full xs:w-auto">Browse Restaurants</Button>
-          </Link>
-        </div>
+  if (cartItems.length === 0) return (
+    <div className="min-h-screen flex items-center justify-center px-4">
+      <div className="glass rounded-3xl p-10 max-w-sm text-center card-3d animate-fade-up">
+        <ShoppingCart className="w-12 h-12 text-forest-300/40 mx-auto mb-4" />
+        <p className="text-white font-bold text-lg mb-2">Cart is empty</p>
+        <Link to="/restaurants" className="btn-glow-orange text-white font-bold px-8 py-3 rounded-xl inline-block mt-2">Browse Food</Link>
       </div>
-    );
-  }
+    </div>
+  );
+
+  const fieldCls = (f) => `w-full input-glass py-3 text-sm ${errors[f] ? 'border-red-500/50' : ''}`;
 
   return (
-    <div className="min-h-screen bg-secondary-50">
-      {/* Mobile Header */}
-      <div className="bg-white shadow-sm sticky top-0 z-10 px-4 py-3 xs:py-4">
-        <div className="flex items-center gap-3 max-w-7xl mx-auto">
-          <Link to="/cart" className="text-secondary-600 hover:text-secondary-900">
-            <svg className="w-5 h-5 xs:w-6 xs:h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
-            </svg>
-          </Link>
-          <h1 className="text-xl xs:text-2xl md:text-4xl font-heading font-bold">Checkout</h1>
-        </div>
+    <div className="min-h-screen pb-8 animate-fade-up">
+      <div className="orb w-72 h-72 bg-forest-600/15 top-0 right-0" />
+
+      {/* Header */}
+      <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3 mb-4"
+        style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <Link to="/cart" className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
+          <ArrowLeft className="w-4 h-4" />
+        </Link>
+        <h1 className="text-white font-heading font-bold text-lg flex-1">Checkout</h1>
+        <span className="text-forest-200/50 text-xs">{cartItems.length} item{cartItems.length>1?'s':''}</span>
       </div>
 
-      <div className="container-custom py-4 xs:py-6 md:py-8 pb-24 xs:pb-28 lg:pb-8">
-
       <form onSubmit={handleSubmit}>
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 xs:gap-6 lg:gap-8">
-          {/* Checkout Form */}
-          <div className="lg:col-span-2 space-y-4 xs:space-y-6">
-            {/* Contact Information */}
-            <Card>
-              <h3 className="text-lg xs:text-xl font-semibold mb-3 xs:mb-4">Contact Information</h3>
-              <div className="space-y-4">
+        <div className="max-w-4xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
+          {/* Left: form */}
+          <div className="lg:col-span-2 space-y-4">
+            {/* Contact */}
+            <div className="glass rounded-2xl p-5">
+              <p className="text-white font-semibold mb-4">Contact Info</p>
+              <div className="space-y-3">
                 <div>
-                  <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                    Full Name *
-                  </label>
-                  <input
-                    type="text"
-                    name="fullName"
-                    value={formData.fullName}
-                    onChange={handleChange}
-                    className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.fullName ? 'border-error' : 'border-secondary-300'
-                    }`}
-                  />
-                  {errors.fullName && <p className="text-error text-xs xs:text-sm mt-1">{errors.fullName}</p>}
-                </div>
-
-                <div className="grid grid-cols-1 xs:grid-cols-2 gap-3 xs:gap-4">
-                  <div>
-                    <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                      Email *
-                    </label>
-                    <input
-                      type="email"
-                      name="email"
-                      value={formData.email}
-                      onChange={handleChange}
-                      className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                        errors.email ? 'border-error' : 'border-secondary-300'
-                      }`}
-                    />
-                    {errors.email && <p className="text-error text-xs xs:text-sm mt-1">{errors.email}</p>}
+                  <label className="block text-forest-200/60 text-xs mb-1">Full Name *</label>
+                  <div className="relative">
+                    <User className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                    <input type="text" value={form.fullName} onChange={set('fullName')} className={`${fieldCls('fullName')} pl-10`} />
                   </div>
-
+                  {errors.fullName && <p className="text-red-400 text-xs mt-1">{errors.fullName}</p>}
+                </div>
+                <div className="grid grid-cols-2 gap-3">
                   <div>
-                    <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                      Phone *
-                    </label>
-                    <input
-                      type="tel"
-                      name="phone"
-                      value={formData.phone}
-                      onChange={handleChange}
-                      className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                        errors.phone ? 'border-error' : 'border-secondary-300'
-                      }`}
-                    />
-                    {errors.phone && <p className="text-error text-xs xs:text-sm mt-1">{errors.phone}</p>}
-                  </div>
-                </div>
-              </div>
-            </Card>
-
-            {/* Delivery Address */}
-            <Card>
-              <h3 className="text-lg xs:text-xl font-semibold mb-3 xs:mb-4">Delivery Address</h3>
-              <div className="space-y-4">
-                <div>
-                  <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                    Street Address *
-                  </label>
-                  <input
-                    type="text"
-                    name="address"
-                    value={formData.address}
-                    onChange={handleChange}
-                    className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                      errors.address ? 'border-error' : 'border-secondary-300'
-                    }`}
-                  />
-                  {errors.address && <p className="text-error text-xs xs:text-sm mt-1">{errors.address}</p>}
-                </div>
-
-                <div>
-                  <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                    Apartment, Suite, Unit (Optional)
-                  </label>
-                  <input
-                    type="text"
-                    name="apartmentUnit"
-                    value={formData.apartmentUnit}
-                    onChange={handleChange}
-                    className="w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                  />
-                </div>
-
-                <div className="grid grid-cols-1 xs:grid-cols-3 gap-3 xs:gap-4">
-                  <div>
-                    <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                      City *
-                    </label>
-                    <input
-                      type="text"
-                      name="city"
-                      value={formData.city}
-                      onChange={handleChange}
-                      className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                        errors.city ? 'border-error' : 'border-secondary-300'
-                      }`}
-                    />
-                    {errors.city && <p className="text-error text-xs xs:text-sm mt-1">{errors.city}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                      State *
-                    </label>
-                    <input
-                      type="text"
-                      name="state"
-                      value={formData.state}
-                      onChange={handleChange}
-                      className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                        errors.state ? 'border-error' : 'border-secondary-300'
-                      }`}
-                    />
-                    {errors.state && <p className="text-error text-xs xs:text-sm mt-1">{errors.state}</p>}
-                  </div>
-
-                  <div>
-                    <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                      ZIP Code *
-                    </label>
-                    <input
-                      type="text"
-                      name="zipCode"
-                      value={formData.zipCode}
-                      onChange={handleChange}
-                      className={`w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 ${
-                        errors.zipCode ? 'border-error' : 'border-secondary-300'
-                      }`}
-                    />
-                    {errors.zipCode && <p className="text-error text-xs xs:text-sm mt-1">{errors.zipCode}</p>}
-                  </div>
-                </div>
-
-                <div>
-                  <label className="block text-xs xs:text-sm font-medium text-secondary-700 mb-1.5 xs:mb-2">
-                    Delivery Instructions (Optional)
-                  </label>
-                  <textarea
-                    name="deliveryInstructions"
-                    value={formData.deliveryInstructions}
-                    onChange={handleChange}
-                    rows={3}
-                    placeholder="E.g., Ring doorbell, leave at door, etc."
-                    className="w-full px-3 xs:px-4 py-2.5 xs:py-3 text-sm xs:text-base border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 resize-none"
-                  />
-                </div>
-              </div>
-            </Card>
-
-            {/* Payment Method */}
-            <Card>
-              <h3 className="text-lg xs:text-xl font-semibold mb-3 xs:mb-4">Payment Method</h3>
-              <div className="space-y-2.5 xs:space-y-3">
-                <label className={`flex items-start xs:items-center p-3 xs:p-4 border-2 rounded-lg cursor-pointer hover:border-primary-500 transition-colors ${
-                  formData.paymentMethod === 'online' ? 'border-primary-500 bg-primary-50' : 'border-secondary-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="online"
-                    checked={formData.paymentMethod === 'online'}
-                    onChange={handleChange}
-                    className="w-4 h-4 mt-0.5 xs:mt-0 text-primary-600 focus:ring-primary-500 flex-shrink-0"
-                  />
-                  <div className="ml-2.5 xs:ml-3 flex-1">
-                    <div className="flex items-center justify-between flex-wrap gap-1">
-                      <p className="font-medium text-sm xs:text-base">Pay Online Now</p>
-                      <span className="text-xs bg-success text-white px-2 py-0.5 xs:py-1 rounded">Recommended</span>
+                    <label className="block text-forest-200/60 text-xs mb-1">Email *</label>
+                    <div className="relative">
+                      <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                      <input type="email" value={form.email} onChange={set('email')} className={`${fieldCls('email')} pl-10`} />
                     </div>
-                    <p className="text-xs xs:text-sm text-secondary-600 mt-0.5">Secure payment with credit/debit card</p>
+                    {errors.email && <p className="text-red-400 text-xs mt-1">{errors.email}</p>}
                   </div>
-                </label>
-
-                <label className={`flex items-start xs:items-center p-3 xs:p-4 border-2 rounded-lg cursor-pointer hover:border-primary-500 transition-colors ${
-                  formData.paymentMethod === 'cash' ? 'border-primary-500 bg-primary-50' : 'border-secondary-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="cash"
-                    checked={formData.paymentMethod === 'cash'}
-                    onChange={handleChange}
-                    className="w-4 h-4 mt-0.5 xs:mt-0 text-primary-600 focus:ring-primary-500 flex-shrink-0"
-                  />
-                  <div className="ml-2.5 xs:ml-3">
-                    <p className="font-medium text-sm xs:text-base">Cash on Delivery</p>
-                    <p className="text-xs xs:text-sm text-secondary-600 mt-0.5">Pay with cash when your order arrives</p>
+                  <div>
+                    <label className="block text-forest-200/60 text-xs mb-1">Phone *</label>
+                    <div className="relative">
+                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                      <input type="tel" value={form.phone} onChange={set('phone')} className={`${fieldCls('phone')} pl-10`} />
+                    </div>
+                    {errors.phone && <p className="text-red-400 text-xs mt-1">{errors.phone}</p>}
                   </div>
-                </label>
-
-                <label className={`flex items-start xs:items-center p-3 xs:p-4 border-2 rounded-lg cursor-pointer hover:border-primary-500 transition-colors ${
-                  formData.paymentMethod === 'card' ? 'border-primary-500 bg-primary-50' : 'border-secondary-300'
-                }`}>
-                  <input
-                    type="radio"
-                    name="paymentMethod"
-                    value="card"
-                    checked={formData.paymentMethod === 'card'}
-                    onChange={handleChange}
-                    className="w-4 h-4 mt-0.5 xs:mt-0 text-primary-600 focus:ring-primary-500 flex-shrink-0"
-                  />
-                  <div className="ml-2.5 xs:ml-3">
-                    <p className="font-medium text-sm xs:text-base">Card on Delivery</p>
-                    <p className="text-xs xs:text-sm text-secondary-600 mt-0.5">Pay with card when your order arrives</p>
-                  </div>
-                </label>
+                </div>
               </div>
-            </Card>
+            </div>
+
+            {/* Delivery address */}
+            <div className="glass rounded-2xl p-5">
+              <p className="text-white font-semibold mb-4">Delivery Address</p>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-forest-200/60 text-xs mb-1">Street Address *</label>
+                  <div className="relative">
+                    <MapPin className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+                    <input type="text" value={form.address} onChange={set('address')} className={`${fieldCls('address')} pl-10`} />
+                  </div>
+                  {errors.address && <p className="text-red-400 text-xs mt-1">{errors.address}</p>}
+                </div>
+                <div>
+                  <label className="block text-forest-200/60 text-xs mb-1">Apt / Unit (optional)</label>
+                  <input type="text" value={form.apartmentUnit} onChange={set('apartmentUnit')} className={fieldCls('apartmentUnit')} />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="block text-forest-200/60 text-xs mb-1">City *</label>
+                    <input type="text" value={form.city} onChange={set('city')} className={fieldCls('city')} />
+                    {errors.city && <p className="text-red-400 text-xs mt-1">{errors.city}</p>}
+                  </div>
+                  <div>
+                    <label className="block text-forest-200/60 text-xs mb-1">ZIP Code</label>
+                    <input type="text" value={form.zipCode} onChange={set('zipCode')} className={fieldCls('zipCode')} />
+                  </div>
+                </div>
+                <div>
+                  <label className="block text-forest-200/60 text-xs mb-1">Delivery Instructions</label>
+                  <textarea value={form.deliveryInstructions} onChange={set('deliveryInstructions')} rows={2}
+                    placeholder="Leave at door, ring bell, etc."
+                    className="w-full input-glass py-2.5 text-sm resize-none" />
+                </div>
+              </div>
+            </div>
+
+            {/* Payment */}
+            <div className="glass rounded-2xl p-5">
+              <p className="text-white font-semibold mb-4">Payment Method</p>
+              <div className="space-y-2">
+                {[
+                  { id:'cash', label:'Cash on Delivery', icon:Banknote, desc:'Pay when your order arrives' },
+                  { id:'card', label:'Card on Delivery', icon:CreditCard, desc:'Pay by card when delivered' },
+                ].map(({id, label, icon:Icon, desc}) => (
+                  <label key={id}
+                    className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all border
+                      ${form.paymentMethod===id ? 'glass-green border-forest-500/40' : 'glass border-transparent hover:glass-green'}`}>
+                    <input type="radio" name="paymentMethod" value={id} checked={form.paymentMethod===id}
+                      onChange={set('paymentMethod')} className="hidden" />
+                    <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
+                      ${form.paymentMethod===id ? 'btn-glow-green' : 'glass'}`}>
+                      <Icon className={`w-5 h-5 ${form.paymentMethod===id ? 'text-white' : 'text-forest-300'}`} />
+                    </div>
+                    <div>
+                      <p className="text-white font-medium text-sm">{label}</p>
+                      <p className="text-forest-200/50 text-xs">{desc}</p>
+                    </div>
+                    {form.paymentMethod===id && (
+                      <div className="ml-auto w-5 h-5 btn-glow-green rounded-full flex items-center justify-center flex-shrink-0">
+                        <div className="w-2 h-2 bg-white rounded-full" />
+                      </div>
+                    )}
+                  </label>
+                ))}
+              </div>
+            </div>
           </div>
 
-          {/* Order Summary - Desktop only */}
-          <div className="lg:col-span-1 hidden lg:block">
-            <Card className="sticky top-24">
-              <h3 className="text-xl font-semibold mb-4">Order Summary</h3>
-
-              {/* Items */}
-              <div className="mb-4 space-y-2 max-h-48 overflow-y-auto scrollbar-hide">
-                {cartItems.map((item) => (
-                  <div key={item.id} className="flex justify-between text-sm">
-                    <span className="text-secondary-700 truncate mr-2">
-                      {item.quantity}x {item.name}
-                    </span>
-                    <span className="font-medium whitespace-nowrap">
-                      ₱{(item.price * item.quantity).toFixed(2)}
-                    </span>
+          {/* Right: summary */}
+          <div className="lg:sticky lg:top-24 space-y-4 self-start">
+            <div className="glass rounded-2xl p-5">
+              <p className="text-white font-semibold mb-3">Order Summary</p>
+              <div className="space-y-2 mb-4">
+                {cartItems.map(item => (
+                  <div key={item.id} className="flex justify-between text-xs">
+                    <span className="text-forest-200/70 truncate flex-1">{item.quantity}× {item.name}</span>
+                    <span className="text-forest-100 ml-2">₱{(item.price*item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
-
-              <div className="border-t border-secondary-200 pt-4 space-y-3 mb-4">
-                <div className="flex justify-between text-secondary-700">
-                  <span>Subtotal</span>
-                  <span>₱{subtotal.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-secondary-700">
-                  <span>Delivery Fee</span>
-                  <span>₱{deliveryFee.toFixed(2)}</span>
-                </div>
-                <div className="flex justify-between text-secondary-700">
-                  <span>Tax</span>
-                  <span>₱{tax.toFixed(2)}</span>
-                </div>
-                <div className="border-t border-secondary-200 pt-3">
-                  <div className="flex justify-between text-lg font-bold">
-                    <span>Total</span>
-                    <span className="text-primary-600">₱{total.toFixed(2)}</span>
+              <div className="border-t border-white/8 pt-3 space-y-2">
+                {[
+                  { label:'Subtotal', val:`₱${subtotal.toFixed(2)}` },
+                  { label:'Delivery', val:`₱${deliveryFee.toFixed(2)}`, icon:Truck },
+                  { label:'Tax (12%)', val:`₱${tax.toFixed(2)}` },
+                ].map(({label,val,icon:Icon}) => (
+                  <div key={label} className="flex justify-between text-sm">
+                    <span className="text-forest-200/60 flex items-center gap-1.5">{Icon && <Icon className="w-3.5 h-3.5" />}{label}</span>
+                    <span className="text-forest-100">{val}</span>
                   </div>
+                ))}
+                <div className="flex justify-between items-center pt-2 border-t border-white/8">
+                  <span className="text-white font-bold">Total</span>
+                  <span className="text-ember-400 font-heading font-bold text-xl">₱{total.toFixed(2)}</span>
                 </div>
               </div>
+            </div>
 
-              <Button
-                type="submit"
-                size="lg"
-                className="w-full"
-                disabled={isSubmitting}
-              >
-                {isSubmitting ? 'Placing Order...' : 'Place Order'}
-              </Button>
-            </Card>
+            <button type="submit" disabled={submitting}
+              className={`w-full py-4 rounded-2xl font-heading font-bold text-base flex items-center justify-center gap-2 transition-all
+                ${submitting ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+              {submitting
+                ? <><div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Placing Order…</>
+                : <>Place Order <ChevronRight className="w-5 h-5" /></>}
+            </button>
           </div>
         </div>
       </form>
-
-      {/* Mobile Fixed Bottom Bar - Order Summary & Place Order */}
-      <div className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-secondary-200 shadow-lg z-20">
-        <div className="px-4 py-3 xs:py-4">
-          {/* Summary rows */}
-          <div className="space-y-1 xs:space-y-1.5 mb-3">
-            <div className="flex justify-between text-xs xs:text-sm text-secondary-700">
-              <span>Subtotal</span>
-              <span>₱{subtotal.toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-xs xs:text-sm text-secondary-700">
-              <span>Delivery + Tax</span>
-              <span>₱{(deliveryFee + tax).toFixed(2)}</span>
-            </div>
-            <div className="flex justify-between text-sm xs:text-base font-bold pt-1 xs:pt-1.5 border-t border-secondary-200">
-              <span>Total</span>
-              <span className="text-primary-600">₱{total.toFixed(2)}</span>
-            </div>
-          </div>
-
-          {/* Place Order button */}
-          <Button
-            type="submit"
-            size="lg"
-            className="w-full text-sm xs:text-base h-11 xs:h-12"
-            disabled={isSubmitting}
-            onClick={handleSubmit}
-          >
-            {isSubmitting ? 'Placing Order...' : 'Place Order'}
-          </Button>
-        </div>
-      </div>
-      </div>
-
-      {/* Payment Modal */}
-      <Modal isOpen={showPaymentModal} onClose={handlePaymentCancel}>
-        <div className="p-6">
-          <h2 className="text-2xl font-bold mb-6">Complete Payment</h2>
-          <PaymentForm
-            amount={total}
-            onSuccess={handlePaymentSuccess}
-            onCancel={handlePaymentCancel}
-          />
-        </div>
-      </Modal>
     </div>
   );
 }
