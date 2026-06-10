@@ -4,7 +4,7 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
-  FileText, Settings, Search, Bell, ShoppingCart, Menu,
+  Settings, Search, Bell, ShoppingCart, Menu,
   ChevronLeft, Wallet, CreditCard, MapPin, Plus, Minus, X,
   Crown, Utensils, Star, Zap
 } from 'lucide-react';
@@ -15,7 +15,6 @@ const NAV = [
   { key: 'favorite',     label: 'Favorites',    icon: Heart,           path: '/favorites' },
   { key: 'message',      label: 'Messages',     icon: MessageCircle,   path: '/messages' },
   { key: 'order-history',label: 'Orders',       icon: Clock,           path: '/orders' },
-  { key: 'bills',        label: 'Bills',        icon: FileText,        path: '/bills' },
   { key: 'setting',      label: 'Settings',     icon: Settings,        path: '/settings' },
 ];
 
@@ -36,7 +35,6 @@ export default function CustomerLayout() {
     if (p === '/favorites') return 'favorite';
     if (p === '/messages') return 'message';
     if (p === '/orders') return 'order-history';
-    if (p === '/bills') return 'bills';
     if (p === '/settings') return 'setting';
     return 'dashboard';
   };
@@ -51,7 +49,7 @@ export default function CustomerLayout() {
     qty > 0 ? updateQuantity(id, qty) : removeFromCart(id);
   };
 
-  const rightPanelPages = ['favorite','message','order-history','bills','setting','upgrade'];
+  const rightPanelPages = ['favorite','message','order-history','setting','upgrade'];
   const showVideoPanel = rightPanelPages.includes(active);
 
   return (

@@ -1,264 +1,120 @@
 import { useState } from 'react';
-import { Bell, Lock, Globe, Palette, Moon, Sun, Shield, LogOut, HelpCircle } from 'lucide-react';
+import { Bell, Lock, Globe, Moon, Shield, LogOut, HelpCircle, ChevronRight } from 'lucide-react';
 import { useAuth } from '../context/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
+
+function Toggle({ value, onChange }) {
+  return (
+    <button onClick={onChange}
+      className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors flex-shrink-0
+        ${value ? 'btn-glow-orange' : 'glass'}`}>
+      <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform
+        ${value ? 'translate-x-6' : 'translate-x-1'}`} />
+    </button>
+  );
+}
+
+function Section({ title, desc, icon: Icon, iconColor, children }) {
+  return (
+    <div className="glass rounded-2xl p-5">
+      <div className="flex items-center gap-3 mb-5">
+        <div className={`w-9 h-9 ${iconColor} rounded-xl flex items-center justify-center flex-shrink-0`}>
+          <Icon className="w-4 h-4 text-white" />
+        </div>
+        <div>
+          <p className="text-white font-semibold">{title}</p>
+          <p className="text-forest-200/50 text-xs">{desc}</p>
+        </div>
+      </div>
+      <div className="space-y-4">{children}</div>
+    </div>
+  );
+}
+
+function ToggleRow({ label, desc, value, onChange }) {
+  return (
+    <div className="flex items-center justify-between gap-4">
+      <div>
+        <p className="text-forest-100 text-sm font-medium">{label}</p>
+        {desc && <p className="text-forest-200/50 text-xs mt-0.5">{desc}</p>}
+      </div>
+      <Toggle value={value} onChange={onChange} />
+    </div>
+  );
+}
 
 export default function Settings() {
   const { logout } = useAuth();
-  const navigate = useNavigate();
-  const [settings, setSettings] = useState({
-    notifications: {
-      orderUpdates: true,
-      promotions: true,
-      newRestaurants: false,
-      newsletter: false,
-    },
-    privacy: {
-      shareData: false,
-      saveHistory: true,
-    },
-    appearance: {
-      theme: 'light',
-      language: 'en',
-    }
+  const navigate   = useNavigate();
+
+  const [s, setS] = useState({
+    notifications: { orderUpdates:true, promotions:true, newRestaurants:false, newsletter:false },
+    privacy:       { shareData:false, saveHistory:true },
+    appearance:    { darkMode:true, language:'en' },
   });
 
-  const toggleSetting = (category, key) => {
-    setSettings(prev => ({
-      ...prev,
-      [category]: {
-        ...prev[category],
-        [key]: !prev[category][key]
-      }
-    }));
-  };
+  const toggle = (cat, key) => setS(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: !prev[cat][key] } }));
 
-  const handleLogout = () => {
-    logout();
-    navigate('/login');
-  };
+  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
-    <div className="min-h-screen bg-[#EBD5AB] p-8">
-      <div className="max-w-4xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900 mb-2">Settings</h1>
-          <p className="text-gray-600">Manage your app preferences and account settings</p>
+    <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
+      <h1 className="text-2xl font-heading font-bold text-white">Settings</h1>
+
+      {/* Notifications */}
+      <Section title="Notifications" desc="Manage your notification preferences" icon={Bell} iconColor="btn-glow-orange">
+        <ToggleRow label="Order Updates"    desc="Get notified about your order status"        value={s.notifications.orderUpdates}   onChange={() => toggle('notifications','orderUpdates')} />
+        <ToggleRow label="Promotions"       desc="Receive special offers and discounts"         value={s.notifications.promotions}     onChange={() => toggle('notifications','promotions')} />
+        <ToggleRow label="New Restaurants"  desc="Be notified when new restaurants join"        value={s.notifications.newRestaurants} onChange={() => toggle('notifications','newRestaurants')} />
+        <ToggleRow label="Newsletter"       desc="Weekly newsletter with food tips"             value={s.notifications.newsletter}     onChange={() => toggle('notifications','newsletter')} />
+      </Section>
+
+      {/* Privacy */}
+      <Section title="Privacy & Security" desc="Control your data and security" icon={Shield} iconColor="btn-glow-green">
+        <ToggleRow label="Share Usage Data"   desc="Help us improve by sharing anonymous data" value={s.privacy.shareData}   onChange={() => toggle('privacy','shareData')} />
+        <ToggleRow label="Save Order History" desc="Keep records of your past orders"          value={s.privacy.saveHistory} onChange={() => toggle('privacy','saveHistory')} />
+      </Section>
+
+      {/* Appearance */}
+      <Section title="Appearance" desc="Customize how the app looks" icon={Moon} iconColor="glass">
+        <ToggleRow label="Dark Mode" desc="Use the dark theme" value={s.appearance.darkMode} onChange={() => toggle('appearance','darkMode')} />
+        <div className="flex items-center justify-between">
+          <div>
+            <p className="text-forest-100 text-sm font-medium">Language</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">Select your preferred language</p>
+          </div>
+          <select value={s.appearance.language} onChange={e => setS(prev => ({ ...prev, appearance:{ ...prev.appearance, language:e.target.value } }))}
+            className="input-glass py-1.5 px-3 text-sm">
+            <option value="en" style={{background:'#0d2b1a'}}>English</option>
+            <option value="fil" style={{background:'#0d2b1a'}}>Filipino</option>
+          </select>
         </div>
+      </Section>
 
-        <div className="space-y-6">
-          {/* Notifications */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-[#E67E22] to-[#d4721d] rounded-xl">
-                <Bell className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Notifications</h2>
-                <p className="text-sm text-gray-600">Manage your notification preferences</p>
-              </div>
+      {/* Account actions */}
+      <div className="glass rounded-2xl p-5 space-y-2">
+        <p className="text-white font-semibold mb-3">Account</p>
+        {[
+          { label:'Change Password', icon:Lock,        action:() => navigate('/forgot-password') },
+          { label:'Help & Support',  icon:HelpCircle,  action:() => navigate('/customer-service') },
+        ].map(({ label, icon:Icon, action }) => (
+          <button key={label} onClick={action}
+            className="w-full flex items-center justify-between px-4 py-3 glass rounded-xl hover:glass-green transition-all group">
+            <div className="flex items-center gap-3">
+              <Icon className="w-4 h-4 text-forest-300/60 group-hover:text-forest-200 transition-colors" />
+              <span className="text-forest-100/80 text-sm font-medium group-hover:text-white transition-colors">{label}</span>
             </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Order Updates</p>
-                  <p className="text-sm text-gray-600">Get notified about your order status</p>
-                </div>
-                <button
-                  onClick={() => toggleSetting('notifications', 'orderUpdates')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.notifications.orderUpdates ? 'bg-[#E67E22]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.notifications.orderUpdates ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Promotions</p>
-                  <p className="text-sm text-gray-600">Receive special offers and discounts</p>
-                </div>
-                <button
-                  onClick={() => toggleSetting('notifications', 'promotions')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.notifications.promotions ? 'bg-[#E67E22]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.notifications.promotions ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">New Restaurants</p>
-                  <p className="text-sm text-gray-600">Be notified when new restaurants join</p>
-                </div>
-                <button
-                  onClick={() => toggleSetting('notifications', 'newRestaurants')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.notifications.newRestaurants ? 'bg-[#E67E22]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.notifications.newRestaurants ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Newsletter</p>
-                  <p className="text-sm text-gray-600">Weekly newsletter with food tips</p>
-                </div>
-                <button
-                  onClick={() => toggleSetting('notifications', 'newsletter')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.notifications.newsletter ? 'bg-[#E67E22]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.notifications.newsletter ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Privacy */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-[#8BAE66] to-[#628141] rounded-xl">
-                <Shield className="w-5 h-5 text-blue-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Privacy & Security</h2>
-                <p className="text-sm text-gray-600">Control your data and security</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Share Usage Data</p>
-                  <p className="text-sm text-gray-600">Help us improve by sharing anonymous data</p>
-                </div>
-                <button
-                  onClick={() => toggleSetting('privacy', 'shareData')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.privacy.shareData ? 'bg-[#E67E22]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.privacy.shareData ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
-              <div className="flex items-center justify-between">
-                <div>
-                  <p className="font-medium text-gray-900">Save Order History</p>
-                  <p className="text-sm text-gray-600">Keep records of your past orders</p>
-                </div>
-                <button
-                  onClick={() => toggleSetting('privacy', 'saveHistory')}
-                  className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${
-                    settings.privacy.saveHistory ? 'bg-[#E67E22]' : 'bg-gray-300'
-                  }`}
-                >
-                  <span className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${
-                    settings.privacy.saveHistory ? 'translate-x-6' : 'translate-x-1'
-                  }`} />
-                </button>
-              </div>
-
-              <button className="w-full mt-4 flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors">
-                <Lock className="w-5 h-5" />
-                <span className="font-medium">Change Password</span>
-              </button>
-            </div>
-          </div>
-
-          {/* Support & Help */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-[#E67E22] to-[#d4721d] rounded-xl">
-                <HelpCircle className="w-5 h-5 text-white" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Support & Help</h2>
-                <p className="text-sm text-gray-600">Get help and find answers</p>
-              </div>
-            </div>
-
-            <div className="space-y-3">
-              <Link
-                to="/customer-service"
-                className="w-full flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 hover:border-[#E67E22] transition-colors"
-              >
-                <HelpCircle className="w-5 h-5" />
-                <span className="font-medium">Help Center & FAQs</span>
-              </Link>
-            </div>
-          </div>
-
-          {/* Appearance */}
-          <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-gradient-to-br from-[#8BAE66] to-[#628141] rounded-xl">
-                <Palette className="w-5 h-5 text-purple-600" />
-              </div>
-              <div>
-                <h2 className="text-xl font-bold text-gray-900">Appearance</h2>
-                <p className="text-sm text-gray-600">Customize how the app looks</p>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Theme</label>
-                <div className="grid grid-cols-2 gap-3">
-                  <button className="flex items-center gap-3 p-3 border-2 border-[#E67E22] rounded-xl bg-[#8BAE66]">
-                    <Sun className="w-5 h-5 text-white" />
-                    <span className="font-medium text-gray-900">Light</span>
-                  </button>
-                  <button className="flex items-center gap-3 p-3 border-2 border-gray-200 rounded-xl hover:border-gray-300">
-                    <Moon className="w-5 h-5 text-gray-600" />
-                    <span className="font-medium text-gray-700">Dark</span>
-                  </button>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">Language</label>
-                <button className="w-full flex items-center gap-2 px-4 py-3 border border-gray-300 rounded-xl text-gray-700 hover:bg-gray-50 transition-colors">
-                  <Globe className="w-5 h-5" />
-                  <span className="flex-1 text-left">English (US)</span>
-                  <span className="text-gray-400">▼</span>
-                </button>
-              </div>
-            </div>
-          </div>
-
-          {/* Danger Zone */}
-          <div className="bg-white rounded-2xl p-6 border border-red-200 shadow-sm">
-            <h2 className="text-xl font-bold text-red-600 mb-4">Danger Zone</h2>
-            <button
-              onClick={handleLogout}
-              className="w-full flex items-center justify-center gap-2 px-4 py-3 bg-red-500 text-white rounded-xl hover:bg-red-600 transition-colors font-medium"
-            >
-              <LogOut className="w-5 h-5" />
-              <span>Logout</span>
-            </button>
-          </div>
-        </div>
+            <ChevronRight className="w-4 h-4 text-forest-200/30 group-hover:text-forest-200 transition-colors" />
+          </button>
+        ))}
+        <button onClick={handleLogout}
+          className="w-full flex items-center gap-3 px-4 py-3 glass rounded-xl hover:glass-orange transition-all group mt-2">
+          <LogOut className="w-4 h-4 text-red-400" />
+          <span className="text-red-400 text-sm font-medium">Sign Out</span>
+        </button>
       </div>
+
+      <p className="text-center text-forest-200/30 text-xs pb-2">KinakanGo v1.0.0 · Bongao, Tawi-Tawi 🇵🇭</p>
     </div>
   );
 }

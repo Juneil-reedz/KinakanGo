@@ -1,334 +1,153 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Check, Star, Crown, Zap, Store, Bike } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { Check, Star, Crown, Zap, ChevronRight, X } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+
+const PLANS = [
+  {
+    id:'free', name:'Basic', price:0, period:'Forever',
+    icon:Star, iconClass:'glass',
+    color:'from-forest-700 to-forest-800',
+    features:['Order food from restaurants','Track your orders','Save favorite restaurants','Basic customer support','Order history'],
+    limitations:['Cannot become restaurant owner','Cannot become rider'],
+  },
+  {
+    id:'premium', name:'Premium', price:299, period:'month',
+    icon:Crown, iconClass:'btn-glow-orange',
+    color:'from-ember-600 to-ember-700',
+    popular:true,
+    features:['All Basic features','Priority customer support','Exclusive discounts & promos','Free delivery on orders above ₱300','Early access to new restaurants','Apply to become Restaurant Owner','Apply to become Rider','Manage multiple roles','Advanced analytics'],
+    limitations:[],
+  },
+  {
+    id:'business', name:'Business Pro', price:999, period:'month',
+    icon:Zap, iconClass:'btn-glow-green',
+    color:'from-forest-500 to-forest-600',
+    features:['All Premium features','24/7 Priority support','Dedicated account manager','Multiple restaurant management','Advanced rider tools','Custom reporting & analytics','API access','Marketing tools','Commission discounts'],
+    limitations:[],
+  },
+];
+
+const FAQS = [
+  { q:'Can I cancel anytime?', a:'Yes, cancel anytime. You keep access until the end of your billing period.' },
+  { q:'Can I switch plans?', a:'Yes, upgrade or downgrade anytime. Changes take effect on your next billing cycle.' },
+  { q:'Is my payment secure?', a:'Yes, all payments are processed through secure encrypted channels.' },
+  { q:'Do I need a plan to order food?', a:'No! The Basic (free) plan lets you order food normally. Premium unlocks extra perks.' },
+];
 
 export default function AccountUpgrade() {
   const navigate = useNavigate();
   const { showSuccess } = useNotification();
-  const [selectedPlan, setSelectedPlan] = useState(null);
-
-  const plans = [
-    {
-      id: 'free',
-      name: 'Basic',
-      price: 0,
-      period: 'Forever',
-      icon: <Star className="w-8 h-8" />,
-      color: 'from-gray-400 to-gray-600',
-      features: [
-        'Order food from restaurants',
-        'Track your orders',
-        'Save favorite restaurants',
-        'Basic customer support',
-        'Order history',
-      ],
-      limitations: [
-        'Cannot become restaurant owner',
-        'Cannot become rider',
-      ]
-    },
-    {
-      id: 'premium',
-      name: 'Premium',
-      price: 299,
-      period: 'month',
-      icon: <Crown className="w-8 h-8" />,
-      color: 'from-orange-400 to-orange-600',
-      popular: true,
-      features: [
-        'All Basic features',
-        'Priority customer support',
-        'Exclusive discounts & promos',
-        'Free delivery on orders above ₱300',
-        'Early access to new restaurants',
-        'Apply to become Restaurant Owner',
-        'Apply to become Rider',
-        'Manage multiple roles in one account',
-        'Advanced analytics dashboard',
-      ],
-      limitations: []
-    },
-    {
-      id: 'business',
-      name: 'Business Pro',
-      price: 999,
-      period: 'month',
-      icon: <Zap className="w-8 h-8" />,
-      color: 'from-purple-400 to-purple-600',
-      features: [
-        'All Premium features',
-        '24/7 Priority support',
-        'Dedicated account manager',
-        'Multiple restaurant management',
-        'Advanced rider tools',
-        'Custom reporting & analytics',
-        'API access for integrations',
-        'Marketing tools & promotions',
-        'Commission rate discounts',
-      ],
-      limitations: []
-    }
-  ];
-
-  const handleSelectPlan = (planId) => {
-    setSelectedPlan(planId);
-  };
+  const [selected, setSelected] = useState(null);
+  const [openFaq, setOpenFaq]   = useState(null);
 
   const handleSubscribe = () => {
-    if (!selectedPlan) {
-      return;
-    }
-
-    const plan = plans.find(p => p.id === selectedPlan);
-
-    if (plan.id === 'free') {
-      showSuccess('You are already on the Basic plan!');
-      return;
-    }
-
-    showSuccess(`Successfully subscribed to ${plan.name} plan!`);
-    // Navigate to profile or payment page
-    setTimeout(() => {
-      navigate('/profile');
-    }, 1500);
+    if (!selected) return;
+    const plan = PLANS.find(p => p.id === selected);
+    if (plan.id === 'free') { showSuccess('You are on the Basic plan!'); return; }
+    showSuccess(`Subscribed to ${plan.name}! 🎉`);
+    setTimeout(() => navigate('/profile'), 1200);
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-primary-50 via-white to-orange-50 py-12">
-      <div className="container-custom">
-        {/* Header */}
-        <div className="text-center mb-12">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-primary-500 to-orange-500 rounded-full mb-4">
-            <Crown className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-heading font-bold mb-3">Upgrade Your Account</h1>
-          <p className="text-lg text-secondary-600 max-w-2xl mx-auto">
-            Choose a plan that fits your needs. Unlock premium features and grow your business with Kinakan Go.
-          </p>
+    <div className="space-y-6 pb-20 lg:pb-0 animate-fade-up">
+      {/* Header */}
+      <div className="text-center py-4">
+        <div className="w-16 h-16 btn-glow-orange rounded-3xl flex items-center justify-center mx-auto mb-4 animate-breathe">
+          <Crown className="w-8 h-8 text-white" />
         </div>
+        <h1 className="text-2xl font-heading font-bold text-white mb-2">Upgrade Your Account</h1>
+        <p className="text-forest-200/60 text-sm max-w-md mx-auto">
+          Choose a plan that fits your needs. Unlock premium features and grow with KinakanGo.
+        </p>
+      </div>
 
-        {/* Plans */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-12">
-          {plans.map((plan) => (
-            <div
-              key={plan.id}
-              className={`relative bg-white rounded-3xl shadow-lg overflow-hidden transition-all duration-300 ${
-                selectedPlan === plan.id
-                  ? 'ring-4 ring-primary-500 scale-105'
-                  : 'hover:shadow-xl hover:scale-102'
-              }`}
-            >
+      {/* Plans grid */}
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+        {PLANS.map(plan => {
+          const Icon = plan.icon;
+          const isSel = selected === plan.id;
+          return (
+            <div key={plan.id} onClick={() => setSelected(plan.id)}
+              className={`relative glass card-3d rounded-3xl overflow-hidden cursor-pointer transition-all duration-300
+                ${isSel ? 'ring-2 ring-ember-500 scale-[1.02] shadow-[0_0_30px_rgba(230,126,34,.3)]' : 'hover:glass-green'}`}>
               {plan.popular && (
-                <div className="absolute top-0 right-0 bg-gradient-to-r from-orange-500 to-red-500 text-white px-4 py-1 text-sm font-bold rounded-bl-lg">
-                  MOST POPULAR
+                <div className="absolute top-3 right-3 btn-glow-orange text-white text-xs px-2.5 py-1 rounded-full font-bold">
+                  POPULAR
                 </div>
               )}
 
-              <div className={`bg-gradient-to-br ${plan.color} p-8 text-white`}>
-                <div className="flex items-center justify-between mb-4">
-                  <div className="bg-white/20 p-3 rounded-xl backdrop-blur-sm">
-                    {plan.icon}
-                  </div>
+              {/* Plan header */}
+              <div className={`bg-gradient-to-br ${plan.color} p-6`}>
+                <div className={`w-12 h-12 ${plan.iconClass} rounded-2xl flex items-center justify-center mb-3`}>
+                  <Icon className="w-6 h-6 text-white" />
                 </div>
-                <h3 className="text-2xl font-bold mb-2">{plan.name}</h3>
-                <div className="flex items-end gap-2 mb-1">
-                  <span className="text-5xl font-bold">₱{plan.price}</span>
-                  {plan.price > 0 && <span className="text-xl mb-2">/{plan.period}</span>}
+                <p className="text-white font-heading font-bold text-xl">{plan.name}</p>
+                <div className="flex items-end gap-1 mt-1">
+                  <span className="text-white font-heading font-bold text-4xl">₱{plan.price}</span>
+                  {plan.price > 0 && <span className="text-white/70 text-sm mb-1">/{plan.period}</span>}
                 </div>
-                {plan.price === 0 && (
-                  <p className="text-white/80 text-sm">Free {plan.period}</p>
-                )}
+                {plan.price === 0 && <p className="text-white/70 text-xs mt-0.5">Free {plan.period}</p>}
               </div>
 
-              <div className="p-8">
-                <ul className="space-y-4 mb-8">
-                  {plan.features.map((feature, index) => (
-                    <li key={index} className="flex items-start gap-3">
-                      <div className="flex-shrink-0 w-6 h-6 bg-green-100 rounded-full flex items-center justify-center mt-0.5">
-                        <Check className="w-4 h-4 text-green-600" />
+              {/* Features */}
+              <div className="p-5">
+                <ul className="space-y-2.5 mb-4">
+                  {plan.features.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm">
+                      <div className="w-5 h-5 btn-glow-green rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <Check className="w-3 h-3 text-white" />
                       </div>
-                      <span className="text-secondary-700">{feature}</span>
+                      <span className="text-forest-100/80">{f}</span>
                     </li>
                   ))}
-                  {plan.limitations.map((limitation, index) => (
-                    <li key={index} className="flex items-start gap-3 opacity-50">
-                      <div className="flex-shrink-0 w-6 h-6 bg-red-100 rounded-full flex items-center justify-center mt-0.5">
-                        <span className="text-red-600 text-sm">✕</span>
+                  {plan.limitations.map((f, i) => (
+                    <li key={i} className="flex items-start gap-2.5 text-sm opacity-40">
+                      <div className="w-5 h-5 glass rounded-full flex items-center justify-center flex-shrink-0 mt-0.5">
+                        <X className="w-3 h-3 text-forest-200" />
                       </div>
-                      <span className="text-secondary-600 line-through">{limitation}</span>
+                      <span className="text-forest-200/60">{f}</span>
                     </li>
                   ))}
                 </ul>
 
-                <Button
-                  onClick={() => handleSelectPlan(plan.id)}
-                  variant={selectedPlan === plan.id ? 'primary' : 'outline'}
-                  className="w-full"
-                  size="lg"
-                >
-                  {selectedPlan === plan.id ? 'Selected' : 'Select Plan'}
-                </Button>
+                <div className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all
+                  ${isSel ? 'btn-glow-orange text-white' : 'glass text-forest-200/70'}`}>
+                  {isSel ? '✓ Selected' : 'Select Plan'}
+                </div>
               </div>
             </div>
+          );
+        })}
+      </div>
+
+      {/* CTA */}
+      {selected && (
+        <button onClick={handleSubscribe}
+          className="w-full py-4 btn-glow-orange text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2 animate-fade-up">
+          {selected === 'free' ? 'Continue with Basic' : `Subscribe to ${PLANS.find(p=>p.id===selected)?.name}`}
+          <ChevronRight className="w-5 h-5" />
+        </button>
+      )}
+
+      {/* FAQ */}
+      <div className="glass rounded-2xl p-5">
+        <p className="text-white font-semibold mb-4">Frequently Asked Questions</p>
+        <div className="space-y-2">
+          {FAQS.map((faq, i) => (
+            <div key={i} className="glass rounded-xl overflow-hidden">
+              <button onClick={() => setOpenFaq(openFaq === i ? null : i)}
+                className="w-full px-4 py-3 flex items-center justify-between text-left">
+                <span className="text-forest-100 text-sm font-medium">{faq.q}</span>
+                <ChevronRight className={`w-4 h-4 text-forest-200/50 flex-shrink-0 transition-transform ${openFaq===i ? 'rotate-90' : ''}`} />
+              </button>
+              {openFaq === i && (
+                <div className="px-4 pb-3">
+                  <p className="text-forest-200/60 text-sm">{faq.a}</p>
+                </div>
+              )}
+            </div>
           ))}
-        </div>
-
-        {/* Subscribe Button */}
-        {selectedPlan && selectedPlan !== 'free' && (
-          <div className="max-w-2xl mx-auto">
-            <Card className="bg-gradient-to-r from-primary-500 to-orange-500 text-white">
-              <div className="text-center py-6">
-                <h3 className="text-2xl font-bold mb-3">
-                  Ready to upgrade to {plans.find(p => p.id === selectedPlan)?.name}?
-                </h3>
-                <p className="text-white/90 mb-6">
-                  You'll get instant access to all premium features and can apply to become a restaurant owner or rider.
-                </p>
-                <Button
-                  onClick={handleSubscribe}
-                  variant="outline"
-                  size="lg"
-                  className="bg-white text-primary-600 hover:bg-gray-100 border-white"
-                >
-                  Subscribe Now - ₱{plans.find(p => p.id === selectedPlan)?.price}/{plans.find(p => p.id === selectedPlan)?.period}
-                </Button>
-              </div>
-            </Card>
-          </div>
-        )}
-
-        {/* Business Opportunities Section */}
-        <div className="mt-16">
-          <h2 className="text-3xl font-bold text-center mb-8">Business Opportunities</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8 max-w-5xl mx-auto">
-            {/* Restaurant Owner */}
-            <Card className="bg-gradient-to-br from-orange-50 to-white border-2 border-orange-200">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mb-4">
-                  <Store className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Become a Restaurant Owner</h3>
-                <p className="text-secondary-600 mb-6">
-                  List your restaurant on Kinakan Go and reach thousands of hungry customers. Manage orders, menu, and analytics from one dashboard.
-                </p>
-                <div className="bg-white rounded-xl p-4 mb-6 text-left">
-                  <h4 className="font-semibold mb-3">Requirements:</h4>
-                  <ul className="space-y-2 text-sm text-secondary-700">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Premium or Business Pro subscription
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Valid BIR Certificate of Registration
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Business Permit
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Food Safety Permit
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Restaurant Photos & Menu
-                    </li>
-                  </ul>
-                </div>
-                <Button
-                  onClick={() => navigate('/apply/restaurant-owner')}
-                  variant="primary"
-                  className="w-full bg-gradient-to-r from-orange-500 to-orange-600"
-                  size="lg"
-                  disabled={!selectedPlan || selectedPlan === 'free'}
-                >
-                  {!selectedPlan || selectedPlan === 'free' ? 'Requires Premium Plan' : 'Apply Now'}
-                </Button>
-              </div>
-            </Card>
-
-            {/* Rider */}
-            <Card className="bg-gradient-to-br from-blue-50 to-white border-2 border-blue-200">
-              <div className="text-center">
-                <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-blue-400 to-blue-600 rounded-full mb-4">
-                  <Bike className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-2xl font-bold mb-3">Become a Rider</h3>
-                <p className="text-secondary-600 mb-6">
-                  Earn money on your own schedule. Deliver food to customers and get paid for every delivery. Flexible hours, great earnings.
-                </p>
-                <div className="bg-white rounded-xl p-4 mb-6 text-left">
-                  <h4 className="font-semibold mb-3">Requirements:</h4>
-                  <ul className="space-y-2 text-sm text-secondary-700">
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Premium or Business Pro subscription
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Valid Driver's License
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Vehicle Registration (OR/CR)
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      NBI or Police Clearance
-                    </li>
-                    <li className="flex items-center gap-2">
-                      <Check className="w-4 h-4 text-green-600" />
-                      Valid ID & Proof of Address
-                    </li>
-                  </ul>
-                </div>
-                <Button
-                  onClick={() => navigate('/apply/rider')}
-                  variant="primary"
-                  className="w-full bg-gradient-to-r from-blue-500 to-blue-600"
-                  size="lg"
-                  disabled={!selectedPlan || selectedPlan === 'free'}
-                >
-                  {!selectedPlan || selectedPlan === 'free' ? 'Requires Premium Plan' : 'Apply Now'}
-                </Button>
-              </div>
-            </Card>
-          </div>
-        </div>
-
-        {/* FAQ */}
-        <div className="mt-16 max-w-3xl mx-auto">
-          <h2 className="text-2xl font-bold text-center mb-8">Frequently Asked Questions</h2>
-          <div className="space-y-4">
-            <Card>
-              <h3 className="font-semibold mb-2">Can I cancel my subscription anytime?</h3>
-              <p className="text-secondary-600">
-                Yes, you can cancel your subscription at any time. You'll continue to have access to premium features until the end of your billing period.
-              </p>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">What happens if my application is rejected?</h3>
-              <p className="text-secondary-600">
-                If your application is rejected, you can reapply after addressing the issues mentioned in the rejection notice. Your subscription will remain active.
-              </p>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">Can I be both a restaurant owner and a rider?</h3>
-              <p className="text-secondary-600">
-                Yes! With a Premium or Business Pro subscription, you can have multiple roles and switch between them seamlessly in your account.
-              </p>
-            </Card>
-            <Card>
-              <h3 className="font-semibold mb-2">How long does application verification take?</h3>
-              <p className="text-secondary-600">
-                Application verification typically takes 2-5 business days. You'll receive email notifications about your application status.
-              </p>
-            </Card>
-          </div>
         </div>
       </div>
     </div>

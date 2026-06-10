@@ -29,7 +29,6 @@ import ForgotPassword from './pages/ForgotPassword';
 import Welcome from './pages/Welcome';
 import Favorites from './pages/Favorites';
 import Messages from './pages/Messages';
-import Bills from './pages/Bills';
 import Settings from './pages/Settings';
 import CustomerService from './pages/CustomerService';
 import AccountUpgrade from './pages/AccountUpgrade';
@@ -92,7 +91,6 @@ function App() {
                     <Route path="profile" element={<Profile />} />
                     <Route path="favorites" element={<Favorites />} />
                     <Route path="messages" element={<Messages />} />
-                    <Route path="bills" element={<Bills />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="customer-service" element={<CustomerService />} />
                     <Route path="upgrade" element={<AccountUpgrade />} />
