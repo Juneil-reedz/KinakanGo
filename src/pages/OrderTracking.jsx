@@ -3,15 +3,19 @@ import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import DeliveryMap3D from '../components/DeliveryMap3D';
 import { mockSocket, generateRoute, mockLocations } from '../services/mockSocket';
-import { MapPin, Clock, Phone, ChevronRight, Package } from 'lucide-react';
+import {
+  MapPin, Clock, Phone, ChevronRight, Package,
+  ClipboardList, ChefHat, PackageCheck, Bike, Navigation, CheckCircle2,
+  ArrowRight, Store
+} from 'lucide-react';
 
 const STATUSES = [
-  { id:'placed',     label:'Placed',   icon:'📝', desc:'Order received' },
-  { id:'preparing',  label:'Cooking',  icon:'👨‍🍳', desc:'Restaurant is preparing your food' },
-  { id:'ready',      label:'Ready',    icon:'✅', desc:'Food is ready for pickup' },
-  { id:'picked_up',  label:'Picked',   icon:'🏍️', desc:'Rider picked up your order' },
-  { id:'on_the_way', label:'On Way',   icon:'🚗', desc:'Delivery in progress' },
-  { id:'delivered',  label:'Done',     icon:'🎉', desc:'Order delivered!' },
+  { id:'placed',     label:'Placed',   icon:ClipboardList,  desc:'Order received by restaurant' },
+  { id:'preparing',  label:'Cooking',  icon:ChefHat,        desc:'Restaurant is preparing your food' },
+  { id:'ready',      label:'Ready',    icon:PackageCheck,   desc:'Food is ready for pickup' },
+  { id:'picked_up',  label:'Picked',   icon:Bike,           desc:'Rider picked up your order' },
+  { id:'on_the_way', label:'On Way',   icon:Navigation,     desc:'Delivery in progress' },
+  { id:'delivered',  label:'Delivered',icon:CheckCircle2,   desc:'Order successfully delivered' },
 ];
 
 const DEMO_ORDERS = [{
@@ -28,7 +32,7 @@ const DEMO_ORDERS = [{
 export default function OrderTracking() {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
-  const [orders, setOrders]         = useState(DEMO_ORDERS);
+  const [orders, setOrders]               = useState(DEMO_ORDERS);
   const [activeOrderId, setActiveOrderId] = useState(null);
 
   const getStatusIdx = (s) => STATUSES.findIndex(st => st.id === s);
@@ -36,15 +40,16 @@ export default function OrderTracking() {
   const simulateProgress = (orderId) => {
     const order = orders.find(o => o.id === orderId);
     if (!order || order.status === 'delivered') return;
-    const idx = getStatusIdx(order.status);
+    const idx  = getStatusIdx(order.status);
     if (idx >= STATUSES.length - 1) return;
     const next = STATUSES[idx + 1];
     setOrders(prev => prev.map(o => o.id === orderId
-      ? { ...o, status:next.id, statusText:next.label, driver: next.id==='picked_up' ? {name:'Maria Santos', phone:'+63 912 000 0001'} : o.driver }
+      ? { ...o, status:next.id, statusText:next.label,
+          driver: next.id==='picked_up' ? {name:'Maria Santos', phone:'+63 912 000 0001'} : o.driver }
       : o));
     addNotification(`Order #${orderId}: ${next.label} — ${next.desc}`, 'info');
     if (next.id === 'picked_up') startTracking(orderId);
-    if (next.id === 'delivered') setTimeout(() => addNotification('Order delivered! Enjoy your meal 🎉', 'success'), 500);
+    if (next.id === 'delivered') setTimeout(() => addNotification('Your order has been delivered. Enjoy your meal!', 'success'), 500);
   };
 
   const startTracking = (orderId) => {
@@ -52,7 +57,7 @@ export default function OrderTracking() {
     if (!order) return;
     const route = generateRoute(order.restaurantLocation, order.customerLocation, 20);
     setOrders(prev => prev.map(o => o.id === orderId
-      ? { ...o, route, riderLocation: route[0], estimatedTime:`${mockSocket.calculateETA(0, route.length)} min` }
+      ? { ...o, route, riderLocation:route[0], estimatedTime:`${mockSocket.calculateETA(0, route.length)} min` }
       : o));
     setActiveOrderId(orderId);
     mockSocket.connect(orderId);
@@ -63,8 +68,8 @@ export default function OrderTracking() {
         : o));
     });
     mockSocket.on('order_status', (data) => {
-      if (data.status==='delivered') {
-        addNotification('Order delivered! 🎉', 'success');
+      if (data.status === 'delivered') {
+        addNotification('Your order has been delivered!', 'success');
         setOrders(prev => prev.map(o => o.id===orderId ? {...o,status:'delivered',statusText:'Delivered',estimatedTime:null} : o));
         mockSocket.disconnect(); setActiveOrderId(null);
       } else { addNotification(data.message, 'info'); }
@@ -75,12 +80,16 @@ export default function OrderTracking() {
   useEffect(() => () => { mockSocket.disconnect(); }, []);
 
   if (orders.length === 0) return (
-    <div className="min-h-screen flex items-center justify-center px-4">
-      <div className="glass rounded-3xl p-10 max-w-sm text-center card-3d animate-fade-up">
-        <span className="text-5xl mb-4 block">📦</span>
+    <div className="min-h-[60vh] flex items-center justify-center px-4">
+      <div className="glass rounded-3xl p-12 max-w-sm w-full text-center card-3d animate-fade-up">
+        <div className="w-16 h-16 glass rounded-3xl flex items-center justify-center mx-auto mb-5">
+          <Package className="w-8 h-8 text-forest-300/60" />
+        </div>
         <p className="text-white font-bold text-lg mb-2">No active orders</p>
         <p className="text-forest-200/50 text-sm mb-6">Place an order to track it here.</p>
-        <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white px-8 py-3 rounded-xl font-bold">Order Now</button>
+        <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white px-8 py-3 rounded-xl font-bold">
+          Order Now
+        </button>
       </div>
     </div>
   );
@@ -94,51 +103,60 @@ export default function OrderTracking() {
         const isDone = order.status === 'delivered';
 
         return (
-          <div key={order.id} className="glass card-3d rounded-3xl overflow-hidden">
+          <div key={order.id} className="glass rounded-3xl overflow-hidden">
+
             {/* Order header */}
-            <div className="p-5 flex flex-wrap items-start justify-between gap-3"
+            <div className="p-5 flex flex-wrap items-start justify-between gap-4"
               style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <p className="text-white font-semibold">Order #{order.id}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${
+              <div className="space-y-1">
+                <div className="flex items-center gap-2.5">
+                  <p className="text-white font-bold text-base">Order #{order.id}</p>
+                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
                     isDone ? 'glass-green text-forest-200' : 'glass-orange text-ember-200'}`}>
                     {order.statusText}
                   </span>
                 </div>
-                <p className="text-forest-200/60 text-xs">{order.restaurant}</p>
-                <p className="text-forest-200/40 text-xs">{new Date(order.date).toLocaleString('en-PH')}</p>
+                <div className="flex items-center gap-1.5 text-forest-200/60 text-xs">
+                  <Store className="w-3.5 h-3.5" />
+                  <span>{order.restaurant}</span>
+                </div>
+                <p className="text-forest-200/30 text-xs">{new Date(order.date).toLocaleString('en-PH')}</p>
               </div>
               <div className="text-right">
-                <p className="text-ember-400 font-heading font-bold text-xl">₱{order.total.toFixed(2)}</p>
+                <p className="text-ember-400 font-heading font-bold text-2xl">₱{order.total.toFixed(2)}</p>
                 {!isDone && order.estimatedTime && (
-                  <p className="text-forest-200/60 text-xs flex items-center gap-1 justify-end mt-0.5">
-                    <Clock className="w-3 h-3" /> ETA: {order.estimatedTime}
+                  <p className="text-forest-200/60 text-xs flex items-center gap-1 justify-end mt-1">
+                    <Clock className="w-3 h-3" />
+                    <span>ETA: {order.estimatedTime}</span>
                   </p>
                 )}
               </div>
             </div>
 
             {/* Progress stepper */}
-            <div className="p-5">
+            <div className="px-5 pt-5 pb-4">
               <div className="relative">
-                {/* track line */}
-                <div className="absolute top-6 left-6 right-6 h-0.5 bg-forest-800">
+                {/* Track line */}
+                <div className="absolute top-5 left-5 right-5 h-px bg-white/8">
                   <div className="h-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
-                    style={{ width:`${(curIdx / (STATUSES.length-1)) * 100}%` }} />
+                    style={{ width:`${(curIdx / (STATUSES.length - 1)) * 100}%` }} />
                 </div>
-                <div className="relative grid grid-cols-6 gap-1">
+
+                <div className="relative grid grid-cols-6">
                   {STATUSES.map((s, i) => {
                     const done    = i <= curIdx;
                     const current = i === curIdx;
+                    const Icon    = s.icon;
                     return (
-                      <div key={s.id} className="flex flex-col items-center">
-                        <div className={`w-12 h-12 rounded-2xl flex items-center justify-center text-xl mb-2 transition-all duration-500 z-10
-                          ${done ? (current ? 'btn-glow-orange scale-110 shadow-[0_0_20px_rgba(230,126,34,.5)]' : 'btn-glow-green') : 'glass'}`}>
-                          {s.icon}
+                      <div key={s.id} className="flex flex-col items-center gap-2">
+                        <div className={`w-10 h-10 rounded-2xl flex items-center justify-center transition-all duration-500 z-10
+                          ${current
+                            ? 'btn-glow-orange scale-110 shadow-[0_0_20px_rgba(230,126,34,.45)]'
+                            : done ? 'btn-glow-green' : 'glass'}`}>
+                          <Icon className={`w-4 h-4 ${done ? 'text-white' : 'text-forest-200/40'}`} />
                         </div>
-                        <p className={`text-xs text-center font-medium leading-tight hidden sm:block
-                          ${done ? (current ? 'text-ember-300' : 'text-forest-300') : 'text-forest-200/40'}`}>
+                        <p className={`text-[10px] text-center font-medium leading-tight hidden sm:block
+                          ${current ? 'text-ember-300' : done ? 'text-forest-300' : 'text-forest-200/30'}`}>
                           {s.label}
                         </p>
                       </div>
@@ -146,42 +164,53 @@ export default function OrderTracking() {
                   })}
                 </div>
               </div>
-              <p className="text-center text-forest-200/60 text-xs mt-3">{STATUSES[curIdx].desc}</p>
+
+              {/* Current status description */}
+              <div className="mt-4 glass rounded-xl px-4 py-2.5 flex items-center gap-2">
+                {(() => { const Icon = STATUSES[curIdx].icon; return <Icon className={`w-4 h-4 flex-shrink-0 ${isDone ? 'text-forest-400' : 'text-ember-400'}`} />; })()}
+                <p className="text-forest-100/70 text-sm">{STATUSES[curIdx].desc}</p>
+              </div>
             </div>
 
-            {/* Items */}
-            <div className="px-5 pb-4">
-              <div className="glass-dark rounded-xl p-3 mb-4">
+            {/* Order items */}
+            <div className="px-5 pb-4 space-y-4">
+              <div className="glass rounded-xl p-4">
+                <p className="text-white/60 text-xs font-semibold uppercase tracking-wide mb-2.5">Items</p>
                 {order.items.map((item, i) => (
-                  <p key={i} className="text-forest-200/70 text-xs py-0.5 flex items-center gap-2">
-                    <span className="text-ember-400">•</span>{item}
-                  </p>
+                  <div key={i} className="flex items-center gap-2 py-1">
+                    <div className="w-1.5 h-1.5 rounded-full bg-ember-500/70 flex-shrink-0" />
+                    <p className="text-forest-100/80 text-sm">{item}</p>
+                  </div>
                 ))}
               </div>
 
-              {/* Driver */}
+              {/* Rider card */}
               {order.driver && !isDone && (
-                <div className="glass rounded-xl px-4 py-3 flex items-center justify-between mb-4">
+                <div className="glass rounded-xl px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 btn-glow-green rounded-xl flex items-center justify-center text-lg">🛵</div>
+                    <div className="w-10 h-10 btn-glow-green rounded-xl flex items-center justify-center flex-shrink-0">
+                      <Bike className="w-5 h-5 text-white" />
+                    </div>
                     <div>
                       <p className="text-white font-semibold text-sm">{order.driver.name}</p>
                       <p className="text-forest-200/50 text-xs">{order.driver.phone}</p>
                     </div>
                   </div>
-                  <button className="glass hover:glass-green transition-all px-3 py-2 rounded-xl text-forest-200 text-xs flex items-center gap-1">
-                    <Phone className="w-3.5 h-3.5" /> Call
+                  <button className="glass hover:glass-green transition-all px-3 py-2 rounded-xl text-forest-200 text-sm flex items-center gap-1.5">
+                    <Phone className="w-3.5 h-3.5" />
+                    <span>Call</span>
                   </button>
                 </div>
               )}
 
-              {/* Map */}
+              {/* Live map */}
               {order.riderLocation && order.route && !isDone && (
-                <div className="mb-4">
+                <div>
                   <div className="flex items-center justify-between mb-2">
                     <p className="text-white font-semibold text-sm">Live Tracking</p>
-                    <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full flex items-center gap-1.5">
-                      <span className="w-1.5 h-1.5 bg-forest-400 rounded-full animate-pulse" />Live
+                    <span className="glass-green text-forest-200 text-xs px-2.5 py-0.5 rounded-full flex items-center gap-1.5">
+                      <span className="w-1.5 h-1.5 bg-forest-400 rounded-full animate-pulse" />
+                      Live
                     </span>
                   </div>
                   <div className="h-64 rounded-2xl overflow-hidden border border-white/10">
@@ -197,9 +226,9 @@ export default function OrderTracking() {
                     />
                   </div>
                   {order.deliveryProgress > 0 && (
-                    <div className="mt-2">
-                      <div className="flex justify-between text-xs text-forest-200/50 mb-1">
-                        <span className="flex items-center gap-1"><MapPin className="w-3 h-3" /> Restaurant</span>
+                    <div className="mt-3">
+                      <div className="flex justify-between text-xs text-forest-200/50 mb-1.5">
+                        <span className="flex items-center gap-1"><Store className="w-3 h-3" /> Restaurant</span>
                         <span className="flex items-center gap-1">You <MapPin className="w-3 h-3 text-ember-400" /></span>
                       </div>
                       <div className="h-1.5 glass rounded-full overflow-hidden">
@@ -211,17 +240,19 @@ export default function OrderTracking() {
                 </div>
               )}
 
-              {/* Simulate button (dev helper) */}
-              {!isDone && (
+              {/* Simulate / Order again */}
+              {!isDone ? (
                 <button onClick={() => simulateProgress(order.id)}
-                  className="w-full glass hover:glass-orange transition-all text-forest-200 text-xs py-2.5 rounded-xl flex items-center justify-center gap-1.5">
-                  <Package className="w-3.5 h-3.5" /> Simulate Next Step <ChevronRight className="w-3.5 h-3.5" />
+                  className="w-full glass hover:glass-orange transition-all text-forest-200 text-sm py-3 rounded-xl flex items-center justify-center gap-2">
+                  <Package className="w-4 h-4" />
+                  Simulate Next Step
+                  <ChevronRight className="w-4 h-4" />
                 </button>
-              )}
-              {isDone && (
+              ) : (
                 <button onClick={() => navigate('/restaurants')}
-                  className="w-full btn-glow-orange text-white font-bold py-3 rounded-xl mt-2">
-                  Order Again 🎉
+                  className="w-full btn-glow-orange text-white font-bold py-3.5 rounded-xl flex items-center justify-center gap-2">
+                  Order Again
+                  <ArrowRight className="w-4 h-4" />
                 </button>
               )}
             </div>
