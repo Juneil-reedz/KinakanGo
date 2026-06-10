@@ -1,176 +1,111 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { ChevronRight, Utensils, Truck, Star, Zap } from 'lucide-react';
+
+const PHRASES = ['Tap it.', 'Get it.', 'Love it.'];
 
 export default function Welcome() {
   const navigate = useNavigate();
-  const [show, setShow] = useState(false);
-  const [textIndex, setTextIndex] = useState(0);
+  const [show, setShow]       = useState(false);
+  const [phrase, setPhrase]   = useState(0);
   const [loading, setLoading] = useState(false);
-  const phrases = ['Tap it.', 'Get it.', 'Bongao Taste.'];
 
   useEffect(() => {
-    // Trigger animation
-    setShow(true);
+    const t = setTimeout(() => setShow(true), 100);
+    const i = setInterval(() => setPhrase(p => (p+1) % PHRASES.length), 2200);
+    return () => { clearTimeout(t); clearInterval(i); };
   }, []);
 
-  useEffect(() => {
-    // Rotate through phrases
-    const interval = setInterval(() => {
-      setTextIndex((prev) => (prev + 1) % phrases.length);
-    }, 2000); // Change every 2 seconds
-
-    return () => clearInterval(interval);
-  }, []);
-
-  const handleGetStarted = () => {
+  const handleStart = () => {
     setLoading(true);
-    setTimeout(() => {
-      navigate('/');
-    }, 1500); // Show loading for 1.5 seconds before navigating
+    setTimeout(() => navigate('/'), 1200);
   };
 
   return (
-    <div className="fixed inset-0 bg-gradient-to-br from-primary-600 via-primary-700 to-primary-800 flex items-center justify-center overflow-hidden">
-      {/* Phone Mockup Container */}
-      <div className={`relative z-10 transition-all duration-1000 ${
-        loading
-          ? 'opacity-0 -translate-x-full'
-          : show
-            ? 'opacity-100 scale-100 translate-x-0'
-            : 'opacity-0 scale-75'
-      }`}>
-        {/* Phone Frame */}
-        <div className="relative w-80 h-[600px] bg-gray-900 rounded-[3rem] shadow-2xl border-8 border-gray-800 overflow-hidden">
-          {/* Phone Notch */}
-          <div className="absolute top-0 left-1/2 -translate-x-1/2 w-40 h-7 bg-gray-900 rounded-b-3xl z-20"></div>
+    <div className="fixed inset-0 overflow-hidden flex items-center justify-center">
+      {/* Ambient orbs */}
+      <div className="orb w-[500px] h-[500px] bg-forest-600/25 top-[-15%] left-[-10%]" />
+      <div className="orb w-96 h-96 bg-ember-500/15 bottom-[-10%] right-[-5%]" />
+      <div className="orb w-64 h-64 bg-forest-400/10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
 
-          {/* Phone Screen */}
-          <div className="absolute inset-2 bg-gradient-to-br from-primary-500 to-primary-700 rounded-[2.5rem] overflow-hidden">
-            <div className="w-full h-full flex flex-col items-center justify-center relative">
-              {/* Animated Background Bubbles - Inside Phone */}
-              <div className="absolute top-10 left-6 w-20 h-20 bg-white/10 rounded-full animate-bubble"></div>
-              <div className="absolute top-32 right-8 w-16 h-16 bg-white/10 rounded-full animate-bubble-delayed"></div>
-              <div className="absolute bottom-32 left-8 w-24 h-24 bg-white/10 rounded-full animate-bubble" style={{ animationDelay: '1.5s' }}></div>
-              <div className="absolute bottom-16 right-6 w-12 h-12 bg-white/10 rounded-full animate-bubble-delayed" style={{ animationDelay: '2s' }}></div>
-
-              {/* Floating Food Emojis - Inside Phone */}
-              <div className={`absolute top-20 left-8 text-5xl transition-all duration-1000 delay-200 animate-float ${show ? 'opacity-100' : 'opacity-0'}`}>
-                🍕
-              </div>
-              <div className={`absolute top-24 right-8 text-4xl transition-all duration-1000 delay-400 animate-float-delayed ${show ? 'opacity-100' : 'opacity-0'}`}>
-                🍔
-              </div>
-              <div className={`absolute bottom-6 left-12 text-4xl transition-all duration-1000 delay-600 animate-float ${show ? 'opacity-100' : 'opacity-0'}`}>
-                🍜
-              </div>
-              <div className={`absolute bottom-8 right-12 text-5xl transition-all duration-1000 delay-800 animate-float-delayed ${show ? 'opacity-100' : 'opacity-0'}`}>
-                🍱
-              </div>
-
-              {/* Animated Logo */}
-              <div className={`transition-all duration-1000 delay-300 ${show ? 'opacity-100 translate-y-0' : 'opacity-0 -translate-y-10'}`}>
-                {/* App Logo - No white background, larger size */}
-                <div className="flex items-center justify-center">
-                  <img
-                    src="/assets/KINAKANGO.gif"
-                    alt="KINAKAN Logo"
-                    className="w-72 h-72 object-contain drop-shadow-2xl"
-                  />
-                </div>
-
-                {/* Rotating Text */}
-                <div className="mb-3 h-12 flex items-center justify-center -mt-6">
-                  <h2 className="text-white text-2xl font-bold transition-all duration-500 animate-pulse">
-                    {phrases[textIndex]}
-                  </h2>
-                </div>
-
-                {/* Get Started Button - Closer to logo */}
-                <div className="flex justify-center">
-                  <button
-                    onClick={handleGetStarted}
-                    disabled={loading}
-                    className="bg-gradient-to-r from-primary-600 to-primary-700 text-white px-8 py-3 rounded-full font-bold text-lg shadow-xl hover:shadow-2xl hover:scale-105 hover:from-primary-700 hover:to-primary-800 transition-all duration-300 disabled:opacity-50 disabled:cursor-not-allowed"
-                  >
-                    Get Started
-                  </button>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
+      {/* Rotating ring */}
+      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
+        <div className="w-[600px] h-[600px] rounded-full border-2 border-forest-300 animate-spin-slow" />
+        <div className="absolute w-[450px] h-[450px] rounded-full border border-ember-400" style={{animationDirection:'reverse',animation:'spin-slow 8s linear infinite'}} />
       </div>
 
-      {/* Loading Overlay */}
-      {loading && (
-        <div className="fixed inset-0 flex items-center justify-center z-50">
-          <img
-            src="/assets/KINAKAN-loading.gif"
-            alt="Loading..."
-            className="w-64 h-64 object-contain"
-          />
+      <div className={`relative z-10 max-w-sm w-full mx-auto px-6 transition-all duration-1000
+        ${loading ? 'opacity-0 scale-95' : show ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
+
+        {/* Logo */}
+        <div className="flex flex-col items-center mb-8">
+          <div className="relative mb-4">
+            <div className="w-24 h-24 btn-glow-green rounded-3xl flex items-center justify-center shadow-2xl animate-breathe">
+              <Utensils className="w-12 h-12 text-white" />
+            </div>
+            {/* Pulse rings */}
+            <div className="absolute inset-0 rounded-3xl animate-pulse-ring" style={{background:'rgba(45,138,87,.4)'}} />
+            <div className="absolute inset-0 rounded-3xl animate-pulse-ring" style={{background:'rgba(45,138,87,.2)',animationDelay:'.6s'}} />
+          </div>
+
+          <h1 className="text-4xl font-heading font-bold text-white text-glow-green tracking-tight">
+            KinakanGo
+          </h1>
+          <p className="text-forest-200 mt-1 text-sm tracking-widest uppercase">Bongao Taste</p>
         </div>
-      )}
 
-      {/* Add floating and bubble animation styles */}
-      <style>{`
-        @keyframes float {
-          0%, 100% {
-            transform: translateY(0px) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-20px) rotate(5deg);
-          }
-        }
+        {/* Animated phrase */}
+        <div className="glass rounded-2xl px-6 py-5 mb-6 text-center card-3d">
+          <p className="text-3xl font-heading font-bold text-white text-glow-orange mb-1 transition-all duration-500">
+            {PHRASES[phrase]}
+          </p>
+          <p className="text-forest-200/70 text-sm">Food delivery for Bongao, Tawi-Tawi</p>
+        </div>
 
-        @keyframes float-delayed {
-          0%, 100% {
-            transform: translateY(0px) rotate(0deg);
-          }
-          50% {
-            transform: translateY(-15px) rotate(-5deg);
-          }
-        }
+        {/* Feature pills */}
+        <div className="grid grid-cols-3 gap-3 mb-8">
+          {[
+            { icon: Truck, label: 'Fast Delivery', color: 'text-ember-400' },
+            { icon: Star,  label: 'Top Rated',     color: 'text-forest-300' },
+            { icon: Zap,   label: 'Easy Order',    color: 'text-ember-300' },
+          ].map(({ icon: Icon, label, color }) => (
+            <div key={label} className="glass rounded-xl p-3 flex flex-col items-center gap-1.5 card-3d">
+              <Icon className={`w-5 h-5 ${color}`} />
+              <span className="text-forest-100/70 text-xs text-center leading-tight">{label}</span>
+            </div>
+          ))}
+        </div>
 
-        @keyframes bubble {
-          0%, 100% {
-            transform: translateY(0px) scale(1);
-            opacity: 0.3;
-          }
-          50% {
-            transform: translateY(-30px) scale(1.1);
-            opacity: 0.6;
-          }
-        }
+        {/* CTA */}
+        <button onClick={handleStart}
+          className="w-full py-4 rounded-2xl btn-glow-orange text-white font-heading font-bold text-lg flex items-center justify-center gap-2 relative overflow-hidden">
+          <span className="relative z-10 flex items-center gap-2">
+            {loading ? (
+              <>
+                <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
+                Loading…
+              </>
+            ) : (
+              <>Get Started <ChevronRight className="w-5 h-5" /></>
+            )}
+          </span>
+        </button>
 
-        @keyframes bubble-delayed {
-          0%, 100% {
-            transform: translateY(0px) scale(1);
-            opacity: 0.2;
-          }
-          50% {
-            transform: translateY(-25px) scale(1.15);
-            opacity: 0.5;
-          }
-        }
+        <div className="flex items-center gap-3 mt-4">
+          <button onClick={() => navigate('/login')}
+            className="flex-1 py-3 rounded-2xl glass text-forest-100 font-semibold text-sm hover:glass-green transition-all text-center">
+            Sign In
+          </button>
+          <button onClick={() => navigate('/register')}
+            className="flex-1 py-3 rounded-2xl glass text-forest-100 font-semibold text-sm hover:glass-green transition-all text-center">
+            Register
+          </button>
+        </div>
 
-        .animate-float {
-          animation: float 3s ease-in-out infinite;
-        }
-
-        .animate-float-delayed {
-          animation: float-delayed 3.5s ease-in-out infinite;
-        }
-
-        .animate-bubble {
-          animation: bubble 4s ease-in-out infinite;
-        }
-
-        .animate-bubble-delayed {
-          animation: bubble-delayed 5s ease-in-out infinite;
-        }
-      `}</style>
-
+        <p className="text-center text-forest-200/40 text-xs mt-6">
+          Serving Bongao, Tawi-Tawi 🇵🇭
+        </p>
+      </div>
     </div>
   );
 }

@@ -3,542 +3,372 @@ import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import {
-  Home as HomeIcon,
-  ShoppingBag,
-  Heart,
-  MessageCircle,
-  Clock,
-  FileText,
-  Settings,
-  Search,
-  Bell,
-  ShoppingCart,
-  Menu,
-  ChevronLeft,
-  Wallet,
-  CreditCard,
-  MapPin,
-  Plus,
-  Minus,
-  X,
-  Crown,
-  Utensils
+  Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
+  FileText, Settings, Search, Bell, ShoppingCart, Menu,
+  ChevronLeft, Wallet, CreditCard, MapPin, Plus, Minus, X,
+  Crown, Utensils, Star, Zap
 } from 'lucide-react';
+
+const NAV = [
+  { key: 'dashboard',    label: 'Dashboard',    icon: HomeIcon,        path: '/' },
+  { key: 'food-order',   label: 'Food Order',   icon: ShoppingBag,     path: '/restaurants' },
+  { key: 'favorite',     label: 'Favorites',    icon: Heart,           path: '/favorites' },
+  { key: 'message',      label: 'Messages',     icon: MessageCircle,   path: '/messages' },
+  { key: 'order-history',label: 'Orders',       icon: Clock,           path: '/orders' },
+  { key: 'bills',        label: 'Bills',        icon: FileText,        path: '/bills' },
+  { key: 'setting',      label: 'Settings',     icon: Settings,        path: '/settings' },
+];
 
 export default function CustomerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user } = useAuth();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
-  const [sidebarCollapsed, setSidebarCollapsed] = useState(false);
-  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
+  const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const balance = 12.00;
 
-  // Determine active page based on current location
-  const getActivePage = () => {
-    const path = location.pathname;
-    if (path === '/') return 'dashboard';
-    if (path.startsWith('/restaurants') || path.startsWith('/restaurant/')) return 'food-order';
-    if (path === '/favorites') return 'favorite';
-    if (path === '/messages') return 'message';
-    if (path === '/orders') return 'order-history';
-    if (path === '/bills') return 'bills';
-    if (path === '/settings') return 'setting';
-    if (path === '/upgrade') return 'upgrade';
+  const getActive = () => {
+    const p = location.pathname;
+    if (p === '/') return 'dashboard';
+    if (p.startsWith('/restaurants') || p.startsWith('/restaurant/')) return 'food-order';
+    if (p === '/favorites') return 'favorite';
+    if (p === '/messages') return 'message';
+    if (p === '/orders') return 'order-history';
+    if (p === '/bills') return 'bills';
+    if (p === '/settings') return 'setting';
     return 'dashboard';
   };
+  const active = getActive();
 
-  const activePage = getActivePage();
+  const handleNav = (path) => { navigate(path); setMobileOpen(false); };
 
-  // Navigation handler
-  const handleNavigation = (page) => {
-    if (page === 'dashboard') {
-      navigate('/');
-    } else if (page === 'food-order') {
-      navigate('/restaurants');
-    } else if (page === 'favorite') {
-      navigate('/favorites');
-    } else if (page === 'message') {
-      navigate('/messages');
-    } else if (page === 'order-history') {
-      navigate('/orders');
-    } else if (page === 'bills') {
-      navigate('/bills');
-    } else if (page === 'setting') {
-      navigate('/settings');
-    } else if (page === 'upgrade') {
-      navigate('/upgrade');
-    }
-  };
-
-  // Search handler
-  const handleSearch = (e) => {
-    setSearchQuery(e.target.value);
-  };
-
-  // Handle search on Enter key
-  const handleSearchKeyPress = (e) => {
-    if (e.key === 'Enter' && searchQuery.trim()) {
-      navigate(`/restaurants?search=${encodeURIComponent(searchQuery)}`);
-      setSearchQuery(''); // Clear search after navigation
-    }
-  };
-
-  // Update quantity in cart
-  const handleUpdateQuantity = (id, delta) => {
+  const handleUpdateQty = (id, delta) => {
     const item = cartItems.find(i => i.id === id);
-    if (item) {
-      const newQuantity = item.quantity + delta;
-      if (newQuantity > 0) {
-        updateQuantity(id, newQuantity);
-      } else {
-        removeFromCart(id);
-      }
-    }
+    if (!item) return;
+    const qty = item.quantity + delta;
+    qty > 0 ? updateQuantity(id, qty) : removeFromCart(id);
   };
 
-  // Remove item from cart
-  const handleRemoveFromCart = (id) => {
-    removeFromCart(id);
-  };
-
-  // Checkout handler
-  const handleCheckout = () => {
-    if (cartItems.length === 0) {
-      alert('Your cart is empty!');
-      return;
-    }
-    navigate('/checkout');
-  };
+  const rightPanelPages = ['favorite','message','order-history','bills','setting','upgrade'];
+  const showVideoPanel = rightPanelPages.includes(active);
 
   return (
-    <div className="flex h-screen bg-[#EBD5AB] overflow-hidden">
-      {/* Mobile Menu Overlay */}
-      {mobileMenuOpen && (
-        <div
-          className="fixed inset-0 bg-black/50 z-40 lg:hidden"
-          onClick={() => setMobileMenuOpen(false)}
-        />
+    <div className="flex h-screen overflow-hidden relative">
+
+      {/* ── Ambient background orbs ── */}
+      <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
+      <div className="orb w-80 h-80 bg-ember-500/10 bottom-10 right-10" />
+      <div className="orb w-60 h-60 bg-forest-400/15 top-1/2 left-1/3" />
+
+      {/* ── Mobile overlay ── */}
+      {mobileOpen && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-40 lg:hidden"
+             onClick={() => setMobileOpen(false)} />
       )}
 
-      {/* Left Sidebar */}
-      <aside className={`bg-[#628141] flex flex-col shadow-sm transition-all duration-300 overflow-hidden
-        ${sidebarCollapsed ? 'w-20' : 'w-64'}
-        ${mobileMenuOpen ? 'translate-x-0' : '-translate-x-full'}
-        fixed lg:relative lg:translate-x-0 h-full z-50`}>
-        {/* Logo and Toggle */}
-        <div className={`flex items-center ${sidebarCollapsed ? 'justify-center py-4' : 'justify-between -mt-4'}`}>
-          {!sidebarCollapsed && (
-            <div className="flex-1 flex items-center justify-center">
-              <img
-                src="/assets/KINAKANGO.gif"
-                alt="KINAKAN GO"
-                className="w-full h-auto object-contain"
-              />
+      {/* ══════════════════════════════
+          LEFT SIDEBAR
+      ══════════════════════════════ */}
+      <aside className={`
+        flex flex-col glass-dark z-50 h-full transition-all duration-300
+        ${collapsed ? 'w-20' : 'w-64'}
+        fixed lg:relative
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
+      `} style={{ boxShadow: '4px 0 32px rgba(0,0,0,.4), 1px 0 0 rgba(255,255,255,.06)' }}>
+
+        {/* Logo row */}
+        <div className={`flex items-center ${collapsed ? 'justify-center py-5' : 'justify-between px-4 py-3'}`}>
+          {!collapsed && (
+            <div className="flex items-center gap-2.5 min-w-0">
+              <div className="w-9 h-9 rounded-xl btn-glow-green flex items-center justify-center flex-shrink-0">
+                <Utensils className="w-5 h-5 text-white" />
+              </div>
+              <div className="min-w-0">
+                <p className="font-heading font-bold text-white text-sm leading-tight truncate">KinakanGo</p>
+                <p className="text-forest-200 text-xs truncate">Bongao Taste</p>
+              </div>
             </div>
           )}
-          <button
-            onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
-            className="p-2 hover:bg-[#8BAE66] rounded-lg transition-colors flex-shrink-0"
-          >
-            {sidebarCollapsed ? <Menu className="w-5 h-5 text-[#EBD5AB]" /> : <ChevronLeft className="w-5 h-5 text-[#EBD5AB]" />}
+          <button onClick={() => setCollapsed(!collapsed)}
+            className="flex-shrink-0 w-8 h-8 rounded-lg glass flex items-center justify-center text-forest-200 hover:text-white hover:glass-green transition-all">
+            {collapsed ? <Menu className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
           </button>
         </div>
 
-        {/* Navigation */}
-        <nav className={`flex-1 px-4 overflow-y-auto scrollbar-hide ${sidebarCollapsed ? 'pt-2' : '-mt-6'}`}>
-          <div className="space-y-0.5">
-            <button
-              onClick={() => handleNavigation('dashboard')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'dashboard'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Dashboard"
-            >
-              <HomeIcon className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Dashboard</span>}
-            </button>
-            <button
-              onClick={() => handleNavigation('food-order')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'food-order'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Food Order"
-            >
-              <ShoppingBag className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Food Order</span>}
-            </button>
-            <button
-              onClick={() => handleNavigation('favorite')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'favorite'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Favorite"
-            >
-              <Heart className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Favorite</span>}
-            </button>
-            <button
-              onClick={() => handleNavigation('message')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'message'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Message"
-            >
-              <MessageCircle className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Message</span>}
-            </button>
-            <button
-              onClick={() => handleNavigation('order-history')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'order-history'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Order History"
-            >
-              <Clock className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Order History</span>}
-            </button>
-            <button
-              onClick={() => handleNavigation('bills')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'bills'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Bills"
-            >
-              <FileText className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Bills</span>}
-            </button>
-            <button
-              onClick={() => handleNavigation('setting')}
-              className={`w-full flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} px-4 py-2 rounded-xl font-medium transition-all ${
-                activePage === 'setting'
-                  ? 'bg-[#E67E22] text-white shadow-md'
-                  : 'text-[#EBD5AB] hover:bg-[#8BAE66]'
-              }`}
-              title="Settings"
-            >
-              <Settings className="w-5 h-5" />
-              {!sidebarCollapsed && <span>Settings</span>}
-            </button>
+        {/* User chip */}
+        {!collapsed && (
+          <div className="mx-4 mb-4 p-3 glass-green rounded-2xl flex items-center gap-3">
+            <div className="relative">
+              <img src={user?.profileImage || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop'}
+                   alt="user" className="w-9 h-9 rounded-full object-cover border-2 border-forest-300/40" />
+              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-forest-300 rounded-full border-2 border-forest-900" />
+            </div>
+            <div className="min-w-0 flex-1">
+              <p className="text-white font-semibold text-sm truncate">{user?.name || 'Patricia'}</p>
+              <p className="text-forest-200 text-xs truncate flex items-center gap-1">
+                <Crown className="w-3 h-3 text-ember-300" /> Premium
+              </p>
+            </div>
           </div>
+        )}
+
+        {/* Nav items */}
+        <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide space-y-1">
+          {NAV.map(({ key, label, icon: Icon, path }) => {
+            const isActive = active === key;
+            return (
+              <button key={key} onClick={() => handleNav(path)} title={collapsed ? label : ''}
+                className={`
+                  w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'}
+                  px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200
+                  ${isActive
+                    ? 'btn-glow-orange text-white shadow-lg'
+                    : 'text-forest-100/70 hover:text-white hover:glass-green'}
+                `}>
+                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : ''}`} />
+                {!collapsed && <span className="truncate">{label}</span>}
+                {!collapsed && isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/80" />}
+              </button>
+            );
+          })}
         </nav>
 
-        {/* Upgrade Card */}
-        {!sidebarCollapsed && (
+        {/* Upgrade card */}
+        {!collapsed && (
           <div className="p-4">
-            <div className="bg-[#E67E22] rounded-2xl p-4 text-white">
-              <h3 className="font-bold mb-2">Upgrade your Account</h3>
-              <p className="text-sm mb-3 text-white/90">Enjoy all the benefits and explore more features</p>
-              <button
-                onClick={() => handleNavigation('upgrade')}
-                className="w-full bg-white text-[#E67E22] font-bold py-2 rounded-lg text-sm hover:bg-[#EBD5AB] transition-colors"
-              >
-                Upgrade
+            <div className="glass-orange rounded-2xl p-4 relative overflow-hidden">
+              <div className="orb w-24 h-24 bg-ember-400/30 -top-4 -right-4" />
+              <Zap className="w-6 h-6 text-ember-300 mb-2" />
+              <p className="text-white font-bold text-sm mb-1">Upgrade Account</p>
+              <p className="text-ember-200/80 text-xs mb-3">Unlock all features & benefits</p>
+              <button onClick={() => navigate('/upgrade')}
+                className="w-full py-2 rounded-xl btn-glow-orange text-white text-xs font-bold">
+                Upgrade Now
               </button>
             </div>
           </div>
         )}
       </aside>
 
-      {/* Main Content */}
-      <main className="flex-1 overflow-y-auto scrollbar-hide pb-16 lg:pb-0">
+      {/* ══════════════════════════════
+          MAIN CONTENT
+      ══════════════════════════════ */}
+      <main className="flex-1 flex flex-col overflow-hidden">
+
         {/* Header */}
-        <header className="bg-white border-b border-gray-100 px-3 xs:px-4 md:px-6 lg:px-8 py-3 md:py-4 sticky top-0 z-10">
-          <div className="flex items-center justify-between gap-2 xs:gap-3 md:gap-6">
-            {/* Mobile Menu Button */}
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="lg:hidden p-2 hover:bg-gray-50 rounded-lg transition-colors"
-            >
-              <Menu className="w-5 h-5 text-gray-700" />
-            </button>
+        <header className="glass-dark flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
+          style={{ borderBottom: '1px solid rgba(255,255,255,.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
 
-            <h2 className="text-base xs:text-lg md:text-xl font-semibold text-gray-900 truncate hidden lg:block">
-              Hello, {user?.name || 'Patricia'}
-            </h2>
+          {/* Mobile menu btn */}
+          <button onClick={() => setMobileOpen(!mobileOpen)}
+            className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
+            <Menu className="w-5 h-5" />
+          </button>
 
-            {/* Search bar - visible on all screens on homepage */}
-            {location.pathname === '/' && (
-              <div className="flex items-center gap-2 xs:gap-4 flex-1 max-w-2xl">
-                <div className="relative flex-1">
-                  <Search className="absolute left-2 xs:left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 xs:w-4 xs:h-4 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchQuery}
-                    onChange={handleSearch}
-                    onKeyPress={handleSearchKeyPress}
-                    placeholder="Search food..."
-                    className="w-full pl-8 xs:pl-10 pr-3 xs:pr-4 py-1.5 xs:py-2 bg-[#8BAE66] border-none rounded-lg xs:rounded-xl focus:outline-none focus:ring-2 focus:ring-[#E67E22] text-white placeholder-white/70 text-xs xs:text-sm"
-                  />
-                </div>
-              </div>
-            )}
+          <div className="hidden lg:flex items-center gap-2 min-w-0">
+            <span className="text-forest-100/60 text-sm">Hello,</span>
+            <span className="text-white font-semibold text-sm truncate">{user?.name || 'Patricia'} 👋</span>
+          </div>
 
-            <div className="flex items-center gap-2 xs:gap-3">
-              <button
-                onClick={() => navigate('/cart')}
-                className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors hidden lg:flex"
-              >
-                <ShoppingCart className="w-5 h-5 text-gray-700" />
-                {cartItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 bg-red-500 text-white text-xs w-5 h-5 rounded-full flex items-center justify-center">
-                    {cartItems.length}
-                  </span>
-                )}
-              </button>
-              <button className="relative p-2 hover:bg-gray-50 rounded-lg transition-colors hidden xs:flex">
-                <Bell className="w-5 h-5 text-gray-700" />
-              </button>
-              <button
-                onClick={() => navigate('/profile')}
-                className="w-8 h-8 xs:w-10 xs:h-10 rounded-full overflow-hidden border-2 border-yellow-400 hover:border-yellow-500 transition-colors flex-shrink-0"
-              >
-                {user?.profileImage ? (
-                  <img src={user.profileImage} alt={user.name} className="w-full h-full object-cover" />
-                ) : (
-                  <img
-                    src="https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=100&h=100&fit=crop"
-                    alt="User"
-                    className="w-full h-full object-cover"
-                  />
-                )}
-              </button>
+          {/* Search */}
+          {location.pathname === '/' && (
+            <div className="flex-1 max-w-md relative">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/60" />
+              <input
+                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
+                onKeyDown={e => { if (e.key==='Enter' && searchQuery.trim()) { navigate(`/restaurants?search=${encodeURIComponent(searchQuery)}`); setSearchQuery(''); } }}
+                placeholder="Search food or restaurants…"
+                className="w-full input-glass pl-10 pr-4 py-2 text-sm"
+              />
             </div>
+          )}
+
+          <div className="ml-auto flex items-center gap-2">
+            <button onClick={() => navigate('/cart')} className="relative hidden lg:flex w-9 h-9 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all">
+              <ShoppingCart className="w-5 h-5" />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                  {cartItems.length}
+                </span>
+              )}
+            </button>
+            <button className="relative w-9 h-9 glass rounded-xl hidden xs:flex items-center justify-center text-forest-100 hover:glass-green transition-all">
+              <Bell className="w-5 h-5" />
+              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-400 rounded-full" />
+            </button>
+            <button onClick={() => navigate('/profile')}
+              className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all">
+              <img src={user?.profileImage || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop'}
+                   alt="user" className="w-full h-full object-cover" />
+            </button>
           </div>
         </header>
 
-        {/* Page Content */}
-        <div className="p-3 xs:p-4 sm:p-5 md:p-6 lg:p-8">
+        {/* Page content */}
+        <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6">
           <Outlet />
         </div>
       </main>
 
-      {/* Right Sidebar - Cart or Video (Hidden on mobile) */}
-      <aside className="hidden xl:block w-96 shadow-sm overflow-y-auto scrollbar-hide" style={{ backgroundColor: (['favorite', 'message', 'order-history', 'bills', 'setting', 'upgrade'].includes(activePage)) ? '#E67E22' : 'white' }}>
-        {/* Show video for specific pages */}
-        {(['favorite', 'message', 'order-history', 'bills', 'setting', 'upgrade'].includes(activePage)) ? (
-          <div className="h-full flex flex-col items-center justify-center p-6 space-y-6">
-            {/* Top Section - Slogan and Icons */}
-            <div className="text-center space-y-3">
-              <div className="flex items-center justify-center gap-4 text-white">
-                <Utensils className="w-8 h-8" />
-                <ShoppingBag className="w-8 h-8" />
-                <Heart className="w-8 h-8" />
+      {/* ══════════════════════════════
+          RIGHT PANEL
+      ══════════════════════════════ */}
+      <aside className="hidden xl:flex w-80 flex-col glass-dark overflow-y-auto scrollbar-hide"
+        style={{ borderLeft: '1px solid rgba(255,255,255,.07)', boxShadow: '-4px 0 32px rgba(0,0,0,.3)' }}>
+
+        {showVideoPanel ? (
+          /* Video / promo panel */
+          <div className="flex flex-col h-full items-center justify-center p-6 gap-6">
+            <div className="text-center">
+              <div className="flex justify-center gap-4 mb-3 text-ember-400">
+                <Utensils className="w-7 h-7 animate-float" />
+                <ShoppingBag className="w-7 h-7 animate-float-delay" />
+                <Heart className="w-7 h-7 animate-float-delay2" />
               </div>
-              <h3 className="text-2xl font-bold text-white">
-                Tap it. Get it.
-              </h3>
-              <p className="text-white/90 text-lg font-medium">
-                Bongao Taste
-              </p>
+              <p className="text-2xl font-heading font-bold text-white text-glow-green">Tap it. Get it.</p>
+              <p className="text-forest-200 mt-1">Bongao Taste</p>
             </div>
-
-            {/* Video */}
-            <video
-              src="/assets/sidebar-video.mp4"
-              poster="/assets/sidebar-video.mp4"
-              className="w-full h-auto object-contain border-8 border-white rounded-2xl shadow-2xl"
-              autoPlay
-              loop
-              muted
-              playsInline
-            />
-
-            {/* Bottom Section - Delivery Info */}
-            <div className="text-center space-y-3">
-              <p className="text-white text-lg font-semibold">
-                🚀 Fast & Fresh Delivery
-              </p>
-              <div className="flex items-center justify-center gap-6 text-white">
-                <div className="flex flex-col items-center">
-                  <Clock className="w-6 h-6 mb-1" />
-                  <span className="text-sm">30 mins</span>
+            <video src={`${import.meta.env.BASE_URL}assets/sidebar-video.mp4`}
+              className="w-full rounded-2xl border-2 border-white/10 shadow-2xl"
+              autoPlay loop muted playsInline />
+            <div className="w-full glass rounded-2xl p-4 grid grid-cols-3 gap-3 text-center">
+              {[{icon: Clock, label:'30 min'},{icon: MapPin, label:'Track'},{icon: CreditCard, label:'Easy Pay'}].map(({icon:Icon,label}) => (
+                <div key={label} className="flex flex-col items-center gap-1">
+                  <Icon className="w-5 h-5 text-ember-400" />
+                  <span className="text-forest-100 text-xs">{label}</span>
                 </div>
-                <div className="flex flex-col items-center">
-                  <MapPin className="w-6 h-6 mb-1" />
-                  <span className="text-sm">Track Order</span>
-                </div>
-                <div className="flex flex-col items-center">
-                  <CreditCard className="w-6 h-6 mb-1" />
-                  <span className="text-sm">Easy Pay</span>
-                </div>
-              </div>
+              ))}
             </div>
           </div>
         ) : (
-          <div className="p-6 space-y-6">
-          {/* Balance Card */}
-          <div className="bg-gradient-to-br from-[#628141] to-[#8BAE66] rounded-2xl p-6 text-white">
-            <p className="text-sm mb-2">Your Balance</p>
-            <h3 className="text-3xl font-bold mb-4">${balance.toFixed(2)}</h3>
-            <div className="flex gap-2">
-              <button className="flex-1 bg-white text-[#E67E22] font-semibold py-2 rounded-lg text-sm hover:bg-[#EBD5AB] flex items-center justify-center gap-1">
-                <CreditCard className="w-4 h-4" />
-                Deposit
-              </button>
-              <button className="flex-1 bg-white text-[#E67E22] font-semibold py-2 rounded-lg text-sm hover:bg-[#EBD5AB] flex items-center justify-center gap-1">
-                <Wallet className="w-4 h-4" />
-                Withdraw
-              </button>
+          /* Cart panel */
+          <div className="p-5 flex flex-col gap-5">
+            {/* Balance card */}
+            <div className="rounded-2xl p-5 relative overflow-hidden"
+              style={{ background: 'linear-gradient(135deg, #133d25 0%, #0d2b1a 100%)', border: '1px solid rgba(109,224,154,.15)', boxShadow: '0 8px 32px rgba(0,0,0,.4)' }}>
+              <div className="orb w-32 h-32 bg-forest-400/20 -top-4 -right-4" />
+              <div className="orb w-20 h-20 bg-ember-500/10 bottom-0 left-0" />
+              <p className="text-forest-200 text-xs mb-1 relative">Your Balance</p>
+              <p className="text-3xl font-heading font-bold text-white relative text-glow-green">${balance.toFixed(2)}</p>
+              <div className="flex gap-2 mt-4 relative">
+                <button className="flex-1 glass py-2 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1 hover:glass-green transition-all">
+                  <CreditCard className="w-3.5 h-3.5" /> Deposit
+                </button>
+                <button className="flex-1 glass py-2 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1 hover:glass-green transition-all">
+                  <Wallet className="w-3.5 h-3.5" /> Withdraw
+                </button>
+              </div>
             </div>
-          </div>
 
-          {/* Address */}
-          <div className="border border-gray-200 rounded-2xl p-4">
-            <div className="flex items-center justify-between mb-2">
-              <h4 className="font-semibold text-gray-900">Your Address</h4>
-              <button className="text-yellow-600 text-sm font-medium">Change</button>
+            {/* Address */}
+            <div className="glass rounded-2xl p-4">
+              <div className="flex items-center justify-between mb-2">
+                <p className="text-white text-sm font-semibold">Delivery Address</p>
+                <button className="text-ember-400 text-xs font-medium hover:text-ember-300">Change</button>
+              </div>
+              <div className="flex items-start gap-2">
+                <MapPin className="w-4 h-4 text-forest-300 mt-0.5 flex-shrink-0" />
+                <p className="text-forest-100/70 text-xs">Elm Street, 23</p>
+              </div>
             </div>
-            <div className="flex items-start gap-2">
-              <MapPin className="w-4 h-4 text-gray-400 mt-0.5" />
-              <p className="text-sm text-gray-600">Elm Street, 23</p>
-            </div>
-          </div>
 
-          {/* Order Menu */}
-          <div>
-            <h4 className="font-bold text-gray-900 mb-4">Order Menu</h4>
-            {cartItems.length > 0 ? (
-              <div className="space-y-3 mb-6">
-                {cartItems.map(item => (
-                  <div key={item.id} className="flex items-center gap-3 relative group">
-                    <button
-                      onClick={() => handleRemoveFromCart(item.id)}
-                      className="absolute -top-1 -left-1 w-5 h-5 bg-red-500 rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity hover:bg-red-600 z-10"
-                      title="Remove from cart"
-                    >
-                      <X className="w-3 h-3 text-white" />
-                    </button>
-                    <img
-                      src={item.image}
-                      alt={item.name}
-                      className="w-16 h-16 rounded-xl object-cover"
-                    />
-                    <div className="flex-1">
-                      <h5 className="font-semibold text-sm text-gray-900">{item.name}</h5>
-                      <p className="text-[#E67E22] font-bold text-sm">${item.price}</p>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, -1)}
-                        className="w-6 h-6 bg-[#8BAE66] rounded-lg flex items-center justify-center hover:bg-[#7a9e5c]"
-                      >
-                        <Minus className="w-3 h-3 text-white" />
+            {/* Cart items */}
+            <div>
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-white font-semibold text-sm">Order Menu</p>
+                {cartItems.length > 0 && (
+                  <span className="glass-orange text-ember-300 text-xs px-2 py-0.5 rounded-full">{cartItems.length} items</span>
+                )}
+              </div>
+
+              {cartItems.length > 0 ? (
+                <div className="space-y-3 mb-4">
+                  {cartItems.map(item => (
+                    <div key={item.id} className="glass rounded-xl p-3 flex items-center gap-3 group relative">
+                      <button onClick={() => removeFromCart(item.id)}
+                        className="absolute -top-1 -right-1 w-5 h-5 btn-glow-orange rounded-full flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                        <X className="w-3 h-3 text-white" />
                       </button>
-                      <span className="text-sm font-semibold w-4 text-center">{item.quantity}</span>
-                      <button
-                        onClick={() => handleUpdateQuantity(item.id, 1)}
-                        className="w-6 h-6 bg-[#8BAE66] rounded-lg flex items-center justify-center hover:bg-[#7a9e5c]"
-                      >
-                        <Plus className="w-3 h-3 text-white" />
-                      </button>
+                      <img src={item.image} alt={item.name}
+                        className="w-12 h-12 rounded-lg object-cover border border-white/10" />
+                      <div className="flex-1 min-w-0">
+                        <p className="text-white text-xs font-semibold truncate">{item.name}</p>
+                        <p className="text-ember-400 text-xs font-bold">${item.price}</p>
+                      </div>
+                      <div className="flex items-center gap-1.5">
+                        <button onClick={() => handleUpdateQty(item.id,-1)}
+                          className="w-6 h-6 glass rounded-lg flex items-center justify-center hover:glass-orange transition-all">
+                          <Minus className="w-3 h-3 text-forest-200" />
+                        </button>
+                        <span className="text-white text-xs font-bold w-4 text-center">{item.quantity}</span>
+                        <button onClick={() => handleUpdateQty(item.id,1)}
+                          className="w-6 h-6 glass rounded-lg flex items-center justify-center hover:glass-green transition-all">
+                          <Plus className="w-3 h-3 text-forest-200" />
+                        </button>
+                      </div>
                     </div>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-8 mb-6">
-                <ShoppingCart className="w-12 h-12 text-gray-300 mx-auto mb-2" />
-                <p className="text-gray-500 text-sm">Your cart is empty</p>
-              </div>
-            )}
+                  ))}
+                </div>
+              ) : (
+                <div className="glass rounded-2xl py-8 flex flex-col items-center gap-2 mb-4">
+                  <ShoppingCart className="w-10 h-10 text-forest-300/40" />
+                  <p className="text-forest-200/50 text-sm">Your cart is empty</p>
+                </div>
+              )}
 
-            {/* Coupon */}
-            <div className="mb-4">
-              <button className="w-full text-left p-3 border border-dashed border-gray-300 rounded-xl text-sm text-gray-500 hover:border-yellow-400 hover:text-yellow-600">
-                Have a coupon code?
+              {/* Coupon */}
+              <button className="w-full text-left glass rounded-xl px-4 py-3 text-xs text-forest-200/60 hover:glass-green hover:text-forest-100 transition-all mb-3 border-dashed">
+                🎟 Have a coupon code?
+              </button>
+
+              {/* Total */}
+              <div className="glass-green rounded-xl p-3 flex justify-between items-center mb-3">
+                <span className="text-forest-100 text-sm font-medium">Total</span>
+                <span className="text-white font-heading font-bold text-xl">${getCartTotal().toFixed(2)}</span>
+              </div>
+
+              <button onClick={() => cartItems.length > 0 && navigate('/checkout')}
+                disabled={cartItems.length === 0}
+                className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all ${
+                  cartItems.length === 0
+                    ? 'glass text-forest-200/30 cursor-not-allowed'
+                    : 'btn-glow-orange text-white'
+                }`}>
+                Checkout →
               </button>
             </div>
-
-            {/* Total */}
-            <div className="bg-[#8BAE66] rounded-xl p-4 mb-4">
-              <div className="flex items-center justify-between">
-                <span className="font-semibold text-white">Total</span>
-                <span className="text-2xl font-bold text-white">${getCartTotal().toFixed(2)}</span>
-              </div>
-            </div>
-
-            {/* Checkout Button */}
-            <button
-              onClick={handleCheckout}
-              disabled={cartItems.length === 0}
-              className={`w-full font-bold py-4 rounded-xl shadow-lg transition-all ${
-                cartItems.length === 0
-                  ? 'bg-gray-300 text-gray-500 cursor-not-allowed'
-                  : 'bg-[#E67E22] text-white hover:bg-[#d4721d] active:scale-95'
-              }`}
-            >
-              Checkout
-            </button>
           </div>
-        </div>
         )}
       </aside>
 
-      {/* Mobile Bottom Navigation */}
-      <nav className="fixed bottom-0 left-0 right-0 bg-white border-t border-gray-200 lg:hidden z-30">
+      {/* ── Mobile Bottom Nav ── */}
+      <nav className="fixed bottom-0 left-0 right-0 lg:hidden z-30 glass-dark"
+        style={{ borderTop: '1px solid rgba(255,255,255,.08)', boxShadow: '0 -4px 24px rgba(0,0,0,.4)' }}>
         <div className="flex items-center justify-around px-2 py-2">
-          <button
-            onClick={() => handleNavigation('dashboard')}
-            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors flex-1 ${
-              activePage === 'dashboard' ? 'text-[#E67E22]' : 'text-gray-600'
-            }`}
-          >
-            <HomeIcon className="w-5 h-5" />
-            <span className="text-xs mt-1">Home</span>
-          </button>
-          <button
-            onClick={() => handleNavigation('food-order')}
-            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors flex-1 ${
-              activePage === 'food-order' ? 'text-[#E67E22]' : 'text-gray-600'
-            }`}
-          >
-            <ShoppingBag className="w-5 h-5" />
-            <span className="text-xs mt-1">Order</span>
-          </button>
-          <button
-            onClick={() => navigate('/cart')}
-            className="flex flex-col items-center justify-center p-2 rounded-lg transition-colors flex-1 relative text-gray-600"
-          >
-            <ShoppingCart className="w-5 h-5" />
-            {cartItems.length > 0 && (
-              <span className="absolute top-1 right-1/2 translate-x-2 bg-red-500 text-white text-xs w-4 h-4 rounded-full flex items-center justify-center">
-                {cartItems.length}
-              </span>
-            )}
-            <span className="text-xs mt-1">Cart</span>
-          </button>
-          <button
-            onClick={() => handleNavigation('favorite')}
-            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors flex-1 ${
-              activePage === 'favorite' ? 'text-[#E67E22]' : 'text-gray-600'
-            }`}
-          >
-            <Heart className="w-5 h-5" />
-            <span className="text-xs mt-1">Favorites</span>
-          </button>
-          <button
-            onClick={() => handleNavigation('order-history')}
-            className={`flex flex-col items-center justify-center p-2 rounded-lg transition-colors flex-1 ${
-              activePage === 'order-history' ? 'text-[#E67E22]' : 'text-gray-600'
-            }`}
-          >
-            <Clock className="w-5 h-5" />
-            <span className="text-xs mt-1">Orders</span>
-          </button>
+          {[
+            { key:'dashboard',    icon:HomeIcon,      path:'/' },
+            { key:'food-order',   icon:ShoppingBag,   path:'/restaurants' },
+            { key:'cart',         icon:ShoppingCart,  path:'/cart', badge: cartItems.length },
+            { key:'favorite',     icon:Heart,         path:'/favorites' },
+            { key:'order-history',icon:Clock,         path:'/orders' },
+          ].map(({ key, icon: Icon, path, badge }) => {
+            const isAct = key === 'cart' ? location.pathname === '/cart' : active === key;
+            return (
+              <button key={key} onClick={() => navigate(path)}
+                className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 relative transition-all
+                  ${isAct ? 'text-ember-400' : 'text-forest-200/50 hover:text-forest-100'}`}>
+                <Icon className="w-5 h-5" />
+                {badge > 0 && (
+                  <span className="absolute top-1 right-1/2 translate-x-2 w-4 h-4 btn-glow-orange rounded-full text-white text-[9px] flex items-center justify-center font-bold">
+                    {badge}
+                  </span>
+                )}
+                {isAct && <div className="w-1 h-1 rounded-full bg-ember-400 mt-1" />}
+              </button>
+            );
+          })}
         </div>
       </nav>
     </div>
