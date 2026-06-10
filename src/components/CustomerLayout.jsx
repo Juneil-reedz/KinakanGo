@@ -155,23 +155,23 @@ export default function CustomerLayout() {
       ══════════════════════════════ */}
       <main className="flex-1 flex flex-col overflow-hidden">
 
-        {/* Header */}
-        <header className="glass-dark flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
-          style={{ borderBottom: '1px solid rgba(255,255,255,.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
+        {/* Header — dashboard only */}
+        {active === 'dashboard' && (
+          <header className="glass-dark flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
+            style={{ borderBottom: '1px solid rgba(255,255,255,.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
 
-          {/* Mobile menu btn */}
-          <button onClick={() => setMobileOpen(!mobileOpen)}
-            className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
-            <Menu className="w-5 h-5" />
-          </button>
+            {/* Mobile menu btn */}
+            <button onClick={() => setMobileOpen(!mobileOpen)}
+              className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
+              <Menu className="w-5 h-5" />
+            </button>
 
-          <div className="hidden lg:flex items-center gap-2 min-w-0">
-            <span className="text-forest-100/60 text-sm">Hello,</span>
-            <span className="text-white font-semibold text-sm truncate">{user?.name || 'Patricia'} 👋</span>
-          </div>
+            <div className="hidden lg:flex items-center gap-2 min-w-0">
+              <span className="text-forest-100/60 text-sm">Hello,</span>
+              <span className="text-white font-semibold text-sm truncate">{user?.name || 'Patricia'}</span>
+            </div>
 
-          {/* Search */}
-          {location.pathname === '/' && (
+            {/* Search */}
             <div className="flex-1 max-w-md relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/60" />
               <input
@@ -181,28 +181,28 @@ export default function CustomerLayout() {
                 className="w-full input-glass pl-10 pr-4 py-2 text-sm"
               />
             </div>
-          )}
 
-          <div className="ml-auto flex items-center gap-2">
-            <button onClick={() => navigate('/cart')} className="relative hidden lg:flex w-9 h-9 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all">
-              <ShoppingCart className="w-5 h-5" />
-              {cartItems.length > 0 && (
-                <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
-                  {cartItems.length}
-                </span>
-              )}
-            </button>
-            <button className="relative w-9 h-9 glass rounded-xl hidden xs:flex items-center justify-center text-forest-100 hover:glass-green transition-all">
-              <Bell className="w-5 h-5" />
-              <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-400 rounded-full" />
-            </button>
-            <button onClick={() => navigate('/profile')}
-              className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all">
-              <img src={user?.profileImage || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop'}
-                   alt="user" className="w-full h-full object-cover" />
-            </button>
-          </div>
-        </header>
+            <div className="ml-auto flex items-center gap-2">
+              <button onClick={() => navigate('/cart')} className="relative hidden lg:flex w-9 h-9 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all">
+                <ShoppingCart className="w-5 h-5" />
+                {cartItems.length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                    {cartItems.length}
+                  </span>
+                )}
+              </button>
+              <button className="relative w-9 h-9 glass rounded-xl hidden xs:flex items-center justify-center text-forest-100 hover:glass-green transition-all">
+                <Bell className="w-5 h-5" />
+                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-400 rounded-full" />
+              </button>
+              <button onClick={() => navigate('/profile')}
+                className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all">
+                <img src={user?.profileImage || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop'}
+                     alt="user" className="w-full h-full object-cover" />
+              </button>
+            </div>
+          </header>
+        )}
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6">
