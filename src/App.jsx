@@ -61,7 +61,7 @@ function App() {
           <RestaurantProvider>
             <RiderProvider>
               <AdminProvider>
-                <Router basename={import.meta.env.BASE_URL}>
+                <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
                   <Routes>
                   {/* Welcome Route */}
                   <Route path="/welcome" element={<Welcome />} />
