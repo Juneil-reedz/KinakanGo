@@ -1,515 +1,253 @@
-import { useState } from 'react';
+﻿import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Store, Upload, FileText, CheckCircle, AlertCircle } from 'lucide-react';
-import Card from '../components/Card';
-import Button from '../components/Button';
+import { Store, Upload, CheckCircle, AlertCircle } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+
+const CUISINE_TYPES = [
+  'Filipino','Chinese','Japanese','Korean','Italian','American',
+  'Mexican','Thai','Indian','Fast Food','Bakery','Cafe','Desserts',
+];
+const ID_TYPES = ['Passport',"Driver's License",'SSS ID','UMID',"Voter's ID",'Postal ID'];
+const STEP_LABELS = ['Basic Info','Restaurant','Documents','Photos','Owner Info'];
+
+const EMPTY = {
+  restaurantName:'', businessAddress:'', contactNumber:'', email:'',
+  cuisine:'', description:'',
+  bir:null, businessPermit:null, foodSafetyPermit:null,
+  restaurantPhotos:[], menuPhotos:[],
+  ownerName:'', ownerIdType:'', ownerId:null,
+};
+
+function FileUpload({ label, hint, file, onChange, inputId, multiple }) {
+  const hasFile = multiple ? (file && file.length > 0) : !!file;
+  const label2  = multiple
+    ? (hasFile ? `${file.length} photo(s) selected` : 'Click to upload')
+    : (hasFile ? file.name : 'Click to upload');
+  return (
+    <div>
+      <label className="block text-forest-200/60 text-xs font-medium mb-1.5">
+        {label} <span className="text-red-400">*</span>
+      </label>
+      {hint && <p className="text-forest-200/40 text-xs mb-2">{hint}</p>}
+      <div className="border-2 border-dashed border-forest-600/40 rounded-xl p-6 text-center hover:border-ember-500/60 hover:glass-orange transition-all cursor-pointer">
+        <input type="file" onChange={onChange} accept={multiple ? 'image/*' : '.pdf,.jpg,.jpeg,.png'} multiple={multiple} className="hidden" id={inputId} />
+        <label htmlFor={inputId} className="cursor-pointer flex flex-col items-center gap-2">
+          <Upload className={`w-7 h-7 ${hasFile ? 'text-forest-400' : 'text-forest-300/30'}`} />
+          <span className="text-sm text-forest-200/60 hover:text-forest-100 transition-colors">{label2}</span>
+          {hasFile && <CheckCircle className="w-4 h-4 text-forest-400" />}
+        </label>
+      </div>
+    </div>
+  );
+}
 
 export default function RestaurantOwnerApplication() {
   const navigate = useNavigate();
   const { showSuccess, showError } = useNotification();
-  const [step, setStep] = useState(1);
-  const [formData, setFormData] = useState({
-    restaurantName: '',
-    businessAddress: '',
-    contactNumber: '',
-    email: '',
-    cuisine: '',
-    description: '',
-    bir: null,
-    businessPermit: null,
-    foodSafetyPermit: null,
-    restaurantPhotos: [],
-    menuPhotos: [],
-    ownerName: '',
-    ownerIdType: '',
-    ownerId: null,
-  });
+  const [step, setStep]         = useState(1);
+  const [formData, setFormData] = useState(EMPTY);
 
-  const cuisineTypes = [
-    'Filipino', 'Chinese', 'Japanese', 'Korean', 'Italian', 'American',
-    'Mexican', 'Thai', 'Indian', 'Fast Food', 'Bakery', 'Cafe', 'Desserts'
-  ];
-
-  const idTypes = ['Passport', 'Driver\'s License', 'SSS ID', 'UMID', 'Voter\'s ID', 'Postal ID'];
-
-  const handleInputChange = (e) => {
+  const set = e => {
     const { name, value } = e.target;
-    setFormData(prev => ({ ...prev, [name]: value }));
+    setFormData(p => ({ ...p, [name]: value }));
   };
-
-  const handleFileChange = (e, fieldName) => {
+  const setFile = (e, field) => {
     const files = e.target.files;
-    if (fieldName === 'restaurantPhotos' || fieldName === 'menuPhotos') {
-      setFormData(prev => ({ ...prev, [fieldName]: Array.from(files) }));
+    if (field === 'restaurantPhotos' || field === 'menuPhotos') {
+      setFormData(p => ({ ...p, [field]: Array.from(files) }));
     } else {
-      setFormData(prev => ({ ...prev, [fieldName]: files[0] }));
+      setFormData(p => ({ ...p, [field]: files[0] }));
     }
   };
 
-  const validateStep1 = () => {
-    if (!formData.restaurantName || !formData.businessAddress || !formData.contactNumber || !formData.email) {
-      showError('Please fill in all required fields');
+  const validate = () => {
+    const errs = {
+      1: () => !formData.restaurantName || !formData.businessAddress || !formData.contactNumber || !formData.email,
+      2: () => !formData.cuisine || !formData.description,
+      3: () => !formData.bir || !formData.businessPermit || !formData.foodSafetyPermit,
+      4: () => formData.restaurantPhotos.length === 0 || formData.menuPhotos.length === 0,
+      5: () => !formData.ownerName || !formData.ownerIdType || !formData.ownerId,
+    };
+    if (errs[step]?.()) {
+      showError(step === 3 || step === 4 ? 'Please upload all required files' : 'Please fill in all required fields');
       return false;
     }
     return true;
   };
 
-  const validateStep2 = () => {
-    if (!formData.cuisine || !formData.description) {
-      showError('Please fill in all required fields');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep3 = () => {
-    if (!formData.bir || !formData.businessPermit || !formData.foodSafetyPermit) {
-      showError('Please upload all required documents');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep4 = () => {
-    if (formData.restaurantPhotos.length === 0 || formData.menuPhotos.length === 0) {
-      showError('Please upload at least one restaurant photo and menu photo');
-      return false;
-    }
-    return true;
-  };
-
-  const validateStep5 = () => {
-    if (!formData.ownerName || !formData.ownerIdType || !formData.ownerId) {
-      showError('Please fill in all owner information fields');
-      return false;
-    }
-    return true;
-  };
-
-  const handleNext = () => {
-    let isValid = false;
-    switch(step) {
-      case 1: isValid = validateStep1(); break;
-      case 2: isValid = validateStep2(); break;
-      case 3: isValid = validateStep3(); break;
-      case 4: isValid = validateStep4(); break;
-      case 5: isValid = validateStep5(); break;
-      default: isValid = true;
-    }
-
-    if (isValid && step < 5) {
-      setStep(step + 1);
-    }
-  };
-
-  const handleBack = () => {
-    if (step > 1) {
-      setStep(step - 1);
-    }
-  };
-
+  const handleNext   = () => { if (validate() && step < 5) setStep(s => s + 1); };
+  const handleBack   = () => { if (step > 1) setStep(s => s - 1); };
   const handleSubmit = () => {
-    if (!validateStep5()) return;
-
-    // Here you would send the application to the backend
-    console.log('Application submitted:', formData);
-    showSuccess('Application submitted successfully! We\'ll review it within 2-5 business days.');
-
-    setTimeout(() => {
-      navigate('/profile');
-    }, 2000);
+    if (!validate()) return;
+    showSuccess("Application submitted! We'll review it within 2–5 business days.");
+    setTimeout(() => navigate('/profile'), 2000);
   };
+
+  const INPUT = 'w-full input-glass py-3 text-sm';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-orange-50 via-white to-orange-50 py-12">
-      <div className="container-custom max-w-4xl">
-        {/* Header */}
-        <div className="text-center mb-8">
-          <div className="inline-flex items-center justify-center w-16 h-16 bg-gradient-to-br from-orange-400 to-orange-600 rounded-full mb-4">
-            <Store className="w-8 h-8 text-white" />
-          </div>
-          <h1 className="text-4xl font-heading font-bold mb-3">Restaurant Owner Application</h1>
-          <p className="text-lg text-secondary-600">
-            Complete the application form to list your restaurant on Kinakan Go
-          </p>
+    <div className="container-custom max-w-3xl py-10 animate-fade-up">
+
+      {/* Header */}
+      <div className="text-center mb-8">
+        <div className="inline-flex items-center justify-center w-16 h-16 btn-glow-orange rounded-2xl mb-4">
+          <Store className="w-8 h-8 text-white" />
         </div>
+        <h1 className="text-3xl font-heading font-bold text-white mb-2">Restaurant Owner Application</h1>
+        <p className="text-forest-200/60">Complete the form to list your restaurant on Kinakan Go</p>
+      </div>
 
-        {/* Progress Steps */}
-        <div className="mb-8">
-          <div className="flex items-center justify-between">
-            {[1, 2, 3, 4, 5].map((s) => (
-              <div key={s} className="flex items-center flex-1">
-                <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold transition-all ${
-                  step >= s
-                    ? 'bg-gradient-to-br from-orange-500 to-orange-600 text-white scale-110'
-                    : 'bg-gray-200 text-gray-500'
-                }`}>
-                  {step > s ? <CheckCircle className="w-6 h-6" /> : s}
-                </div>
-                {s < 5 && (
-                  <div className={`flex-1 h-1 mx-2 rounded transition-all ${
-                    step > s ? 'bg-orange-500' : 'bg-gray-200'
-                  }`} />
-                )}
+      {/* Progress stepper */}
+      <div className="mb-8">
+        <div className="flex items-center justify-between">
+          {[1, 2, 3, 4, 5].map(s => (
+            <div key={s} className="flex items-center flex-1">
+              <div className={`flex items-center justify-center w-10 h-10 rounded-full font-bold text-sm transition-all
+                ${step > s ? 'btn-glow-green text-white scale-110' : step === s ? 'btn-glow-orange text-white scale-110' : 'glass text-forest-200/40'}`}>
+                {step > s ? <CheckCircle className="w-5 h-5" /> : s}
               </div>
-            ))}
-          </div>
-          <div className="flex justify-between mt-2 text-xs text-secondary-600">
-            <span>Basic Info</span>
-            <span>Restaurant</span>
-            <span>Documents</span>
-            <span>Photos</span>
-            <span>Owner Info</span>
-          </div>
+              {s < 5 && (
+                <div className={`flex-1 h-1 mx-2 rounded-full transition-all ${step > s ? 'bg-gradient-to-r from-forest-500 to-ember-500' : 'glass'}`} />
+              )}
+            </div>
+          ))}
         </div>
+        <div className="flex justify-between mt-2 text-xs text-forest-200/40">
+          {STEP_LABELS.map(l => <span key={l}>{l}</span>)}
+        </div>
+      </div>
 
-        {/* Form Steps */}
-        <Card className="p-8">
-          {/* Step 1: Basic Information */}
-          {step === 1 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold mb-6">Basic Information</h2>
+      {/* Form card */}
+      <div className="glass rounded-3xl p-6 md:p-8">
 
+        {/* Step 1 — Basic Info */}
+        {step === 1 && (
+          <div className="space-y-5">
+            <h2 className="text-white font-heading font-bold text-xl mb-5">Basic Information</h2>
+            <div>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Restaurant Name <span className="text-red-400">*</span></label>
+              <input type="text" name="restaurantName" value={formData.restaurantName} onChange={set} placeholder="Enter restaurant name" className={INPUT} />
+            </div>
+            <div>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Business Address <span className="text-red-400">*</span></label>
+              <textarea name="businessAddress" value={formData.businessAddress} onChange={set} placeholder="Enter complete business address" rows={3} className={`${INPUT} resize-none`} />
+            </div>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Restaurant Name <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="restaurantName"
-                  value={formData.restaurantName}
-                  onChange={handleInputChange}
-                  placeholder="Enter restaurant name"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
+                <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Contact Number <span className="text-red-400">*</span></label>
+                <input type="tel" name="contactNumber" value={formData.contactNumber} onChange={set} placeholder="+63 XXX XXX XXXX" className={INPUT} />
               </div>
-
               <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Business Address <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  name="businessAddress"
-                  value={formData.businessAddress}
-                  onChange={handleInputChange}
-                  placeholder="Enter complete business address"
-                  rows={3}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Contact Number <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="tel"
-                    name="contactNumber"
-                    value={formData.contactNumber}
-                    onChange={handleInputChange}
-                    placeholder="+63 XXX XXX XXXX"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-2">
-                    Email Address <span className="text-red-500">*</span>
-                  </label>
-                  <input
-                    type="email"
-                    name="email"
-                    value={formData.email}
-                    onChange={handleInputChange}
-                    placeholder="restaurant@example.com"
-                    className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                  />
-                </div>
+                <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Email Address <span className="text-red-400">*</span></label>
+                <input type="email" name="email" value={formData.email} onChange={set} placeholder="restaurant@example.com" className={INPUT} />
               </div>
             </div>
-          )}
-
-          {/* Step 2: Restaurant Details */}
-          {step === 2 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold mb-6">Restaurant Details</h2>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Cuisine Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="cuisine"
-                  value={formData.cuisine}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                >
-                  <option value="">Select cuisine type</option>
-                  {cuisineTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Restaurant Description <span className="text-red-500">*</span>
-                </label>
-                <textarea
-                  name="description"
-                  value={formData.description}
-                  onChange={handleInputChange}
-                  placeholder="Describe your restaurant, specialties, and what makes it unique..."
-                  rows={6}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-                <p className="text-sm text-gray-500 mt-2">
-                  {formData.description.length} / 500 characters
-                </p>
-              </div>
-            </div>
-          )}
-
-          {/* Step 3: Legal Documents */}
-          {step === 3 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold mb-6">Legal Documents</h2>
-              <div className="bg-blue-50 border border-blue-200 rounded-xl p-4 mb-6">
-                <div className="flex items-start gap-3">
-                  <AlertCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-blue-800">
-                    <p className="font-semibold mb-1">Important:</p>
-                    <p>All documents must be valid, clear, and readable. Accepted formats: PDF, JPG, PNG (max 5MB each)</p>
-                  </div>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  BIR Certificate of Registration <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, 'bir')}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    id="bir-upload"
-                  />
-                  <label htmlFor="bir-upload" className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {formData.bir ? formData.bir.name : 'Click to upload BIR Certificate'}
-                    </p>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Business Permit <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, 'businessPermit')}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    id="permit-upload"
-                  />
-                  <label htmlFor="permit-upload" className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {formData.businessPermit ? formData.businessPermit.name : 'Click to upload Business Permit'}
-                    </p>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Food Safety Permit / Sanitary Permit <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, 'foodSafetyPermit')}
-                    accept=".pdf,.jpg,.jpeg,.png"
-                    className="hidden"
-                    id="food-permit-upload"
-                  />
-                  <label htmlFor="food-permit-upload" className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {formData.foodSafetyPermit ? formData.foodSafetyPermit.name : 'Click to upload Food Safety Permit'}
-                    </p>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 4: Photos */}
-          {step === 4 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold mb-6">Restaurant & Menu Photos</h2>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Restaurant Photos <span className="text-red-500">*</span>
-                </label>
-                <p className="text-sm text-gray-500 mb-3">Upload photos of your restaurant exterior, interior, and ambiance (minimum 1, maximum 10)</p>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, 'restaurantPhotos')}
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    id="restaurant-photos-upload"
-                  />
-                  <label htmlFor="restaurant-photos-upload" className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {formData.restaurantPhotos.length > 0
-                        ? `${formData.restaurantPhotos.length} photo(s) selected`
-                        : 'Click to upload restaurant photos'}
-                    </p>
-                  </label>
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Menu Photos <span className="text-red-500">*</span>
-                </label>
-                <p className="text-sm text-gray-500 mb-3">Upload clear photos of your menu or individual dishes (minimum 1, maximum 20)</p>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, 'menuPhotos')}
-                    accept="image/*"
-                    multiple
-                    className="hidden"
-                    id="menu-photos-upload"
-                  />
-                  <label htmlFor="menu-photos-upload" className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {formData.menuPhotos.length > 0
-                        ? `${formData.menuPhotos.length} photo(s) selected`
-                        : 'Click to upload menu photos'}
-                    </p>
-                  </label>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Step 5: Owner Information */}
-          {step === 5 && (
-            <div className="space-y-6">
-              <h2 className="text-2xl font-bold mb-6">Owner Information</h2>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Full Name (as shown on ID) <span className="text-red-500">*</span>
-                </label>
-                <input
-                  type="text"
-                  name="ownerName"
-                  value={formData.ownerName}
-                  onChange={handleInputChange}
-                  placeholder="Enter full name"
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  ID Type <span className="text-red-500">*</span>
-                </label>
-                <select
-                  name="ownerIdType"
-                  value={formData.ownerIdType}
-                  onChange={handleInputChange}
-                  className="w-full px-4 py-3 border-2 border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent"
-                >
-                  <option value="">Select ID type</option>
-                  {idTypes.map(type => (
-                    <option key={type} value={type}>{type}</option>
-                  ))}
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-gray-700 mb-2">
-                  Upload Valid ID <span className="text-red-500">*</span>
-                </label>
-                <div className="border-2 border-dashed border-gray-300 rounded-xl p-6 text-center hover:border-orange-400 transition-colors cursor-pointer">
-                  <input
-                    type="file"
-                    onChange={(e) => handleFileChange(e, 'ownerId')}
-                    accept="image/*,.pdf"
-                    className="hidden"
-                    id="owner-id-upload"
-                  />
-                  <label htmlFor="owner-id-upload" className="cursor-pointer">
-                    <Upload className="w-8 h-8 text-gray-400 mx-auto mb-2" />
-                    <p className="text-sm text-gray-600">
-                      {formData.ownerId ? formData.ownerId.name : 'Click to upload valid ID'}
-                    </p>
-                  </label>
-                </div>
-              </div>
-
-              <div className="bg-green-50 border border-green-200 rounded-xl p-4 mt-6">
-                <div className="flex items-start gap-3">
-                  <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
-                  <div className="text-sm text-green-800">
-                    <p className="font-semibold mb-1">Review Your Application</p>
-                    <p>Please review all information before submitting. Once submitted, your application will be reviewed by our team within 2-5 business days.</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Navigation Buttons */}
-          <div className="flex items-center justify-between mt-8 pt-6 border-t">
-            <Button
-              variant="outline"
-              onClick={handleBack}
-              disabled={step === 1}
-            >
-              Back
-            </Button>
-
-            <div className="text-sm text-gray-500">
-              Step {step} of 5
-            </div>
-
-            {step < 5 ? (
-              <Button
-                variant="primary"
-                onClick={handleNext}
-                className="bg-gradient-to-r from-orange-500 to-orange-600"
-              >
-                Next
-              </Button>
-            ) : (
-              <Button
-                variant="primary"
-                onClick={handleSubmit}
-                className="bg-gradient-to-r from-green-500 to-green-600"
-              >
-                Submit Application
-              </Button>
-            )}
           </div>
-        </Card>
+        )}
+
+        {/* Step 2 — Restaurant Details */}
+        {step === 2 && (
+          <div className="space-y-5">
+            <h2 className="text-white font-heading font-bold text-xl mb-5">Restaurant Details</h2>
+            <div>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Cuisine Type <span className="text-red-400">*</span></label>
+              <select name="cuisine" value={formData.cuisine} onChange={set} className={INPUT}>
+                <option value="" style={{ background:'#0d2b1a' }}>Select cuisine type</option>
+                {CUISINE_TYPES.map(t => <option key={t} value={t} style={{ background:'#0d2b1a' }}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Restaurant Description <span className="text-red-400">*</span></label>
+              <textarea name="description" value={formData.description} onChange={set}
+                placeholder="Describe your restaurant, specialties, and what makes it unique..."
+                rows={6} className={`${INPUT} resize-none`} />
+              <p className="text-forest-200/30 text-xs mt-1">{formData.description.length} / 500 characters</p>
+            </div>
+          </div>
+        )}
+
+        {/* Step 3 — Legal Documents */}
+        {step === 3 && (
+          <div className="space-y-5">
+            <h2 className="text-white font-heading font-bold text-xl mb-5">Legal Documents</h2>
+            <div className="glass rounded-xl p-4 flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 text-ember-400 flex-shrink-0 mt-0.5" />
+              <p className="text-forest-200/70 text-sm">All documents must be valid and clear. Accepted: PDF, JPG, PNG (max 5 MB each)</p>
+            </div>
+            <FileUpload label="BIR Certificate of Registration" file={formData.bir} onChange={e => setFile(e, 'bir')} inputId="bir-upload" />
+            <FileUpload label="Business Permit" file={formData.businessPermit} onChange={e => setFile(e, 'businessPermit')} inputId="permit-upload" />
+            <FileUpload label="Food Safety / Sanitary Permit" file={formData.foodSafetyPermit} onChange={e => setFile(e, 'foodSafetyPermit')} inputId="food-permit-upload" />
+          </div>
+        )}
+
+        {/* Step 4 — Photos */}
+        {step === 4 && (
+          <div className="space-y-5">
+            <h2 className="text-white font-heading font-bold text-xl mb-5">Restaurant & Menu Photos</h2>
+            <FileUpload
+              label="Restaurant Photos"
+              hint="Exterior, interior, and ambiance photos (min 1, max 10)"
+              file={formData.restaurantPhotos}
+              onChange={e => setFile(e, 'restaurantPhotos')}
+              inputId="restaurant-photos-upload"
+              multiple
+            />
+            <FileUpload
+              label="Menu Photos"
+              hint="Clear photos of your menu or individual dishes (min 1, max 20)"
+              file={formData.menuPhotos}
+              onChange={e => setFile(e, 'menuPhotos')}
+              inputId="menu-photos-upload"
+              multiple
+            />
+          </div>
+        )}
+
+        {/* Step 5 — Owner Info */}
+        {step === 5 && (
+          <div className="space-y-5">
+            <h2 className="text-white font-heading font-bold text-xl mb-5">Owner Information</h2>
+            <div>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Full Name (as shown on ID) <span className="text-red-400">*</span></label>
+              <input type="text" name="ownerName" value={formData.ownerName} onChange={set} placeholder="Enter full name" className={INPUT} />
+            </div>
+            <div>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1.5">ID Type <span className="text-red-400">*</span></label>
+              <select name="ownerIdType" value={formData.ownerIdType} onChange={set} className={INPUT}>
+                <option value="" style={{ background:'#0d2b1a' }}>Select ID type</option>
+                {ID_TYPES.map(t => <option key={t} value={t} style={{ background:'#0d2b1a' }}>{t}</option>)}
+              </select>
+            </div>
+            <FileUpload
+              label="Upload Valid ID"
+              file={formData.ownerId}
+              onChange={e => setFile(e, 'ownerId')}
+              inputId="owner-id-upload"
+            />
+            <div className="glass-green rounded-xl p-4 flex items-start gap-3">
+              <CheckCircle className="w-5 h-5 text-forest-400 flex-shrink-0 mt-0.5" />
+              <p className="text-forest-100/80 text-sm">Please review all information before submitting. Our team will review your application within 2–5 business days.</p>
+            </div>
+          </div>
+        )}
+
+        {/* Navigation */}
+        <div className="flex items-center justify-between mt-8 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,.08)' }}>
+          <button onClick={handleBack} disabled={step === 1}
+            className="glass hover:glass-green transition-all text-forest-200/70 hover:text-white disabled:opacity-30 text-sm font-medium px-5 py-2.5 rounded-xl">
+            Back
+          </button>
+          <span className="text-forest-200/40 text-xs">Step {step} of 5</span>
+          {step < 5 ? (
+            <button onClick={handleNext} className="btn-glow-orange text-white text-sm font-semibold px-6 py-2.5 rounded-xl">
+              Next
+            </button>
+          ) : (
+            <button onClick={handleSubmit} className="btn-glow-green text-white text-sm font-semibold px-6 py-2.5 rounded-xl flex items-center gap-2">
+              <CheckCircle className="w-4 h-4" /> Submit Application
+            </button>
+          )}
+        </div>
       </div>
     </div>
   );
