@@ -5,7 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
-  ChevronLeft, Wallet, CreditCard, MapPin, Plus, Minus, X,
+  ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
   Crown, Utensils, Star, Zap
 } from 'lucide-react';
 
@@ -26,7 +26,6 @@ export default function CustomerLayout() {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
-  const balance = 12.00;
 
   const getActive = () => {
     const p = location.pathname;
@@ -243,22 +242,6 @@ export default function CustomerLayout() {
         ) : (
           /* Cart panel */
           <div className="p-5 flex flex-col gap-5">
-            {/* Balance card */}
-            <div className="rounded-2xl p-5 relative overflow-hidden"
-              style={{ background: 'linear-gradient(135deg, #133d25 0%, #0d2b1a 100%)', border: '1px solid rgba(109,224,154,.15)', boxShadow: '0 8px 32px rgba(0,0,0,.4)' }}>
-              <div className="orb w-32 h-32 bg-forest-400/20 -top-4 -right-4" />
-              <div className="orb w-20 h-20 bg-ember-500/10 bottom-0 left-0" />
-              <p className="text-forest-200 text-xs mb-1 relative">Your Balance</p>
-              <p className="text-3xl font-heading font-bold text-white relative text-glow-green">₱{balance.toFixed(2)}</p>
-              <div className="flex gap-2 mt-4 relative">
-                <button className="flex-1 glass py-2 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1 hover:glass-green transition-all">
-                  <CreditCard className="w-3.5 h-3.5" /> Deposit
-                </button>
-                <button className="flex-1 glass py-2 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1 hover:glass-green transition-all">
-                  <Wallet className="w-3.5 h-3.5" /> Withdraw
-                </button>
-              </div>
-            </div>
 
             {/* Address */}
             <div className="glass rounded-2xl p-4">
