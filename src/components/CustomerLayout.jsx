@@ -6,7 +6,7 @@ import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
-  Crown, Utensils, Star, Zap
+  Crown, Utensils, Star, Zap, User
 } from 'lucide-react';
 
 const NAV = [
@@ -98,8 +98,12 @@ export default function CustomerLayout() {
         {!collapsed && (
           <div className="mx-4 mb-4 p-3 glass-green rounded-2xl flex items-center gap-3">
             <div className="relative">
-              <img src={user?.profileImage || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop'}
-                   alt="user" className="w-9 h-9 rounded-full object-cover border-2 border-forest-300/40" />
+              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-forest-300/40 flex items-center justify-center glass-dark">
+                {user?.avatar
+                  ? <img src={user.avatar} alt="user" className="w-full h-full object-cover" />
+                  : <User className="w-5 h-5 text-forest-300/70" />
+                }
+              </div>
               <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-forest-300 rounded-full border-2 border-forest-900" />
             </div>
             <div className="min-w-0 flex-1">
@@ -195,9 +199,11 @@ export default function CustomerLayout() {
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-400 rounded-full" />
               </button>
               <button onClick={() => navigate('/profile')}
-                className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all">
-                <img src={user?.profileImage || 'https://images.unsplash.com/photo-1438761681033-6461ffad8d80?w=80&h=80&fit=crop'}
-                     alt="user" className="w-full h-full object-cover" />
+                className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all flex items-center justify-center glass-dark">
+                {user?.avatar
+                  ? <img src={user.avatar} alt="user" className="w-full h-full object-cover" />
+                  : <User className="w-5 h-5 text-forest-300/70" />
+                }
               </button>
             </div>
           </header>
