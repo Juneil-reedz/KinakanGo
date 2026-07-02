@@ -25,7 +25,7 @@ export default function RiderLayout({ children }) {
         <div className="p-5 flex flex-col h-full min-h-[4rem] lg:min-h-screen">
           {/* Logo */}
           <Link to="/rider/dashboard" className="flex items-center gap-3 mb-8 group">
-            <div className="w-11 h-11 btn-glow-orange rounded-2xl flex items-center justify-center text-2xl flex-shrink-0 group-hover:scale-110 transition-transform">🛵</div>
+            <div className="w-11 h-11 btn-glow-orange rounded-2xl flex items-center justify-center flex-shrink-0 group-hover:scale-110 transition-transform"><Bike className="w-5 h-5 text-white" /></div>
             <div className="hidden lg:block">
               <p className="text-white font-heading font-bold text-sm">Rider Portal</p>
               <p className="text-forest-200/50 text-xs">Delivery Dashboard</p>
