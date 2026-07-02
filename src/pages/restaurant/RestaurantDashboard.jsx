@@ -1,247 +1,151 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useRestaurant } from '../../context/RestaurantContext';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import { Package, DollarSign, Clock, ChefHat, TrendingUp, TrendingDown, ArrowRight, Calendar } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, ChefHat, ArrowRight, Clock, User } from 'lucide-react';
+
+const STATUS_STYLE = {
+  pending:   'glass-orange text-ember-200',
+  preparing: 'glass text-forest-200',
+  ready:     'btn-glow-green text-white',
+  completed: 'glass-green text-forest-200',
+};
 
 export default function RestaurantDashboard() {
   const { restaurant } = useRestaurant();
-  const [stats, setStats] = useState({
-    todayOrders: 24,
-    todaySales: 487.50,
-    pendingOrders: 3,
-    inProgressOrders: 5,
-    todayProfit: 350.00,
-  });
 
-  const [recentOrders, setRecentOrders] = useState([
-    {
-      id: '12345',
-      customerName: 'John Doe',
-      items: [
-        { name: 'Margherita Pizza', quantity: 2 },
-        { name: 'Caesar Salad', quantity: 1 },
-      ],
-      total: 40.76,
-      status: 'pending',
-      time: '2 min ago',
-      date: '04 Aug 2024',
-      estimatedReady: '20 min',
-    },
-    {
-      id: '12344',
-      customerName: 'Jane Smith',
-      items: [
-        { name: 'Pepperoni Pizza', quantity: 1 },
-        { name: 'Spaghetti Carbonara', quantity: 1 },
-      ],
-      total: 28.98,
-      status: 'preparing',
-      time: '5 min ago',
-      date: '04 Aug 2024',
-      estimatedReady: '15 min',
-    },
-    {
-      id: '12343',
-      customerName: 'Mike Johnson',
-      items: [
-        { name: 'Margherita Pizza', quantity: 3 },
-      ],
-      total: 38.97,
-      status: 'ready',
-      time: '10 min ago',
-      date: '04 Aug 2024',
-    },
-    {
-      id: '12342',
-      customerName: 'Sarah Wilson',
-      items: [
-        { name: 'Caesar Salad', quantity: 2 },
-      ],
-      total: 16.70,
-      status: 'completed',
-      time: '15 min ago',
-      date: '04 Aug 2024',
-    },
-  ]);
+  const stats = { todayOrders:24, todaySales:487.50, totalSales:2681.25, todayProfit:350.00 };
 
-  const [filter, setFilter] = useState('all');
+  const recentOrders = [
+    { id:'12345', customerName:'John Doe',     items:[{ name:'Margherita Pizza', quantity:2 },{ name:'Caesar Salad', quantity:1 }],    total:40.76, status:'pending',   time:'2 min ago',  date:'04 Aug 2024' },
+    { id:'12344', customerName:'Jane Smith',   items:[{ name:'Pepperoni Pizza', quantity:1 },{ name:'Spaghetti Carbonara', quantity:1 }], total:28.98, status:'preparing', time:'5 min ago',  date:'04 Aug 2024' },
+    { id:'12343', customerName:'Mike Johnson', items:[{ name:'Margherita Pizza', quantity:3 }],                                           total:38.97, status:'ready',     time:'10 min ago', date:'04 Aug 2024' },
+    { id:'12342', customerName:'Sarah Wilson', items:[{ name:'Caesar Salad', quantity:2 }],                                               total:16.70, status:'completed', time:'15 min ago', date:'04 Aug 2024' },
+  ];
 
-  const getFilteredOrders = () => {
-    if (filter === 'all') return recentOrders;
-    return recentOrders.filter(order => order.status === filter);
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      pending: 'bg-yellow-50 text-yellow-700 border-yellow-200',
-      preparing: 'bg-blue-50 text-blue-700 border-blue-200',
-      ready: 'bg-orange-50 text-orange-700 border-orange-200',
-      completed: 'bg-green-50 text-green-700 border-green-200',
-    };
-    return badges[status] || badges.pending;
-  };
+  const STAT_CARDS = [
+    { label:'Available Cash', value:`₱${stats.todaySales.toFixed(2)}`,              icon:DollarSign, color:'btn-glow-orange', trend:'+10%' },
+    { label:'Total Orders',   value:stats.todayOrders,                              icon:Package,    color:'btn-glow-green',  trend:'+8%'  },
+    { label:'Total Sales',    value:`₱${stats.totalSales.toFixed(0)}`,              icon:TrendingUp, color:'glass-green',     trend:'+10%' },
+    { label:'Total Profit',   value:`₱${stats.todayProfit.toFixed(2)}`,             icon:ChefHat,    color:'glass-orange',    trend:'+68%' },
+  ];
 
   return (
-    <div className="space-y-6">
-      {/* Stats Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-5">
-        {/* Available Cash */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Available Cash</p>
-              <p className="text-3xl font-bold text-gray-900">₱{stats.todaySales.toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-orange-100 to-rose-100 rounded-xl">
-              <DollarSign className="w-6 h-6 text-rose-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingUp className="w-4 h-4 text-green-600" />
-            <span className="text-green-600 font-medium">+10% Growth</span>
-          </div>
-        </div>
+    <div className="space-y-5 pb-6 animate-fade-up">
 
-        {/* Total Order */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Total Order</p>
-              <p className="text-3xl font-bold text-gray-900">{stats.todayOrders}</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-purple-100 to-indigo-100 rounded-xl">
-              <Package className="w-6 h-6 text-purple-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingUp className="w-4 h-4 text-green-600" />
-            <span className="text-green-600 font-medium">+8% Growth</span>
-          </div>
-        </div>
-
-        {/* Total Sales */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Total Sales</p>
-              <p className="text-3xl font-bold text-gray-900">₱{(stats.todaySales * 5.5).toFixed(0)}</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-blue-100 to-cyan-100 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingUp className="w-4 h-4 text-green-600" />
-            <span className="text-green-600 font-medium">+10% Growth</span>
-          </div>
-        </div>
-
-        {/* Total Profit */}
-        <div className="bg-white rounded-2xl p-6 shadow-sm border border-gray-100 hover:shadow-md transition-shadow">
-          <div className="flex items-start justify-between mb-4">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Total Profit</p>
-              <p className="text-3xl font-bold text-gray-900">₱{stats.todayProfit.toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl">
-              <ChefHat className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-          <div className="flex items-center gap-1 text-sm">
-            <TrendingUp className="w-4 h-4 text-green-600" />
-            <span className="text-green-600 font-medium">+68% Increase</span>
-          </div>
-        </div>
+      {/* Greeting */}
+      <div>
+        <p className="text-forest-200/50 text-sm">Overview</p>
+        <h1 className="text-2xl font-heading font-bold text-white">{restaurant?.name || 'Restaurant'}</h1>
       </div>
 
-      {/* Main Content Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Recent Orders - Takes 2 columns */}
-        <div className="lg:col-span-2">
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-6">
-              <h2 className="text-xl font-bold text-gray-900">Recent Order</h2>
-              <Link to="/owner/orders" className="flex items-center gap-2 text-rose-600 hover:text-rose-700 font-medium text-sm">
-                <span>See All</span>
-                <ArrowRight className="w-4 h-4" />
-              </Link>
+      {/* Stat cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        {STAT_CARDS.map(({ label, value, icon:Icon, color, trend }) => (
+          <div key={label} className="glass card-3d rounded-2xl p-4">
+            <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-3`}>
+              <Icon className="w-4 h-4 text-white" />
             </div>
+            <p className="text-white font-heading font-bold text-xl leading-tight">{value}</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
+            <p className="text-forest-300 text-xs mt-1 flex items-center gap-0.5">
+              <TrendingUp className="w-3 h-3" /> {trend}
+            </p>
+          </div>
+        ))}
+      </div>
 
-            {/* Orders List */}
-            <div className="space-y-3">
-              {recentOrders.slice(0, 3).map((order) => (
-                <div
-                  key={order.id}
-                  className="flex items-center justify-between p-4 bg-gray-50 rounded-xl hover:bg-orange-50 transition-colors border border-transparent hover:border-orange-100"
-                >
-                  <div className="flex items-center gap-4 flex-1">
-                    <div className="w-12 h-12 bg-gradient-to-br from-rose-400 to-orange-500 rounded-xl flex items-center justify-center text-white font-bold shadow-sm">
-                      {order.items[0].name.charAt(0)}
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="font-semibold text-gray-900">{order.items[0].name}</h3>
-                      <p className="text-sm text-gray-600">₱{order.total.toFixed(2)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right mr-4">
-                    <p className="text-sm text-gray-600">{order.date}</p>
-                    <span className={`inline-block mt-1 px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(order.status)}`}>
-                      {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                    </span>
+      {/* Main grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+
+        {/* Recent orders — 2 cols */}
+        <div className="lg:col-span-2 glass rounded-2xl overflow-hidden">
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+            <p className="text-white font-semibold">Recent Orders</p>
+            <Link to="/owner/orders" className="flex items-center gap-1 text-ember-400 hover:text-ember-300 text-xs font-medium transition-colors">
+              See All <ArrowRight className="w-3.5 h-3.5" />
+            </Link>
+          </div>
+          <div className="divide-y divide-white/5">
+            {recentOrders.slice(0, 3).map(order => (
+              <div key={order.id} className="p-4 flex items-center gap-3 hover:glass transition-all">
+                <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                  {order.items[0].name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <p className="text-white text-sm font-semibold truncate">{order.items[0].name}</p>
+                  <div className="flex items-center gap-2 mt-0.5">
+                    <User className="w-3 h-3 text-forest-300/50" />
+                    <p className="text-forest-200/50 text-xs truncate">{order.customerName}</p>
                   </div>
                 </div>
-              ))}
-            </div>
-
-            {/* View All Orders Button */}
-            <Link to="/owner/orders" className="block mt-4">
-              <Button className="w-full bg-gradient-to-r from-rose-400 to-orange-500 hover:from-rose-500 hover:to-orange-600 text-white font-medium py-3 rounded-xl shadow-sm">
+                <div className="text-right flex-shrink-0">
+                  <p className="text-ember-400 font-bold text-sm">₱{order.total.toFixed(2)}</p>
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${STATUS_STYLE[order.status]}`}>
+                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                  </span>
+                </div>
+              </div>
+            ))}
+          </div>
+          <div className="p-4" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+            <Link to="/owner/orders">
+              <button className="w-full btn-glow-orange text-white text-sm font-semibold py-2.5 rounded-xl">
                 View All Orders
-              </Button>
+              </button>
             </Link>
           </div>
         </div>
 
-        {/* Quick Stats - Takes 1 column */}
-        <div className="space-y-6">
-          {/* Performance Card */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-gray-900">Performance</h3>
-              <button className="text-gray-400 hover:text-gray-600">
-                <svg className="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
-                  <path d="M10 6a2 2 0 110-4 2 2 0 010 4zM10 12a2 2 0 110-4 2 2 0 010 4zM10 18a2 2 0 110-4 2 2 0 010 4z" />
-                </svg>
-              </button>
-            </div>
-            <div className="text-center py-6">
-              <div className="inline-flex items-center justify-center w-32 h-32 rounded-full bg-gradient-to-br from-orange-100 to-rose-100 mb-4">
-                <div className="text-4xl font-bold text-rose-600">{stats.pendingOrders}</div>
+        {/* Right column */}
+        <div className="space-y-4">
+          {/* Pending ring */}
+          <div className="glass rounded-2xl p-5 text-center">
+            <p className="text-white font-semibold mb-4">Pending Orders</p>
+            <div className="relative inline-flex items-center justify-center w-28 h-28 mx-auto mb-3">
+              <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="10" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="url(#grad)" strokeWidth="10"
+                  strokeDasharray="251" strokeDashoffset={251 - (3 / 24) * 251} strokeLinecap="round" />
+                <defs>
+                  <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
+                    <stop offset="0%" stopColor="#22c55e" />
+                    <stop offset="100%" stopColor="#f97316" />
+                  </linearGradient>
+                </defs>
+              </svg>
+              <div className="absolute inset-0 flex flex-col items-center justify-center">
+                <span className="text-white font-heading font-bold text-3xl">3</span>
+                <span className="text-forest-200/50 text-xs">of 24</span>
               </div>
-              <p className="text-gray-600 text-sm">Pending Orders</p>
             </div>
+            <p className="text-forest-200/50 text-xs">Awaiting confirmation</p>
           </div>
 
-          {/* Quick Actions */}
-          <div className="bg-white rounded-2xl shadow-sm border border-gray-100 p-6">
-            <h3 className="font-bold text-gray-900 mb-4">Quick Actions</h3>
-            <div className="space-y-3">
-              <Link to="/owner/menu">
-                <Button className="w-full bg-gray-100 hover:bg-orange-50 text-gray-700 hover:text-rose-600 font-medium py-3 rounded-xl transition-colors border border-gray-200 hover:border-orange-200">
-                  Manage Menu
-                </Button>
+          {/* Quick actions */}
+          <div className="glass rounded-2xl p-4 space-y-2">
+            <p className="text-white font-semibold mb-3">Quick Actions</p>
+            {[
+              { label:'Manage Menu',   path:'/owner/menu',    color:'hover:glass-orange' },
+              { label:'View Reports',  path:'/owner/reports', color:'hover:glass-green'  },
+              { label:'All Orders',    path:'/owner/orders',  color:'hover:glass-orange' },
+            ].map(({ label, path, color }) => (
+              <Link key={path} to={path}>
+                <button className={`w-full glass ${color} transition-all text-forest-100/80 hover:text-white text-sm font-medium py-2.5 rounded-xl flex items-center justify-between px-4 mb-1`}>
+                  {label} <ChevronRight />
+                </button>
               </Link>
-              <Link to="/owner/reports">
-                <Button className="w-full bg-gray-100 hover:bg-orange-50 text-gray-700 hover:text-rose-600 font-medium py-3 rounded-xl transition-colors border border-gray-200 hover:border-orange-200">
-                  View Reports
-                </Button>
-              </Link>
-            </div>
+            ))}
           </div>
         </div>
       </div>
     </div>
+  );
+}
+
+function ChevronRight() {
+  return (
+    <svg className="w-4 h-4 opacity-40" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 5l7 7-7 7" />
+    </svg>
   );
 }

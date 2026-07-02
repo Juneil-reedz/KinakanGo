@@ -1,272 +1,194 @@
 import { useState } from 'react';
-import { useRestaurant } from '../../context/RestaurantContext';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import { DollarSign, Package, TrendingUp, FileText, Download } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, Users, Download, FileText } from 'lucide-react';
+
+const DATA = {
+  week: {
+    rows:[
+      { day:'Mon', sales:245.50,  orders:12 },
+      { day:'Tue', sales:389.25,  orders:18 },
+      { day:'Wed', sales:467.80,  orders:22 },
+      { day:'Thu', sales:523.45,  orders:25 },
+      { day:'Fri', sales:678.90,  orders:32 },
+      { day:'Sat', sales:892.35,  orders:41 },
+      { day:'Sun', sales:734.25,  orders:35 },
+    ],
+  },
+  month: {
+    rows:[
+      { day:'Week 1', sales:1245.50, orders:58 },
+      { day:'Week 2', sales:1589.25, orders:72 },
+      { day:'Week 3', sales:1867.80, orders:85 },
+      { day:'Week 4', sales:2023.45, orders:95 },
+    ],
+  },
+  year: {
+    rows:[
+      { day:'Jan', sales:4523.45, orders:215 },
+      { day:'Feb', sales:5234.80, orders:245 },
+      { day:'Mar', sales:5678.90, orders:268 },
+      { day:'Apr', sales:6123.35, orders:285 },
+      { day:'May', sales:6789.25, orders:312 },
+      { day:'Jun', sales:7234.50, orders:335 },
+      { day:'Jul', sales:7892.35, orders:365 },
+      { day:'Aug', sales:8145.80, orders:378 },
+      { day:'Sep', sales:7523.45, orders:348 },
+      { day:'Oct', sales:7890.25, orders:362 },
+      { day:'Nov', sales:8234.50, orders:385 },
+      { day:'Dec', sales:9123.35, orders:425 },
+    ],
+  },
+};
+
+const TOP_ITEMS = [
+  { name:'Margherita Pizza',    orders:156, revenue:2026.44, pct:18 },
+  { name:'Pepperoni Pizza',     orders:134, revenue:2008.66, pct:15 },
+  { name:'Spaghetti Carbonara', orders:98,  revenue:1370.02, pct:11 },
+  { name:'Caesar Salad',        orders:87,  revenue:782.13,  pct:10 },
+  { name:'Chicken Parmigiana',  orders:76,  revenue:1293.24, pct:8  },
+];
+
+const CUSTOMER_STATS = [
+  { label:'Total Customers',      value:247,      change:'+12%' },
+  { label:'New Customers',        value:45,       change:'+8%'  },
+  { label:'Returning Customers',  value:202,      change:'+15%' },
+  { label:'Avg Order Value',      value:'₱32.45', change:'+5%'  },
+];
+
+const RANK_COLOR = ['btn-glow-orange','glass','glass-green'];
 
 export default function RestaurantReports() {
-  const { restaurant } = useRestaurant();
-
-  const [timeRange, setTimeRange] = useState('week');
-
-  // Mock sales data
-  const salesData = {
-    week: [
-      { day: 'Mon', sales: 245.50, orders: 12 },
-      { day: 'Tue', sales: 389.25, orders: 18 },
-      { day: 'Wed', sales: 467.80, orders: 22 },
-      { day: 'Thu', sales: 523.45, orders: 25 },
-      { day: 'Fri', sales: 678.90, orders: 32 },
-      { day: 'Sat', sales: 892.35, orders: 41 },
-      { day: 'Sun', sales: 734.25, orders: 35 },
-    ],
-    month: [
-      { day: 'Week 1', sales: 1245.50, orders: 58 },
-      { day: 'Week 2', sales: 1589.25, orders: 72 },
-      { day: 'Week 3', sales: 1867.80, orders: 85 },
-      { day: 'Week 4', sales: 2023.45, orders: 95 },
-    ],
-    year: [
-      { day: 'Jan', sales: 4523.45, orders: 215 },
-      { day: 'Feb', sales: 5234.80, orders: 245 },
-      { day: 'Mar', sales: 5678.90, orders: 268 },
-      { day: 'Apr', sales: 6123.35, orders: 285 },
-      { day: 'May', sales: 6789.25, orders: 312 },
-      { day: 'Jun', sales: 7234.50, orders: 335 },
-      { day: 'Jul', sales: 7892.35, orders: 365 },
-      { day: 'Aug', sales: 8145.80, orders: 378 },
-      { day: 'Sep', sales: 7523.45, orders: 348 },
-      { day: 'Oct', sales: 7890.25, orders: 362 },
-      { day: 'Nov', sales: 8234.50, orders: 385 },
-      { day: 'Dec', sales: 9123.35, orders: 425 },
-    ],
-  };
-
-  // Mock top items data
-  const topItems = [
-    { name: 'Margherita Pizza', orders: 156, revenue: 2026.44, percentage: 18 },
-    { name: 'Pepperoni Pizza', orders: 134, revenue: 2008.66, percentage: 15 },
-    { name: 'Spaghetti Carbonara', orders: 98, revenue: 1370.02, percentage: 11 },
-    { name: 'Caesar Salad', orders: 87, revenue: 782.13, percentage: 10 },
-    { name: 'Chicken Parmigiana', orders: 76, revenue: 1293.24, percentage: 8 },
-  ];
-
-  // Mock customer stats
-  const customerStats = [
-    { metric: 'Total Customers', value: 247, change: '+12%' },
-    { metric: 'New Customers', value: 45, change: '+8%' },
-    { metric: 'Returning Customers', value: 202, change: '+15%' },
-    { metric: 'Average Order Value', value: '₱32.45', change: '+5%' },
-  ];
-
-  const currentData = salesData[timeRange];
-  const maxSales = Math.max(...currentData.map(d => d.sales));
-
-  const totalSales = currentData.reduce((sum, d) => sum + d.sales, 0);
-  const totalOrders = currentData.reduce((sum, d) => sum + d.orders, 0);
-  const avgOrderValue = totalSales / totalOrders;
+  const [range, setRange] = useState('week');
+  const d    = DATA[range];
+  const max  = Math.max(...d.rows.map(r => r.sales));
+  const totalSales  = d.rows.reduce((s,r) => s+r.sales,  0);
+  const totalOrders = d.rows.reduce((s,r) => s+r.orders, 0);
+  const avg         = totalSales / totalOrders;
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-5 pb-6 animate-fade-up">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-2xl font-bold mb-2 text-gray-900">Reports & Analytics</h1>
-          <p className="text-gray-600">Track your restaurant's performance</p>
+          <p className="text-forest-200/50 text-sm">Analytics</p>
+          <h1 className="text-2xl font-heading font-bold text-white">Reports</h1>
         </div>
-
-        {/* Time Range Selector */}
-        <div className="flex gap-2">
-          <button
-            onClick={() => setTimeRange('week')}
-            className={`px-4 py-2.5 rounded-xl font-medium transition-colors ${
-              timeRange === 'week'
-                ? 'bg-gradient-to-r from-rose-400 to-orange-500 text-white shadow-md'
-                : 'bg-gray-50 text-gray-700 hover:bg-orange-50 hover:text-rose-600'
-            }`}
-          >
-            This Week
-          </button>
-          <button
-            onClick={() => setTimeRange('month')}
-            className={`px-4 py-2.5 rounded-xl font-medium transition-colors ${
-              timeRange === 'month'
-                ? 'bg-gradient-to-r from-rose-400 to-orange-500 text-white shadow-md'
-                : 'bg-gray-50 text-gray-700 hover:bg-orange-50 hover:text-rose-600'
-            }`}
-          >
-            This Month
-          </button>
-          <button
-            onClick={() => setTimeRange('year')}
-            className={`px-4 py-2.5 rounded-xl font-medium transition-colors ${
-              timeRange === 'year'
-                ? 'bg-gradient-to-r from-rose-400 to-orange-500 text-white shadow-md'
-                : 'bg-gray-50 text-gray-700 hover:bg-orange-50 hover:text-rose-600'
-            }`}
-          >
-            This Year
-          </button>
+        <div className="flex glass rounded-xl overflow-hidden">
+          {['week','month','year'].map(r => (
+            <button key={r} onClick={() => setRange(r)}
+              className={`px-3 py-2 text-xs font-semibold transition-all capitalize
+                ${range===r ? 'btn-glow-orange text-white' : 'text-forest-200/60 hover:text-forest-100'}`}>
+              {r === 'week' ? 'Week' : r === 'month' ? 'Month' : 'Year'}
+            </button>
+          ))}
         </div>
       </div>
 
-      {/* Summary Stats */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
-        <Card className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Total Sales</p>
-              <p className="text-3xl font-bold text-gray-900">₱{totalSales.toFixed(2)}</p>
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label:'Total Sales',  value:`₱${totalSales.toFixed(0)}`,  icon:DollarSign, color:'btn-glow-orange' },
+          { label:'Total Orders', value:totalOrders,                   icon:Package,    color:'btn-glow-green'  },
+          { label:'Avg Order',    value:`₱${avg.toFixed(2)}`,          icon:TrendingUp, color:'glass-orange'    },
+        ].map(({ label, value, icon:Icon, color }) => (
+          <div key={label} className="glass card-3d rounded-2xl p-4">
+            <div className={`w-8 h-8 ${color} rounded-xl flex items-center justify-center mb-2`}>
+              <Icon className="w-4 h-4 text-white" />
             </div>
-            <div className="p-3 bg-gradient-to-br from-green-100 to-emerald-100 rounded-xl">
-              <DollarSign className="w-6 h-6 text-green-600" />
-            </div>
+            <p className="text-white font-heading font-bold text-lg leading-tight">{value}</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
           </div>
-        </Card>
-
-        <Card className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Total Orders</p>
-              <p className="text-3xl font-bold text-gray-900">{totalOrders}</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-blue-100 to-indigo-100 rounded-xl">
-              <Package className="w-6 h-6 text-blue-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-white border border-gray-100 rounded-2xl shadow-sm">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-sm text-gray-600 mb-2">Avg Order Value</p>
-              <p className="text-3xl font-bold text-gray-900">₱{avgOrderValue.toFixed(2)}</p>
-            </div>
-            <div className="p-3 bg-gradient-to-br from-orange-100 to-rose-100 rounded-xl">
-              <TrendingUp className="w-6 h-6 text-rose-600" />
-            </div>
-          </div>
-        </Card>
+        ))}
       </div>
 
-      {/* Sales Chart */}
-      <Card className="border border-gray-100 rounded-2xl shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-gray-900">Sales Overview</h2>
-
-        <div className="space-y-4">
-          {currentData.map((item, index) => (
-            <div key={index}>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-sm font-semibold text-gray-900">{item.day}</span>
-                <div className="text-right">
-                  <span className="text-sm font-bold bg-gradient-to-r from-rose-500 to-orange-500 bg-clip-text text-transparent">₱{item.sales.toFixed(2)}</span>
-                  <span className="text-xs text-gray-500 ml-2">({item.orders} orders)</span>
+      {/* Sales chart */}
+      <div className="glass rounded-2xl p-5">
+        <p className="text-white font-semibold mb-5">Sales Overview</p>
+        <div className="space-y-3">
+          {d.rows.map((row, i) => (
+            <div key={i}>
+              <div className="flex items-center justify-between mb-1.5">
+                <span className="text-forest-200/70 text-xs font-medium w-12">{row.day}</span>
+                <div className="flex-1 mx-3 h-2.5 glass rounded-full overflow-hidden">
+                  <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
+                    style={{ width:`${(row.sales/max)*100}%` }} />
+                </div>
+                <div className="text-right min-w-[110px]">
+                  <span className="text-white text-xs font-bold">₱{row.sales.toFixed(2)}</span>
+                  <span className="text-forest-200/40 text-xs ml-1.5">{row.orders} orders</span>
                 </div>
               </div>
-              <div className="w-full bg-gray-100 rounded-full h-3 overflow-hidden">
-                <div
-                  className="bg-gradient-to-r from-rose-400 to-orange-500 h-3 rounded-full transition-all duration-500 shadow-sm"
-                  style={{ width: `${(item.sales / maxSales) * 100}%` }}
-                />
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Top selling items */}
+      <div className="glass rounded-2xl overflow-hidden">
+        <div className="p-4" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+          <p className="text-white font-semibold">Top Selling Items</p>
+        </div>
+        <div className="divide-y divide-white/5">
+          {TOP_ITEMS.map((item, i) => (
+            <div key={i} className="p-4 flex items-center gap-3 hover:glass transition-all">
+              <div className={`w-8 h-8 ${RANK_COLOR[i] || 'glass'} rounded-xl flex items-center justify-center text-white text-xs font-bold flex-shrink-0`}>
+                {i+1}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-sm font-semibold truncate">{item.name}</p>
+                <p className="text-forest-200/50 text-xs">{item.orders} orders</p>
+              </div>
+              <div className="text-right flex-shrink-0">
+                <p className="text-ember-400 font-bold text-sm">₱{item.revenue.toFixed(2)}</p>
+                <div className="flex items-center gap-1.5 justify-end mt-1">
+                  <div className="w-12 h-1.5 glass rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-forest-500 to-ember-500 rounded-full"
+                      style={{ width:`${item.pct*5}%` }} />
+                  </div>
+                  <span className="text-forest-200/40 text-xs">{item.pct}%</span>
+                </div>
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
-      {/* Top Items */}
-      <Card className="border border-gray-100 rounded-2xl shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-gray-900">Top Selling Items</h2>
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-gray-200">
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Rank</th>
-                <th className="text-left py-3 px-4 font-semibold text-gray-700">Item Name</th>
-                <th className="text-right py-3 px-4 font-semibold text-gray-700">Orders</th>
-                <th className="text-right py-3 px-4 font-semibold text-gray-700">Revenue</th>
-                <th className="text-right py-3 px-4 font-semibold text-gray-700">Share</th>
-              </tr>
-            </thead>
-            <tbody>
-              {topItems.map((item, index) => (
-                <tr key={index} className="border-b border-gray-100 hover:bg-orange-50 transition-colors">
-                  <td className="py-4 px-4">
-                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full font-bold text-sm ${
-                      index === 0 ? 'bg-gradient-to-br from-yellow-100 to-amber-100 text-yellow-700 border border-yellow-200' :
-                      index === 1 ? 'bg-gradient-to-br from-gray-100 to-gray-200 text-gray-700 border border-gray-300' :
-                      index === 2 ? 'bg-gradient-to-br from-orange-100 to-rose-100 text-orange-700 border border-orange-200' :
-                      'bg-gray-50 text-gray-600 border border-gray-200'
-                    }`}>
-                      {index + 1}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4 font-medium text-gray-900">{item.name}</td>
-                  <td className="py-4 px-4 text-right text-gray-700">{item.orders}</td>
-                  <td className="py-4 px-4 text-right font-bold bg-gradient-to-r from-rose-500 to-orange-500 bg-clip-text text-transparent">
-                    ₱{item.revenue.toFixed(2)}
-                  </td>
-                  <td className="py-4 px-4 text-right">
-                    <div className="flex items-center justify-end gap-2">
-                      <div className="w-16 bg-gray-100 rounded-full h-2 overflow-hidden">
-                        <div
-                          className="bg-gradient-to-r from-rose-400 to-orange-500 h-2 rounded-full"
-                          style={{ width: `${item.percentage * 5}%` }}
-                        />
-                      </div>
-                      <span className="text-sm text-gray-600 w-10">{item.percentage}%</span>
-                    </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
+      {/* Customer stats */}
+      <div className="glass rounded-2xl p-5">
+        <div className="flex items-center gap-2 mb-4">
+          <Users className="w-4 h-4 text-forest-300/60" />
+          <p className="text-white font-semibold">Customer Statistics</p>
         </div>
-      </Card>
-
-      {/* Customer Statistics */}
-      <Card className="border border-gray-100 rounded-2xl shadow-sm">
-        <h2 className="text-xl font-bold mb-6 text-gray-900">Customer Statistics</h2>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-          {customerStats.map((stat, index) => (
-            <div key={index} className="p-5 bg-gradient-to-br from-orange-50 to-rose-50 rounded-xl border border-orange-100">
-              <p className="text-sm text-gray-600 mb-2">{stat.metric}</p>
+        <div className="grid grid-cols-2 gap-3">
+          {CUSTOMER_STATS.map(({ label, value, change }) => (
+            <div key={label} className="glass rounded-xl p-3">
+              <p className="text-forest-200/50 text-xs mb-1">{label}</p>
               <div className="flex items-baseline gap-2">
-                <p className="text-2xl font-bold text-gray-900">{stat.value}</p>
-                <span className={`text-sm font-semibold ${
-                  stat.change.startsWith('+') ? 'text-green-600' : 'text-red-600'
-                }`}>
-                  {stat.change}
-                </span>
+                <p className="text-white font-heading font-bold text-lg">{value}</p>
+                <span className="text-forest-300 text-xs font-semibold">{change}</span>
               </div>
             </div>
           ))}
         </div>
-      </Card>
+      </div>
 
-      {/* Export Options */}
-      <Card className="border border-gray-100 rounded-2xl shadow-sm">
-        <h2 className="text-xl font-bold mb-4 text-gray-900">Export Reports</h2>
-        <p className="text-gray-600 mb-4">
-          Download detailed reports for accounting and analysis
-        </p>
-        <div className="flex flex-wrap gap-3">
-          <Button variant="outline" className="text-gray-700 border-gray-300 hover:bg-orange-50 hover:border-orange-200 hover:text-rose-600">
-            <FileText className="w-4 h-4 mr-2" />
-            Export as PDF
-          </Button>
-          <Button variant="outline" className="text-gray-700 border-gray-300 hover:bg-orange-50 hover:border-orange-200 hover:text-rose-600">
-            <Download className="w-4 h-4 mr-2" />
-            Export as Excel
-          </Button>
-          <Button variant="outline" className="text-gray-700 border-gray-300 hover:bg-orange-50 hover:border-orange-200 hover:text-rose-600">
-            <Download className="w-4 h-4 mr-2" />
-            Export as CSV
-          </Button>
+      {/* Export */}
+      <div className="glass rounded-2xl p-5">
+        <p className="text-white font-semibold mb-1">Export Reports</p>
+        <p className="text-forest-200/50 text-sm mb-4">Download detailed reports for accounting and analysis.</p>
+        <div className="flex gap-3 flex-wrap">
+          {[
+            { label:'Export PDF',   icon:FileText },
+            { label:'Export Excel', icon:Download },
+            { label:'Export CSV',   icon:Download },
+          ].map(({ label, icon:Icon }) => (
+            <button key={label}
+              className="flex-1 glass hover:glass-orange transition-all text-forest-100/80 hover:text-white text-sm font-medium py-2.5 rounded-xl flex items-center justify-center gap-2">
+              <Icon className="w-4 h-4" /> {label}
+            </button>
+          ))}
         </div>
-      </Card>
+      </div>
     </div>
   );
 }
