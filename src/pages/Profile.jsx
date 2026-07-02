@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -6,7 +6,7 @@ import { useNotification } from '../context/NotificationContext';
 import { ordersApi } from '../services/api';
 import {
   ArrowRight, X, Mail, Edit2, Package, Heart, Phone, MapPin,
-  LogOut, Settings, RotateCcw, Receipt, Star, Store, Check, User
+  LogOut, Settings, RotateCcw, Receipt, Star, Store, Check, User, Camera
 } from 'lucide-react';
 
 const QUICK_ACTIONS = [
@@ -30,6 +30,22 @@ export default function Profile() {
   const [orders, setOrders]       = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [saving, setSaving]       = useState(false);
+  const avatarInputRef            = useRef(null);
+
+  const handleAvatarChange = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (file.size > 2 * 1024 * 1024) {
+      addNotification('Image must be under 2 MB', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      updateUser({ avatar: ev.target.result });
+      addNotification('Profile photo updated!', 'success');
+    };
+    reader.readAsDataURL(file);
+  };
 
   useEffect(() => {
     setOrdersLoading(true);
@@ -97,8 +113,27 @@ export default function Profile() {
           <div className="glass card-3d rounded-3xl p-6">
             <div className="flex flex-col sm:flex-row items-center gap-5">
               <div className="relative flex-shrink-0">
-                <div className="w-24 h-24 rounded-2xl glass-dark flex items-center justify-center border-2 border-white/15">
-                  <User className="w-10 h-10 text-forest-300/60" />
+                <input
+                  ref={avatarInputRef}
+                  type="file"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={handleAvatarChange}
+                />
+                <button
+                  onClick={() => avatarInputRef.current?.click()}
+                  className="w-24 h-24 rounded-2xl glass-dark flex items-center justify-center border-2 border-white/15 overflow-hidden group relative"
+                >
+                  {user.avatar
+                    ? <img src={user.avatar} alt="avatar" className="w-full h-full object-cover" />
+                    : <User className="w-10 h-10 text-forest-300/60" />
+                  }
+                  <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-2xl">
+                    <Camera className="w-6 h-6 text-white" />
+                  </div>
+                </button>
+                <div className="absolute -bottom-1.5 -right-1.5 w-7 h-7 btn-glow-green rounded-full flex items-center justify-center pointer-events-none">
+                  <Camera className="w-3.5 h-3.5 text-white" />
                 </div>
               </div>
               <div className="flex-1 text-center sm:text-left">
