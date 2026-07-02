@@ -30,8 +30,9 @@ export default function Login() {
       await login(form.email, form.password);
       addNotification('Login successful! Welcome back! 🎉', 'success');
       navigate('/welcome', { replace: true });
-    } catch {
-      setErrors({ password: 'Invalid email or password' });
+    } catch (err) {
+      const msg = err?.data?.error || err?.message || 'Invalid email or password';
+      setErrors({ password: msg });
     } finally {
       setLoading(false);
     }

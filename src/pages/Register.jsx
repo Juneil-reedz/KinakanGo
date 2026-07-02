@@ -42,10 +42,15 @@ export default function Register() {
     setLoading(true);
     try {
       await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
-      addNotification('Account created! Welcome aboard 🎉', 'success');
+      addNotification('Account created! Welcome aboard', 'success');
       navigate('/');
-    } catch {
-      setErrors({ email: 'Email already in use or registration failed' });
+    } catch (err) {
+      const msg = err?.data?.error || err?.message || 'Registration failed';
+      if (msg.toLowerCase().includes('email')) {
+        setErrors({ email: msg });
+      } else {
+        setErrors({ password: msg });
+      }
     } finally {
       setLoading(false);
     }
