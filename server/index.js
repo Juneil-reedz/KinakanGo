@@ -6,11 +6,11 @@ const PORT = process.env.PORT || 4000;
 
 async function start() {
   try {
-    const conn = await pool.getConnection();
-    conn.release();
-    console.log('MySQL connected');
+    const client = await pool.connect();
+    client.release();
+    console.log('PostgreSQL connected');
   } catch (err) {
-    console.error('MySQL connection failed:', err.message);
+    console.error('PostgreSQL connection failed:', err.message);
     process.exit(1);
   }
 

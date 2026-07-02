@@ -1,8 +1,8 @@
-const bcrypt  = require('bcryptjs');
-const jwt     = require('jsonwebtoken');
-const pool    = require('../config/db');
+const bcrypt = require('bcryptjs');
+const jwt    = require('jsonwebtoken');
+const pool   = require('../config/db');
 
-const ACCESS_TTL  = '15m';
+const ACCESS_TTL = '15m';
 const REFRESH_TTL = '7d';
 const REFRESH_MS  = 7 * 24 * 60 * 60 * 1000;
 
@@ -13,33 +13,30 @@ function signAccess(user) {
     { expiresIn: ACCESS_TTL }
   );
 }
-
 function signRefresh(user) {
   return jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_TTL });
 }
 
 async function register(req, res) {
   const { name, email, password, phone, role } = req.body;
-  const allowed = ['customer', 'rider', 'restaurant_owner'];
+  const allowed  = ['customer', 'rider', 'restaurant_owner'];
   const userRole = allowed.includes(role) ? role : 'customer';
 
-  const [existing] = await pool.query('SELECT id FROM users WHERE email = ?', [email]);
+  const { rows: existing } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
   if (existing.length) return res.status(409).json({ error: 'Email already registered' });
 
   const hash = await bcrypt.hash(password, 12);
-  const [result] = await pool.query(
-    'INSERT INTO users (name, email, password_hash, phone, role) VALUES (?,?,?,?,?)',
+  const { rows } = await pool.query(
+    'INSERT INTO users (name, email, password_hash, phone, role) VALUES ($1,$2,$3,$4,$5) RETURNING id, name, email, role',
     [name, email, hash, phone || null, userRole]
   );
+  const user = rows[0];
 
-  const user = { id: result.insertId, name, email, role: userRole };
   const accessToken  = signAccess(user);
   const refreshToken = signRefresh(user);
-
-  const expiresAt = new Date(Date.now() + REFRESH_MS);
   await pool.query(
-    'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?,?,?)',
-    [user.id, refreshToken, expiresAt]
+    'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1,$2,$3)',
+    [user.id, refreshToken, new Date(Date.now() + REFRESH_MS)]
   );
 
   res.status(201).json({ accessToken, refreshToken, user });
@@ -47,8 +44,8 @@ async function register(req, res) {
 
 async function login(req, res) {
   const { email, password } = req.body;
-  const [rows] = await pool.query(
-    'SELECT id, name, email, password_hash, role, is_active, avatar_url FROM users WHERE email = ?',
+  const { rows } = await pool.query(
+    'SELECT id, name, email, password_hash, role, is_active, avatar_url FROM users WHERE email = $1',
     [email]
   );
   const row = rows[0];
@@ -61,11 +58,9 @@ async function login(req, res) {
   const user = { id: row.id, name: row.name, email: row.email, role: row.role, avatarUrl: row.avatar_url };
   const accessToken  = signAccess(user);
   const refreshToken = signRefresh(user);
-
-  const expiresAt = new Date(Date.now() + REFRESH_MS);
   await pool.query(
-    'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES (?,?,?)',
-    [user.id, refreshToken, expiresAt]
+    'INSERT INTO refresh_tokens (user_id, token, expires_at) VALUES ($1,$2,$3)',
+    [user.id, refreshToken, new Date(Date.now() + REFRESH_MS)]
   );
 
   res.json({ accessToken, refreshToken, user });
@@ -82,13 +77,15 @@ async function refresh(req, res) {
     return res.status(401).json({ error: 'Invalid refresh token' });
   }
 
-  const [rows] = await pool.query(
-    'SELECT * FROM refresh_tokens WHERE token = ? AND expires_at > NOW()',
+  const { rows: tokenRows } = await pool.query(
+    'SELECT id FROM refresh_tokens WHERE token = $1 AND expires_at > NOW()',
     [refreshToken]
   );
-  if (!rows.length) return res.status(401).json({ error: 'Refresh token revoked or expired' });
+  if (!tokenRows.length) return res.status(401).json({ error: 'Refresh token revoked or expired' });
 
-  const [users] = await pool.query('SELECT id, name, email, role FROM users WHERE id = ?', [payload.id]);
+  const { rows: users } = await pool.query(
+    'SELECT id, name, email, role FROM users WHERE id = $1', [payload.id]
+  );
   const user = users[0];
   if (!user) return res.status(401).json({ error: 'User not found' });
 
@@ -99,14 +96,14 @@ async function refresh(req, res) {
 async function logout(req, res) {
   const { refreshToken } = req.body;
   if (refreshToken) {
-    await pool.query('DELETE FROM refresh_tokens WHERE token = ?', [refreshToken]);
+    await pool.query('DELETE FROM refresh_tokens WHERE token = $1', [refreshToken]);
   }
   res.json({ message: 'Logged out' });
 }
 
 async function me(req, res) {
-  const [rows] = await pool.query(
-    'SELECT id, name, email, phone, role, avatar_url, is_active, created_at FROM users WHERE id = ?',
+  const { rows } = await pool.query(
+    'SELECT id, name, email, phone, role, avatar_url, is_active, created_at FROM users WHERE id = $1',
     [req.user.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'User not found' });

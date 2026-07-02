@@ -4,22 +4,22 @@ async function placeOrder(req, res) {
   const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode } = req.body;
   const customerId = req.user.id;
 
-  // Validate items and calculate totals
   const ids = items.map(i => i.menuItemId);
-  const [menuRows] = await pool.query(
-    'SELECT id, price, name, is_available FROM menu_items WHERE id IN (?) AND restaurant_id = ?',
-    [ids, restaurantId]
+  const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
+  const { rows: menuRows } = await pool.query(
+    `SELECT id, price, name, is_available FROM menu_items WHERE id IN (${placeholders}) AND restaurant_id = $${ids.length + 1}`,
+    [...ids, restaurantId]
   );
   if (menuRows.length !== ids.length) {
     return res.status(400).json({ error: 'One or more items unavailable or not from this restaurant' });
   }
   const itemMap = Object.fromEntries(menuRows.map(r => [r.id, r]));
 
-  // Promo
   let discount = 0;
   if (promoCode) {
-    const [promos] = await pool.query(
-      'SELECT * FROM promo_codes WHERE code = ? AND is_active = 1 AND (expires_at IS NULL OR expires_at > NOW())',
+    const { rows: promos } = await pool.query(
+      `SELECT * FROM promo_codes WHERE code = $1 AND is_active = true
+       AND (expires_at IS NULL OR expires_at > NOW())`,
       [promoCode]
     );
     if (promos.length) {
@@ -29,44 +29,44 @@ async function placeOrder(req, res) {
         discount = p.discount_type === 'percent'
           ? (gross * p.discount_value) / 100
           : p.discount_value;
-        await pool.query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = ?', [p.id]);
+        await pool.query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1', [p.id]);
       }
     }
   }
 
-  const [restaurant] = await pool.query('SELECT delivery_fee FROM restaurants WHERE id = ?', [restaurantId]);
-  const deliveryFee = restaurant[0]?.delivery_fee || 0;
+  const { rows: restRows } = await pool.query('SELECT delivery_fee FROM restaurants WHERE id = $1', [restaurantId]);
+  const deliveryFee = restRows[0]?.delivery_fee || 0;
   const subtotal    = items.reduce((s, i) => s + itemMap[i.menuItemId].price * i.quantity, 0) - discount;
   const tax         = subtotal * 0.08;
-  const total       = subtotal + deliveryFee + tax;
+  const total       = subtotal + parseFloat(deliveryFee) + tax;
 
-  const conn = await pool.getConnection();
+  const client = await pool.connect();
   try {
-    await conn.beginTransaction();
-    const [orderResult] = await conn.query(
+    await client.query('BEGIN');
+    const { rows: orderRows } = await client.query(
       `INSERT INTO orders
          (customer_id, restaurant_id, status, delivery_address, special_instructions,
           subtotal, delivery_fee, tax, total, payment_method)
-       VALUES (?,?,'pending',?,?,?,?,?,?,?)`,
+       VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
       [customerId, restaurantId, deliveryAddress, specialInstructions || null,
        subtotal, deliveryFee, tax, total, paymentMethod || 'cash']
     );
-    const orderId = orderResult.insertId;
+    const orderId = orderRows[0].id;
 
     for (const item of items) {
       const mi = itemMap[item.menuItemId];
-      await conn.query(
-        'INSERT INTO order_items (order_id, menu_item_id, name, price, quantity, notes) VALUES (?,?,?,?,?,?)',
+      await client.query(
+        'INSERT INTO order_items (order_id, menu_item_id, name, price, quantity, notes) VALUES ($1,$2,$3,$4,$5,$6)',
         [orderId, item.menuItemId, mi.name, mi.price, item.quantity, item.notes || null]
       );
     }
-    await conn.commit();
+    await client.query('COMMIT');
     res.status(201).json({ orderId, total });
   } catch (err) {
-    await conn.rollback();
+    await client.query('ROLLBACK');
     throw err;
   } finally {
-    conn.release();
+    client.release();
   }
 }
 
@@ -77,45 +77,46 @@ async function listOrders(req, res) {
 
   const where  = [];
   const params = [];
+  let   idx    = 1;
 
-  if (role === 'customer')         { where.push('o.customer_id = ?');    params.push(id); }
-  if (role === 'rider')            { where.push('o.rider_id = ?');       params.push(id); }
+  if (role === 'customer')         { where.push(`o.customer_id = $${idx++}`);    params.push(id); }
+  if (role === 'rider')            { where.push(`o.rider_id = $${idx++}`);       params.push(id); }
   if (role === 'restaurant_owner') {
-    where.push('o.restaurant_id IN (SELECT id FROM restaurants WHERE owner_id = ?)');
+    where.push(`o.restaurant_id IN (SELECT id FROM restaurants WHERE owner_id = $${idx++})`);
     params.push(id);
   }
-  if (status) { where.push('o.status = ?'); params.push(status); }
+  if (status) { where.push(`o.status = $${idx++}`); params.push(status); }
 
   const cond = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT o.id, o.status, o.total, o.payment_method, o.payment_status,
             o.created_at, r.name AS restaurant_name, r.image_url AS restaurant_image,
             u.name AS customer_name
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
-     ${cond} ORDER BY o.created_at DESC LIMIT ? OFFSET ?`,
+     ${cond} ORDER BY o.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, parseInt(limit), offset]
   );
   res.json({ data: rows, page: parseInt(page), limit: parseInt(limit) });
 }
 
 async function getOrder(req, res) {
-  const [rows] = await pool.query(
+  const { rows } = await pool.query(
     `SELECT o.*, r.name AS restaurant_name, r.image_url AS restaurant_image,
             r.address AS restaurant_address,
             u.name AS customer_name, u.phone AS customer_phone
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
-     WHERE o.id = ?`,
+     WHERE o.id = $1`,
     [req.params.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'Order not found' });
 
-  const [items] = await pool.query(
-    'SELECT * FROM order_items WHERE order_id = ?', [req.params.id]
+  const { rows: items } = await pool.query(
+    'SELECT * FROM order_items WHERE order_id = $1', [req.params.id]
   );
   res.json({ ...rows[0], items });
 }
@@ -126,10 +127,11 @@ async function updateStatus(req, res) {
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
   await pool.query(
-    `UPDATE orders SET status = ?,
-       cancelled_reason = CASE WHEN ? = 'cancelled' THEN ? ELSE cancelled_reason END,
-       delivered_at     = CASE WHEN ? = 'delivered'  THEN NOW() ELSE delivered_at END
-     WHERE id = ?`,
+    `UPDATE orders SET
+       status           = $1,
+       cancelled_reason = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_reason END,
+       delivered_at     = CASE WHEN $4 = 'delivered'  THEN NOW() ELSE delivered_at END
+     WHERE id = $5`,
     [status, status, cancelledReason || null, status, req.params.id]
   );
   res.json({ message: 'Status updated' });
@@ -137,7 +139,7 @@ async function updateStatus(req, res) {
 
 async function assignRider(req, res) {
   const { riderId } = req.body;
-  await pool.query('UPDATE orders SET rider_id = ? WHERE id = ?', [riderId, req.params.id]);
+  await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, req.params.id]);
   res.json({ message: 'Rider assigned' });
 }
 

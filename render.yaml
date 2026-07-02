@@ -8,16 +8,9 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
-      # MySQL credentials — fill these in from Railway dashboard
-      - key: DB_HOST
-        sync: false
-      - key: DB_PORT
-        sync: false
-      - key: DB_USER
-        sync: false
-      - key: DB_PASSWORD
-        sync: false
-      - key: DB_NAME
+      # Supabase PostgreSQL connection string
+      # Format: postgresql://postgres.[project-ref]:[password]@aws-0-[region].pooler.supabase.com:6543/postgres
+      - key: DATABASE_URL
         sync: false
       # JWT secrets — click "Generate" on Render dashboard for each
       - key: JWT_SECRET
