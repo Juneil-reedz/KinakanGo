@@ -3,16 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { Heart, Star, Plus, Trash2, ShoppingCart } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 
-const DEMO = [
-  { id:1, name:'Margherita Pizza', restaurant:"Pizza Palace",   price:350, rating:5, image:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop', category:'Pizza' },
-  { id:2, name:'Classic Burger',   restaurant:"Burger King's", price:250, rating:4, image:'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&h=300&fit=crop', category:'Burger' },
-  { id:3, name:'Caesar Salad',     restaurant:'Healthy Bites', price:180, rating:5, image:'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400&h=300&fit=crop', category:'Salad' },
-];
-
 export default function Favorites() {
   const navigate      = useNavigate();
   const { addToCart } = useCart();
-  const [favorites, setFavorites] = useState(DEMO);
+  const [favorites, setFavorites] = useState([]);
 
   const remove = (id) => setFavorites(f => f.filter(i => i.id !== id));
 

@@ -102,25 +102,6 @@ export default function Login() {
             </button>
           </form>
 
-          <div className="flex items-center gap-3 my-5">
-            <div className="flex-1 h-px" style={{background:'rgba(255,255,255,.08)'}} />
-            <span className="text-forest-200/40 text-xs">or sign in as</span>
-            <div className="flex-1 h-px" style={{background:'rgba(255,255,255,.08)'}} />
-          </div>
-
-          <div className="grid grid-cols-3 gap-2">
-            {[
-              { label: '🏪 Restaurant', path: '/owner/login' },
-              { label: '🛵 Rider',      path: '/rider/login' },
-              { label: '⚙️ Admin',      path: '/admin/login' },
-            ].map(({ label, path }) => (
-              <button key={path} onClick={() => navigate(path)}
-                className="glass py-2.5 rounded-xl text-forest-100/70 text-xs font-medium hover:glass-green hover:text-white transition-all text-center">
-                {label}
-              </button>
-            ))}
-          </div>
-
           <p className="text-center text-forest-200/50 text-sm mt-5">
             No account?{' '}
             <button onClick={() => navigate('/register')} className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">
