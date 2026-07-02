@@ -1,75 +1,64 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authApi, restaurantsApi, storage } from '../services/api';
 
 const RestaurantContext = createContext();
 
 export function useRestaurant() {
-  const context = useContext(RestaurantContext);
-  if (!context) {
-    throw new Error('useRestaurant must be used within RestaurantProvider');
-  }
-  return context;
+  const ctx = useContext(RestaurantContext);
+  if (!ctx) throw new Error('useRestaurant must be used within RestaurantProvider');
+  return ctx;
 }
 
 export function RestaurantProvider({ children }) {
   const [restaurant, setRestaurant] = useState(null);
-  const [isLoading, setIsLoading] = useState(true);
-
-  // Mock restaurant data
-  const mockRestaurant = {
-    id: 1,
-    name: 'Pizza Palace',
-    email: 'owner@pizzapalace.com',
-    phone: '+63 917 987 6543',
-    address: 'Purok 3, Barangay Laminusa, Bongao, Tawi-Tawi',
-    logo: null,
-    status: 'open',
-    rating: 4.5,
-    totalOrders: 1247,
-    categories: ['Italian', 'Pizza', 'Pasta'],
-  };
+  const [isLoading, setIsLoading]   = useState(true);
 
   useEffect(() => {
-    // Check if restaurant is logged in (from localStorage)
-    const savedRestaurant = localStorage.getItem('restaurant');
-    if (savedRestaurant) {
-      setRestaurant(JSON.parse(savedRestaurant));
+    const saved = localStorage.getItem('kkg_restaurant');
+    if (saved && storage.getAccess()) {
+      setRestaurant(JSON.parse(saved));
+      // Refresh restaurant data from API in background
+      restaurantsApi.myRestaurant()
+        .then(data => persist(data))
+        .catch(() => { /* keep cached data if offline */ });
     }
     setIsLoading(false);
   }, []);
 
+  const persist = (r) => {
+    setRestaurant(r);
+    if (r) localStorage.setItem('kkg_restaurant', JSON.stringify(r));
+    else   localStorage.removeItem('kkg_restaurant');
+  };
+
   const login = async (email, password) => {
-    // Mock login - in production, this would call an API
-    if (email && password) {
-      const restaurantData = { ...mockRestaurant, email };
-      setRestaurant(restaurantData);
-      localStorage.setItem('restaurant', JSON.stringify(restaurantData));
-      return { success: true, restaurant: restaurantData };
+    const res = await authApi.login(email, password);
+    if (res.user.role !== 'restaurant_owner') {
+      throw new Error('Not a restaurant owner account');
     }
-    return { success: false, error: 'Invalid credentials' };
+    storage.setTokens(res.accessToken, res.refreshToken);
+    // Fetch the restaurant profile after login
+    const restaurantData = await restaurantsApi.myRestaurant();
+    persist(restaurantData);
+    return { success: true, restaurant: restaurantData };
   };
 
-  const logout = () => {
-    setRestaurant(null);
-    localStorage.removeItem('restaurant');
-  };
+  const logout = useCallback(async () => {
+    try { await authApi.logout(storage.getRefresh()); } catch { /* ignore */ }
+    storage.clearTokens();
+    persist(null);
+  }, []);
 
-  const updateRestaurant = (updates) => {
+  const updateRestaurant = async (updates) => {
+    if (restaurant?.id) {
+      await restaurantsApi.update(restaurant.id, updates);
+    }
     const updated = { ...restaurant, ...updates };
-    setRestaurant(updated);
-    localStorage.setItem('restaurant', JSON.stringify(updated));
-  };
-
-  const value = {
-    restaurant,
-    isLoading,
-    login,
-    logout,
-    updateRestaurant,
-    isAuthenticated: !!restaurant,
+    persist(updated);
   };
 
   return (
-    <RestaurantContext.Provider value={value}>
+    <RestaurantContext.Provider value={{ restaurant, isLoading, login, logout, updateRestaurant, isAuthenticated: !!restaurant }}>
       {children}
     </RestaurantContext.Provider>
   );

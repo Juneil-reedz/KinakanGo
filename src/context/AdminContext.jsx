@@ -1,63 +1,50 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authApi, storage } from '../services/api';
 
 const AdminContext = createContext();
 
 export function useAdmin() {
-  const context = useContext(AdminContext);
-  if (!context) {
-    throw new Error('useAdmin must be used within AdminProvider');
-  }
-  return context;
+  const ctx = useContext(AdminContext);
+  if (!ctx) throw new Error('useAdmin must be used within AdminProvider');
+  return ctx;
 }
 
 export function AdminProvider({ children }) {
-  const [admin, setAdmin] = useState(null);
+  const [admin, setAdmin]     = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock admin data
-  const mockAdmin = {
-    id: 1,
-    name: 'Admin User',
-    email: 'admin@fooddelivery.com',
-    role: 'super_admin',
-    permissions: ['all'],
-  };
-
   useEffect(() => {
-    // Check if admin is logged in (from localStorage)
-    const savedAdmin = localStorage.getItem('admin');
-    if (savedAdmin) {
-      setAdmin(JSON.parse(savedAdmin));
+    const saved = localStorage.getItem('kkg_admin');
+    if (saved && storage.getAccess()) {
+      setAdmin(JSON.parse(saved));
     }
     setIsLoading(false);
   }, []);
 
+  const persist = (a) => {
+    setAdmin(a);
+    if (a) localStorage.setItem('kkg_admin', JSON.stringify(a));
+    else   localStorage.removeItem('kkg_admin');
+  };
+
   const login = async (email, password) => {
-    // Mock login - in production, this would call an API
-    if (email && password) {
-      const adminData = { ...mockAdmin, email };
-      setAdmin(adminData);
-      localStorage.setItem('admin', JSON.stringify(adminData));
-      return { success: true, admin: adminData };
+    const res = await authApi.login(email, password);
+    if (res.user.role !== 'admin') {
+      throw new Error('Not an admin account');
     }
-    return { success: false, error: 'Invalid credentials' };
+    storage.setTokens(res.accessToken, res.refreshToken);
+    persist(res.user);
+    return { success: true, admin: res.user };
   };
 
-  const logout = () => {
-    setAdmin(null);
-    localStorage.removeItem('admin');
-  };
-
-  const value = {
-    admin,
-    isLoading,
-    login,
-    logout,
-    isAuthenticated: !!admin,
-  };
+  const logout = useCallback(async () => {
+    try { await authApi.logout(storage.getRefresh()); } catch { /* ignore */ }
+    storage.clearTokens();
+    persist(null);
+  }, []);
 
   return (
-    <AdminContext.Provider value={value}>
+    <AdminContext.Provider value={{ admin, isLoading, login, logout, isAuthenticated: !!admin }}>
       {children}
     </AdminContext.Provider>
   );

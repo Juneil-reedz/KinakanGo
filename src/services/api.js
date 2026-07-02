@@ -1,20 +1,37 @@
-// On GitHub Pages there is no backend — use the live server URL if provided via env, else empty (mock fallback kicks in)
+// Base URL: set VITE_API_URL in .env for production, falls back to /api (proxied in dev)
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
-function getToken() {
+const TOKEN_KEY   = 'kkg_access';
+const REFRESH_KEY = 'kkg_refresh';
+
+export const storage = {
+  getAccess:      ()      => localStorage.getItem(TOKEN_KEY),
+  getRefresh:     ()      => localStorage.getItem(REFRESH_KEY),
+  setTokens:      (a, r)  => { localStorage.setItem(TOKEN_KEY, a); if (r) localStorage.setItem(REFRESH_KEY, r); },
+  clearTokens:    ()      => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(REFRESH_KEY); },
+};
+
+// Silently refresh the access token using the stored refresh token
+async function tryRefresh() {
+  const refreshToken = storage.getRefresh();
+  if (!refreshToken) return false;
   try {
-    const user = JSON.parse(localStorage.getItem('user') || 'null');
-    const rider = JSON.parse(localStorage.getItem('rider') || 'null');
-    const admin = JSON.parse(localStorage.getItem('admin') || 'null');
-    const restaurant = JSON.parse(localStorage.getItem('restaurant') || 'null');
-    return user?.token || rider?.token || admin?.token || restaurant?.token || null;
+    const res  = await fetch(`${BASE}/auth/refresh`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ refreshToken }),
+    });
+    if (!res.ok) return false;
+    const { accessToken } = await res.json();
+    storage.setTokens(accessToken, null);
+    return true;
   } catch {
-    return null;
+    return false;
   }
 }
 
-async function request(path, options = {}) {
-  const token = getToken();
+async function request(path, options = {}, retry = true) {
+  const token = storage.getAccess();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
     headers: {
@@ -23,145 +40,114 @@ async function request(path, options = {}) {
       ...options.headers,
     },
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Request failed');
+
+  // On 401, attempt silent refresh once then retry
+  if (res.status === 401 && retry) {
+    const refreshed = await tryRefresh();
+    if (refreshed) return request(path, options, false);
+    storage.clearTokens();
+  }
+
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || 'Request failed'), { status: res.status, data });
   return data;
 }
 
-// Restaurant APIs
-export const getRestaurants = (filters = {}) => {
-  const params = new URLSearchParams();
-  if (filters.category && filters.category !== 'all') params.set('category', filters.category);
-  if (filters.search) params.set('search', filters.search);
-  if (filters.sortBy) params.set('sortBy', filters.sortBy);
-  return request(`/restaurants?${params}`);
+// ── Auth ──────────────────────────────────────────────────────────────────────
+
+export const authApi = {
+  login:   (email, password) =>
+    request('/auth/login',    { method: 'POST', body: JSON.stringify({ email, password }) }),
+  register: (payload) =>
+    request('/auth/register', { method: 'POST', body: JSON.stringify(payload) }),
+  refresh: (refreshToken) =>
+    request('/auth/refresh',  { method: 'POST', body: JSON.stringify({ refreshToken }) }),
+  logout:  (refreshToken) =>
+    request('/auth/logout',   { method: 'POST', body: JSON.stringify({ refreshToken }) }),
+  me: () => request('/auth/me'),
 };
 
-export const getRestaurantById = (id) => request(`/restaurants/${id}`);
+// ── Users ─────────────────────────────────────────────────────────────────────
 
-export const getFeaturedRestaurants = (limit = 6) => request(`/restaurants/featured?limit=${limit}`);
-
-// Menu APIs
-export const getMenuByRestaurantId = (restaurantId, categoryFilter = 'all') => {
-  const params = new URLSearchParams();
-  if (categoryFilter !== 'all') params.set('category', categoryFilter);
-  return request(`/menu/restaurants/${restaurantId}/menu?${params}`);
+export const usersApi = {
+  list:   (params = {}) => request(`/users?${new URLSearchParams(params)}`),
+  getOne: (id)          => request(`/users/${id}`),
+  update: (id, data)    => request(`/users/${id}`,      { method: 'PATCH', body: JSON.stringify(data) }),
+  ban:    (id, reason)  => request(`/users/${id}/ban`,   { method: 'POST',  body: JSON.stringify({ reason }) }),
+  unban:  (id)          => request(`/users/${id}/unban`, { method: 'POST' }),
 };
 
-export const getMenuItem = (itemId) => request(`/menu/${itemId}`);
+// ── Restaurants ───────────────────────────────────────────────────────────────
 
-export const getAllMenuItems = (filters = {}) => {
-  const params = new URLSearchParams();
-  if (filters.category && filters.category !== 'all') params.set('category', filters.category);
-  if (filters.search) params.set('search', filters.search);
-  if (filters.sortBy) params.set('sortBy', filters.sortBy);
-  return request(`/menu?${params}`);
+export const restaurantsApi = {
+  list:      (params = {}) => request(`/restaurants?${new URLSearchParams(params)}`),
+  getOne:    (id)          => request(`/restaurants/${id}`),
+  myRestaurant: ()         => request('/restaurants/owner/me'),
+  create:    (data)        => request('/restaurants',         { method: 'POST',   body: JSON.stringify(data) }),
+  update:    (id, data)    => request(`/restaurants/${id}`,   { method: 'PATCH',  body: JSON.stringify(data) }),
+  remove:    (id)          => request(`/restaurants/${id}`,   { method: 'DELETE' }),
+  approve:   (id)          => request(`/restaurants/${id}/approve`, { method: 'POST' }),
 };
 
-// Order APIs
-export const getUserOrders = (userId) => request(`/orders/users/${userId}/orders`);
+// ── Menu ──────────────────────────────────────────────────────────────────────
 
-export const getOrderById = (orderId) => request(`/orders/${orderId}`);
-
-export const createOrder = (orderData) =>
-  request('/orders', { method: 'POST', body: JSON.stringify(orderData) });
-
-export const updateOrderStatus = (orderId, status, extra = {}) =>
-  request(`/orders/${orderId}/status`, { method: 'PUT', body: JSON.stringify({ status, ...extra }) });
-
-// Category APIs
-export const getCategories = () => request('/categories');
-
-// User APIs
-export const getUserProfile = (userId) => request(`/users/${userId}`);
-
-export const updateUserProfile = (userId, userData) =>
-  request(`/users/${userId}`, { method: 'PUT', body: JSON.stringify(userData) });
-
-export const getUserFavorites = (userId) => request(`/users/${userId}/favorites`);
-
-export const addToFavorites = (userId, restaurantId) =>
-  request(`/users/${userId}/favorites/${restaurantId}`, { method: 'POST' });
-
-export const removeFromFavorites = (userId, restaurantId) =>
-  request(`/users/${userId}/favorites/${restaurantId}`, { method: 'DELETE' });
-
-// Address APIs
-export const addAddress = (userId, address) =>
-  request(`/users/${userId}/addresses`, { method: 'POST', body: JSON.stringify(address) });
-
-export const updateAddress = (userId, addressId, data) =>
-  request(`/users/${userId}/addresses/${addressId}`, { method: 'PUT', body: JSON.stringify(data) });
-
-export const deleteAddress = (userId, addressId) =>
-  request(`/users/${userId}/addresses/${addressId}`, { method: 'DELETE' });
-
-// Payment method APIs
-export const addPaymentMethod = (userId, payment) =>
-  request(`/users/${userId}/payment-methods`, { method: 'POST', body: JSON.stringify(payment) });
-
-export const deletePaymentMethod = (userId, pmId) =>
-  request(`/users/${userId}/payment-methods/${pmId}`, { method: 'DELETE' });
-
-// Auth APIs
-export const login = (email, password) =>
-  request('/auth/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-
-export const register = (userData) =>
-  request('/auth/register', { method: 'POST', body: JSON.stringify(userData) });
-
-export const riderLogin = (email, password) =>
-  request('/auth/rider/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-
-export const adminLogin = (email, password) =>
-  request('/auth/admin/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-
-export const restaurantLogin = (email, password) =>
-  request('/auth/restaurant/login', { method: 'POST', body: JSON.stringify({ email, password }) });
-
-// Search API
-export const searchAll = (query) => request(`/search?query=${encodeURIComponent(query)}`);
-
-// Admin APIs
-export const getAdminStats = () => request('/admin/stats');
-export const getAdminUsers = () => request('/admin/users');
-export const getAdminRestaurants = () => request('/admin/restaurants');
-export const getAdminRiders = () => request('/admin/riders');
-export const getAdminOrders = (status) => request(`/admin/orders${status ? `?status=${status}` : ''}`);
-export const getAdminApplications = (filters = {}) => {
-  const params = new URLSearchParams(filters);
-  return request(`/admin/applications?${params}`);
+export const menuApi = {
+  list:   (restaurantId)         => request(`/restaurants/${restaurantId}/menu`),
+  create: (restaurantId, data)   => request(`/restaurants/${restaurantId}/menu`,           { method: 'POST',   body: JSON.stringify(data) }),
+  update: (restaurantId, itemId, data) => request(`/restaurants/${restaurantId}/menu/${itemId}`, { method: 'PATCH',  body: JSON.stringify(data) }),
+  remove: (restaurantId, itemId) => request(`/restaurants/${restaurantId}/menu/${itemId}`, { method: 'DELETE' }),
 };
-export const updateApplication = (id, status) =>
-  request(`/admin/applications/${id}`, { method: 'PUT', body: JSON.stringify({ status }) });
-export const getAdminIssues = (status) => request(`/admin/issues${status ? `?status=${status}` : ''}`);
-export const updateIssue = (id, status) =>
-  request(`/admin/issues/${id}`, { method: 'PUT', body: JSON.stringify({ status }) });
-export const getAdminPromos = () => request('/admin/promos');
-export const createPromo = (data) =>
-  request('/admin/promos', { method: 'POST', body: JSON.stringify(data) });
-export const updatePromo = (id, data) =>
-  request(`/admin/promos/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deletePromo = (id) =>
-  request(`/admin/promos/${id}`, { method: 'DELETE' });
 
-// Rider APIs
-export const getRiders = (filters = {}) => {
-  const params = new URLSearchParams(filters);
-  return request(`/riders?${params}`);
+// ── Orders ────────────────────────────────────────────────────────────────────
+
+export const ordersApi = {
+  place:       (data)           => request('/orders',               { method: 'POST',  body: JSON.stringify(data) }),
+  list:        (params = {})    => request(`/orders?${new URLSearchParams(params)}`),
+  getOne:      (id)             => request(`/orders/${id}`),
+  updateStatus:(id, status, extra = {}) =>
+    request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...extra }) }),
+  assignRider: (id, riderId)    =>
+    request(`/orders/${id}/assign-rider`, { method: 'PATCH', body: JSON.stringify({ riderId }) }),
 };
-export const getRiderById = (id) => request(`/riders/${id}`);
-export const updateRiderStatus = (id, data) =>
-  request(`/riders/${id}/status`, { method: 'PUT', body: JSON.stringify(data) });
 
-// Restaurant owner APIs
-export const getRestaurantOrders = (restaurantId, status) =>
-  request(`/orders?restaurantId=${restaurantId}${status ? `&status=${status}` : ''}`);
-export const updateRestaurant = (id, data) =>
-  request(`/restaurants/${id}`, { method: 'PUT', body: JSON.stringify(data) });
-export const addMenuItem = (restaurantId, item) =>
-  request(`/menu/restaurants/${restaurantId}/menu`, { method: 'POST', body: JSON.stringify(item) });
-export const updateMenuItem = (itemId, data) =>
-  request(`/menu/${itemId}`, { method: 'PUT', body: JSON.stringify(data) });
-export const deleteMenuItem = (itemId) =>
-  request(`/menu/${itemId}`, { method: 'DELETE' });
+// ── Applications ──────────────────────────────────────────────────────────────
+
+export const applicationsApi = {
+  submit:  (type, data)  => request('/applications',             { method: 'POST', body: JSON.stringify({ type, data }) }),
+  list:    (params = {}) => request(`/applications?${new URLSearchParams(params)}`),
+  getOne:  (id)          => request(`/applications/${id}`),
+  approve: (id)          => request(`/applications/${id}/approve`, { method: 'POST' }),
+  reject:  (id, reason)  => request(`/applications/${id}/reject`,  { method: 'POST', body: JSON.stringify({ reason }) }),
+};
+
+// ── Issues ────────────────────────────────────────────────────────────────────
+
+export const issuesApi = {
+  submit:  (data)         => request('/issues',              { method: 'POST', body: JSON.stringify(data) }),
+  list:    (params = {})  => request(`/issues?${new URLSearchParams(params)}`),
+  resolve: (id, data)     => request(`/issues/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
+  deny:    (id, notes)    => request(`/issues/${id}/deny`,    { method: 'POST', body: JSON.stringify({ notes }) }),
+};
+
+// ── Promos ────────────────────────────────────────────────────────────────────
+
+export const promosApi = {
+  list:     (params = {}) => request(`/promos?${new URLSearchParams(params)}`),
+  create:   (data)        => request('/promos',         { method: 'POST',   body: JSON.stringify(data) }),
+  update:   (id, data)    => request(`/promos/${id}`,   { method: 'PATCH',  body: JSON.stringify(data) }),
+  remove:   (id)          => request(`/promos/${id}`,   { method: 'DELETE' }),
+  validate: (code, total) => request('/promos/validate',{ method: 'POST',   body: JSON.stringify({ code, orderTotal: total }) }),
+};
+
+// Legacy named exports kept for any pages that import them directly
+export const getRestaurants        = (f = {}) => restaurantsApi.list(f);
+export const getFeaturedRestaurants= (limit = 6) => restaurantsApi.list({ limit });
+export const getRestaurantById     = (id)     => restaurantsApi.getOne(id);
+export const getMenuByRestaurantId = (id)     => menuApi.list(id);
+export const getAllMenuItems        = (f = {}) => request(`/menu?${new URLSearchParams(f)}`);
+export const getUserOrders         = ()       => ordersApi.list();
+export const getOrderById          = (id)     => ordersApi.getOne(id);
+export const createOrder           = (data)   => ordersApi.place(data);
+export const updateOrderStatus     = (id, s, extra) => ordersApi.updateStatus(id, s, extra);
+export const login                 = (e, p)   => authApi.login(e, p);
+export const register              = (data)   => authApi.register(data);

@@ -1,74 +1,55 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
+import { authApi, storage } from '../services/api';
 
 const RiderContext = createContext();
 
 export function useRider() {
-  const context = useContext(RiderContext);
-  if (!context) {
-    throw new Error('useRider must be used within RiderProvider');
-  }
-  return context;
+  const ctx = useContext(RiderContext);
+  if (!ctx) throw new Error('useRider must be used within RiderProvider');
+  return ctx;
 }
 
 export function RiderProvider({ children }) {
-  const [rider, setRider] = useState(null);
+  const [rider, setRider]     = useState(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Mock rider data
-  const mockRider = {
-    id: 1,
-    name: 'Mike Johnson',
-    email: 'rider@fooddelivery.com',
-    phone: '+63 917 789 0123',
-    vehicle: 'Motorcycle',
-    licensePlate: 'ABC-1234',
-    rating: 4.8,
-    totalDeliveries: 1247,
-    status: 'active',
-  };
-
   useEffect(() => {
-    // Check if rider is logged in (from localStorage)
-    const savedRider = localStorage.getItem('rider');
-    if (savedRider) {
-      setRider(JSON.parse(savedRider));
+    const saved = localStorage.getItem('kkg_rider');
+    if (saved && storage.getAccess()) {
+      setRider(JSON.parse(saved));
     }
     setIsLoading(false);
   }, []);
 
-  const login = async (email, password) => {
-    // Mock login - in production, this would call an API
-    if (email && password) {
-      const riderData = { ...mockRider, email };
-      setRider(riderData);
-      localStorage.setItem('rider', JSON.stringify(riderData));
-      return { success: true, rider: riderData };
-    }
-    return { success: false, error: 'Invalid credentials' };
+  const persist = (r) => {
+    setRider(r);
+    if (r) localStorage.setItem('kkg_rider', JSON.stringify(r));
+    else   localStorage.removeItem('kkg_rider');
   };
 
-  const logout = () => {
-    setRider(null);
-    localStorage.removeItem('rider');
+  const login = async (email, password) => {
+    const res = await authApi.login(email, password);
+    if (res.user.role !== 'rider') {
+      throw new Error('Not a rider account');
+    }
+    storage.setTokens(res.accessToken, res.refreshToken);
+    persist(res.user);
+    return { success: true, rider: res.user };
   };
+
+  const logout = useCallback(async () => {
+    try { await authApi.logout(storage.getRefresh()); } catch { /* ignore */ }
+    storage.clearTokens();
+    persist(null);
+  }, []);
 
   const updateRider = (updates) => {
     const updated = { ...rider, ...updates };
-    setRider(updated);
-    localStorage.setItem('rider', JSON.stringify(updated));
-  };
-
-  const value = {
-    rider,
-    isLoading,
-    login,
-    logout,
-    updateRider,
-    isAuthenticated: !!rider,
+    persist(updated);
   };
 
   return (
-    <RiderContext.Provider value={value}>
+    <RiderContext.Provider value={{ rider, isLoading, login, logout, updateRider, isAuthenticated: !!rider }}>
       {children}
     </RiderContext.Provider>
   );
