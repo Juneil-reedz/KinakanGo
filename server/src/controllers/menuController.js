@@ -1,5 +1,29 @@
 const pool = require('../config/db');
 
+async function listAll(req, res) {
+  const { category, limit = 20 } = req.query;
+  const where  = ['m.is_available = true', 'r.is_approved = true'];
+  const params = [];
+  let   idx    = 1;
+
+  if (category) { where.push(`c.name ILIKE $${idx++}`); params.push(category); }
+
+  const { rows } = await pool.query(
+    `SELECT m.id, m.name, m.description, m.price, m.image_url,
+            m.is_vegetarian, m.prep_time_mins,
+            c.name AS category_name,
+            r.id AS restaurant_id, r.name AS restaurant_name, r.rating
+     FROM menu_items m
+     JOIN restaurants r ON m.restaurant_id = r.id
+     LEFT JOIN menu_categories c ON m.category_id = c.id
+     WHERE ${where.join(' AND ')}
+     ORDER BY r.rating DESC, m.id DESC
+     LIMIT $${idx++}`,
+    [...params, parseInt(limit)]
+  );
+  res.json(rows);
+}
+
 async function listItems(req, res) {
   const { rows } = await pool.query(
     `SELECT m.*, c.name AS category_name
@@ -52,4 +76,4 @@ async function deleteItem(req, res) {
   res.json({ message: 'Deleted' });
 }
 
-module.exports = { listItems, createItem, updateItem, deleteItem };
+module.exports = { listAll, listItems, createItem, updateItem, deleteItem };
