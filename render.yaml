@@ -1,0 +1,43 @@
+services:
+  - type: web
+    name: kinakango-api
+    runtime: node
+    rootDir: server
+    buildCommand: npm install
+    startCommand: npm start
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: DB_HOST
+        fromDatabase:
+          name: kinakango-db
+          property: host
+      - key: DB_PORT
+        fromDatabase:
+          name: kinakango-db
+          property: port
+      - key: DB_USER
+        fromDatabase:
+          name: kinakango-db
+          property: user
+      - key: DB_PASSWORD
+        fromDatabase:
+          name: kinakango-db
+          property: password
+      - key: DB_NAME
+        fromDatabase:
+          name: kinakango-db
+          property: database
+      - key: JWT_SECRET
+        generateValue: true
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+      - key: CLIENT_URL
+        value: https://juneil-reedz.github.io
+
+databases:
+  - name: kinakango-db
+    databaseName: kinakango
+    plan: free
+    # Render offers MySQL — select engine: mysql in the dashboard
+    # render.yaml does not support engine selection yet; create it manually
