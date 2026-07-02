@@ -249,7 +249,7 @@ export default function CustomerLayout() {
               <div className="orb w-32 h-32 bg-forest-400/20 -top-4 -right-4" />
               <div className="orb w-20 h-20 bg-ember-500/10 bottom-0 left-0" />
               <p className="text-forest-200 text-xs mb-1 relative">Your Balance</p>
-              <p className="text-3xl font-heading font-bold text-white relative text-glow-green">${balance.toFixed(2)}</p>
+              <p className="text-3xl font-heading font-bold text-white relative text-glow-green">₱{balance.toFixed(2)}</p>
               <div className="flex gap-2 mt-4 relative">
                 <button className="flex-1 glass py-2 rounded-xl text-white text-xs font-semibold flex items-center justify-center gap-1 hover:glass-green transition-all">
                   <CreditCard className="w-3.5 h-3.5" /> Deposit
@@ -293,7 +293,7 @@ export default function CustomerLayout() {
                         className="w-12 h-12 rounded-lg object-cover border border-white/10" />
                       <div className="flex-1 min-w-0">
                         <p className="text-white text-xs font-semibold truncate">{item.name}</p>
-                        <p className="text-ember-400 text-xs font-bold">${item.price}</p>
+                        <p className="text-ember-400 text-xs font-bold">₱{item.price}</p>
                       </div>
                       <div className="flex items-center gap-1.5">
                         <button onClick={() => handleUpdateQty(item.id,-1)}
@@ -324,7 +324,7 @@ export default function CustomerLayout() {
               {/* Total */}
               <div className="glass-green rounded-xl p-3 flex justify-between items-center mb-3">
                 <span className="text-forest-100 text-sm font-medium">Total</span>
-                <span className="text-white font-heading font-bold text-xl">${getCartTotal().toFixed(2)}</span>
+                <span className="text-white font-heading font-bold text-xl">₱{getCartTotal().toFixed(2)}</span>
               </div>
 
               <button onClick={() => cartItems.length > 0 && navigate('/checkout')}

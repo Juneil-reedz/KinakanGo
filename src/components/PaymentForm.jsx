@@ -244,7 +244,7 @@ export default function PaymentForm({ amount, onSuccess, onCancel }) {
       <div className="bg-primary-50 border border-primary-200 rounded-lg p-4 mb-4">
         <div className="flex items-center justify-between">
           <span className="text-sm font-medium text-secondary-700">Amount to pay:</span>
-          <span className="text-2xl font-bold text-primary-600">${amount.toFixed(2)}</span>
+          <span className="text-2xl font-bold text-primary-600">₱{amount.toFixed(2)}</span>
         </div>
       </div>
 
@@ -375,7 +375,7 @@ export default function PaymentForm({ amount, onSuccess, onCancel }) {
           disabled={isProcessing}
           className="flex-1"
         >
-          {isProcessing ? 'Processing...' : `Pay $${amount.toFixed(2)}`}
+          {isProcessing ? 'Processing...' : `Pay ₱${amount.toFixed(2)}`}
         </Button>
       </div>
     </form>

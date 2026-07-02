@@ -4,7 +4,7 @@ import { Ticket, Plus, Edit, Trash2, Check, X, Calendar, Users, TrendingUp } fro
 
 const INIT_PROMOS = [
   { id:1, code:"WELCOME20", type:"percentage", value:20,   minOrder:15.00, maxDiscount:10.00, usageLimit:100, usedCount:47,  startDate:"2024-01-01", endDate:"2024-12-31", status:"active",  targetUsers:"new",      description:"20% off for new customers" },
-  { id:2, code:"SAVE5",     type:"fixed",      value:5.00, minOrder:20.00, maxDiscount:null,  usageLimit:500, usedCount:234, startDate:"2024-01-01", endDate:"2024-06-30", status:"active",  targetUsers:"all",      description:"$5 off orders over $20" },
+  { id:2, code:"SAVE5",     type:"fixed",      value:5.00, minOrder:20.00, maxDiscount:null,  usageLimit:500, usedCount:234, startDate:"2024-01-01", endDate:"2024-06-30", status:"active",  targetUsers:"all",      description:"₱5 off orders over ₱20" },
   { id:3, code:"FLASH50",   type:"percentage", value:50,   minOrder:30.00, maxDiscount:15.00, usageLimit:50,  usedCount:50,  startDate:"2024-01-15", endDate:"2024-01-15", status:"expired", targetUsers:"all",      description:"Flash sale - 50% off" },
 ];
 
