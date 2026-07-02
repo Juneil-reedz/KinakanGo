@@ -1,6 +1,7 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useRestaurant } from '../../context/RestaurantContext';
+import { ordersApi } from '../../services/api';
 import { DollarSign, Package, TrendingUp, ChefHat, ArrowRight, Clock, User } from 'lucide-react';
 
 const STATUS_STYLE = {
@@ -11,22 +12,34 @@ const STATUS_STYLE = {
 };
 
 export default function RestaurantDashboard() {
-  const { restaurant } = useRestaurant();
+  const { restaurant }            = useRestaurant();
+  const [recentOrders, setOrders] = useState([]);
+  const [loading, setLoading]     = useState(true);
 
-  const stats = { todayOrders:24, todaySales:487.50, totalSales:2681.25, todayProfit:350.00 };
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await ordersApi.list({ limit: 5 });
+        setOrders(res.data || res || []);
+      } catch {
+        // silently fail — dashboard is non-critical
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
-  const recentOrders = [
-    { id:'12345', customerName:'John Doe',     items:[{ name:'Margherita Pizza', quantity:2 },{ name:'Caesar Salad', quantity:1 }],    total:40.76, status:'pending',   time:'2 min ago',  date:'04 Aug 2024' },
-    { id:'12344', customerName:'Jane Smith',   items:[{ name:'Pepperoni Pizza', quantity:1 },{ name:'Spaghetti Carbonara', quantity:1 }], total:28.98, status:'preparing', time:'5 min ago',  date:'04 Aug 2024' },
-    { id:'12343', customerName:'Mike Johnson', items:[{ name:'Margherita Pizza', quantity:3 }],                                           total:38.97, status:'ready',     time:'10 min ago', date:'04 Aug 2024' },
-    { id:'12342', customerName:'Sarah Wilson', items:[{ name:'Caesar Salad', quantity:2 }],                                               total:16.70, status:'completed', time:'15 min ago', date:'04 Aug 2024' },
-  ];
+  // Derive simple stats from the fetched orders
+  const todayOrders = recentOrders.length;
+  const totalSales  = recentOrders.reduce((s, o) => s + Number(o.total || o.totalAmount || 0), 0);
+  const pendingCount = recentOrders.filter(o => o.status === 'pending').length;
 
   const STAT_CARDS = [
-    { label:'Available Cash', value:`₱${stats.todaySales.toFixed(2)}`,              icon:DollarSign, color:'btn-glow-orange', trend:'+10%' },
-    { label:'Total Orders',   value:stats.todayOrders,                              icon:Package,    color:'btn-glow-green',  trend:'+8%'  },
-    { label:'Total Sales',    value:`₱${stats.totalSales.toFixed(0)}`,              icon:TrendingUp, color:'glass-green',     trend:'+10%' },
-    { label:'Total Profit',   value:`₱${stats.todayProfit.toFixed(2)}`,             icon:ChefHat,    color:'glass-orange',    trend:'+68%' },
+    { label:'Recent Orders',   value:todayOrders,                icon:Package,    color:'btn-glow-green',  trend:'+8%'  },
+    { label:'Total Revenue',   value:`₱${totalSales.toFixed(2)}`,icon:DollarSign, color:'btn-glow-orange', trend:'+10%' },
+    { label:'Pending',         value:pendingCount,               icon:ChefHat,    color:'glass-orange',    trend:''     },
+    { label:'Restaurant',      value:restaurant?.name ? '—' : '—', icon:TrendingUp, color:'glass-green',  trend:''     },
   ];
 
   return (
@@ -47,9 +60,11 @@ export default function RestaurantDashboard() {
             </div>
             <p className="text-white font-heading font-bold text-xl leading-tight">{value}</p>
             <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
-            <p className="text-forest-300 text-xs mt-1 flex items-center gap-0.5">
-              <TrendingUp className="w-3 h-3" /> {trend}
-            </p>
+            {trend && (
+              <p className="text-forest-300 text-xs mt-1 flex items-center gap-0.5">
+                <TrendingUp className="w-3 h-3" /> {trend}
+              </p>
+            )}
           </div>
         ))}
       </div>
@@ -65,28 +80,45 @@ export default function RestaurantDashboard() {
               See All <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </div>
-          <div className="divide-y divide-white/5">
-            {recentOrders.slice(0, 3).map(order => (
-              <div key={order.id} className="p-4 flex items-center gap-3 hover:glass transition-all">
-                <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                  {order.items[0].name.charAt(0)}
-                </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-white text-sm font-semibold truncate">{order.items[0].name}</p>
-                  <div className="flex items-center gap-2 mt-0.5">
-                    <User className="w-3 h-3 text-forest-300/50" />
-                    <p className="text-forest-200/50 text-xs truncate">{order.customerName}</p>
+          {loading ? (
+            <div className="p-4 space-y-3">
+              {[1,2,3].map(i => <div key={i} className="glass rounded-xl h-16 animate-pulse" />)}
+            </div>
+          ) : recentOrders.length === 0 ? (
+            <div className="p-8 flex flex-col items-center gap-2">
+              <Package className="w-8 h-8 text-forest-300/30" />
+              <p className="text-forest-200/40 text-sm">No recent orders</p>
+            </div>
+          ) : (
+            <div className="divide-y divide-white/5">
+              {recentOrders.slice(0, 3).map(order => {
+                const items = order.items || order.orderItems || [];
+                const customerName = order.customerName || order.customer?.name || 'Customer';
+                const total = order.total || order.totalAmount || 0;
+                const firstItemName = items[0]?.name || items[0]?.menuItem?.name || 'Order';
+                return (
+                  <div key={order.id} className="p-4 flex items-center gap-3 hover:glass transition-all">
+                    <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
+                      {firstItemName.charAt(0)}
+                    </div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white text-sm font-semibold truncate">{firstItemName}</p>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <User className="w-3 h-3 text-forest-300/50" />
+                        <p className="text-forest-200/50 text-xs truncate">{customerName}</p>
+                      </div>
+                    </div>
+                    <div className="text-right flex-shrink-0">
+                      <p className="text-ember-400 font-bold text-sm">₱{Number(total).toFixed(2)}</p>
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${STATUS_STYLE[order.status] || 'glass text-forest-200/60'}`}>
+                        {(order.status||'pending').charAt(0).toUpperCase() + (order.status||'pending').slice(1)}
+                      </span>
+                    </div>
                   </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-ember-400 font-bold text-sm">₱{order.total.toFixed(2)}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium mt-1 inline-block ${STATUS_STYLE[order.status]}`}>
-                    {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
-                  </span>
-                </div>
-              </div>
-            ))}
-          </div>
+                );
+              })}
+            </div>
+          )}
           <div className="p-4" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
             <Link to="/owner/orders">
               <button className="w-full btn-glow-orange text-white text-sm font-semibold py-2.5 rounded-xl">
@@ -105,7 +137,7 @@ export default function RestaurantDashboard() {
               <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
                 <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="10" />
                 <circle cx="50" cy="50" r="40" fill="none" stroke="url(#grad)" strokeWidth="10"
-                  strokeDasharray="251" strokeDashoffset={251 - (3 / 24) * 251} strokeLinecap="round" />
+                  strokeDasharray="251" strokeDashoffset={251 - (todayOrders > 0 ? (pendingCount / todayOrders) * 251 : 0)} strokeLinecap="round" />
                 <defs>
                   <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
                     <stop offset="0%" stopColor="#22c55e" />
@@ -114,8 +146,8 @@ export default function RestaurantDashboard() {
                 </defs>
               </svg>
               <div className="absolute inset-0 flex flex-col items-center justify-center">
-                <span className="text-white font-heading font-bold text-3xl">3</span>
-                <span className="text-forest-200/50 text-xs">of 24</span>
+                <span className="text-white font-heading font-bold text-3xl">{pendingCount}</span>
+                <span className="text-forest-200/50 text-xs">of {todayOrders}</span>
               </div>
             </div>
             <p className="text-forest-200/50 text-xs">Awaiting confirmation</p>

@@ -1,13 +1,7 @@
-﻿import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
+import { usersApi } from "../../services/api";
 import { Users, Search, Shield, ShieldOff, Eye, Clock, Package, DollarSign, AlertTriangle, X, Check } from "lucide-react";
-
-const INIT_USERS = [
-  { id:1, name:"John Doe",      email:"john.doe@example.com",  phone:"+63 917 123 4567", status:"active", joinDate:"2024-01-15", totalOrders:24,  totalSpent:487.50,  lastOrder:"2 days ago",  issues:0, banReason:null },
-  { id:2, name:"Jane Smith",    email:"jane.smith@example.com",phone:"+63 917 987 6543", status:"active", joinDate:"2024-02-10", totalOrders:15,  totalSpent:324.80,  lastOrder:"1 week ago",  issues:1, banReason:null },
-  { id:3, name:"Mike Johnson",  email:"mike.j@example.com",    phone:"+63 917 456 7890", status:"banned", joinDate:"2023-12-05", totalOrders:8,   totalSpent:156.30,  lastOrder:"3 weeks ago", issues:5, banReason:"Multiple fraudulent payment attempts" },
-  { id:4, name:"Sarah Williams",email:"sarah.w@example.com",   phone:"+63 917 234 5678", status:"active", joinDate:"2024-03-01", totalOrders:42,  totalSpent:1247.90, lastOrder:"Today",        issues:0, banReason:null },
-];
 
 const STATUS_CLS = {
   active:"glass-green text-forest-200",
@@ -16,17 +10,32 @@ const STATUS_CLS = {
 };
 
 export default function AdminUsers() {
-  const { showSuccess, showError } = useNotification();
-  const [users, setUsers]           = useState(INIT_USERS);
+  const { addNotification } = useNotification();
+  const [users, setUsers]           = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [search, setSearch]         = useState("");
   const [filter, setFilter]         = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
   const [modal, setModal]           = useState(null); // "ban" | "unban" | "view"
   const [banReason, setBanReason]   = useState("");
 
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await usersApi.list({ role: "customer" });
+        setUsers(res.data || res || []);
+      } catch {
+        addNotification("Failed to load users", "error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
   const filtered = users.filter(u => {
     const matchFilter = filter === "all" || u.status === filter;
-    const matchSearch = !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()) || u.phone.includes(search);
+    const matchSearch = !search || (u.name || "").toLowerCase().includes(search.toLowerCase()) || (u.email || "").toLowerCase().includes(search.toLowerCase()) || (u.phone || "").includes(search);
     return matchFilter && matchSearch;
   });
 
@@ -35,17 +44,27 @@ export default function AdminUsers() {
   const openView  = (u) => { setSelectedUser(u); setModal("view"); };
   const close     = ()  => { setModal(null); setSelectedUser(null); setBanReason(""); };
 
-  const handleBan = () => {
-    if (!banReason.trim()) { showError("Please provide a reason"); return; }
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"banned", banReason } : u));
-    showSuccess(`${selectedUser.name} has been banned`);
-    close();
+  const handleBan = async () => {
+    if (!banReason.trim()) { addNotification("Please provide a reason", "error"); return; }
+    try {
+      await usersApi.ban(selectedUser.id, banReason);
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"banned", banReason } : u));
+      addNotification(`${selectedUser.name} has been banned`, "success");
+      close();
+    } catch {
+      addNotification("Failed to ban user", "error");
+    }
   };
 
-  const handleUnban = () => {
-    setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"active", banReason:null } : u));
-    showSuccess(`${selectedUser.name} has been unbanned`);
-    close();
+  const handleUnban = async () => {
+    try {
+      await usersApi.unban(selectedUser.id);
+      setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"active", banReason:null } : u));
+      addNotification(`${selectedUser.name} has been unbanned`, "success");
+      close();
+    } catch {
+      addNotification("Failed to unban user", "error");
+    }
   };
 
   const FILTERS = [
@@ -98,8 +117,12 @@ export default function AdminUsers() {
         </div>
       </div>
 
-      {/* Users list */}
-      {filtered.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="space-y-2">
+          {[1,2,3].map(i => <div key={i} className="glass rounded-2xl h-20 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
           <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
             <Users className="w-7 h-7 text-forest-300/40" />
@@ -112,15 +135,15 @@ export default function AdminUsers() {
             <div key={user.id} className="glass rounded-2xl p-4 hover:glass-green transition-all">
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 btn-glow-green rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
-                  {user.name.charAt(0)}
+                  {(user.name || "U").charAt(0)}
                 </div>
                 <div className="flex-1 min-w-0">
                   <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div>
                       <div className="flex items-center gap-2 flex-wrap">
                         <p className="text-white font-semibold text-sm">{user.name}</p>
-                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[user.status]}`}>
-                          {user.status.toUpperCase()}
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[user.status] || "glass text-forest-200/60"}`}>
+                          {(user.status || "active").toUpperCase()}
                         </span>
                         {user.issues > 0 && (
                           <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 flex items-center gap-0.5">
@@ -128,7 +151,7 @@ export default function AdminUsers() {
                           </span>
                         )}
                       </div>
-                      <p className="text-forest-200/50 text-xs mt-0.5">{user.email} · {user.phone}</p>
+                      <p className="text-forest-200/50 text-xs mt-0.5">{user.email} {user.phone ? `· ${user.phone}` : ""}</p>
                       {user.banReason && (
                         <p className="text-red-400/70 text-xs mt-1 flex items-center gap-1">
                           <ShieldOff className="w-3 h-3" /> {user.banReason}
@@ -154,9 +177,9 @@ export default function AdminUsers() {
                     </div>
                   </div>
                   <div className="flex items-center gap-4 mt-2 text-xs text-forest-200/50">
-                    <span className="flex items-center gap-1"><Package className="w-3 h-3" />{user.totalOrders} orders</span>
-                    <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />${user.totalSpent.toFixed(2)} spent</span>
-                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{user.lastOrder}</span>
+                    <span className="flex items-center gap-1"><Package className="w-3 h-3" />{user.totalOrders || 0} orders</span>
+                    <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />₱{Number(user.totalSpent || 0).toFixed(2)} spent</span>
+                    {user.lastOrder && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{user.lastOrder}</span>}
                   </div>
                 </div>
               </div>
@@ -177,24 +200,23 @@ export default function AdminUsers() {
             </div>
             <div className="flex items-center gap-3 mb-5">
               <div className="w-14 h-14 btn-glow-green rounded-xl flex items-center justify-center text-white font-bold text-2xl">
-                {selectedUser.name.charAt(0)}
+                {(selectedUser.name || "U").charAt(0)}
               </div>
               <div>
                 <p className="text-white font-semibold">{selectedUser.name}</p>
-                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[selectedUser.status]}`}>
-                  {selectedUser.status.toUpperCase()}
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[selectedUser.status] || "glass text-forest-200/60"}`}>
+                  {(selectedUser.status || "active").toUpperCase()}
                 </span>
               </div>
             </div>
             <div className="space-y-3">
               {[
                 { label:"Email",        value:selectedUser.email },
-                { label:"Phone",        value:selectedUser.phone },
-                { label:"Joined",       value:selectedUser.joinDate },
-                { label:"Total Orders", value:selectedUser.totalOrders },
-                { label:"Total Spent",  value:`$${selectedUser.totalSpent.toFixed(2)}` },
-                { label:"Last Order",   value:selectedUser.lastOrder },
-                { label:"Issues",       value:selectedUser.issues },
+                { label:"Phone",        value:selectedUser.phone || "—" },
+                { label:"Joined",       value:selectedUser.joinDate || selectedUser.createdAt ? new Date(selectedUser.joinDate || selectedUser.createdAt).toLocaleDateString() : "—" },
+                { label:"Total Orders", value:selectedUser.totalOrders || 0 },
+                { label:"Total Spent",  value:`₱${Number(selectedUser.totalSpent || 0).toFixed(2)}` },
+                { label:"Issues",       value:selectedUser.issues || 0 },
               ].map(({ label, value }) => (
                 <div key={label} className="glass rounded-xl px-3 py-2 flex justify-between">
                   <span className="text-forest-200/50 text-xs">{label}</span>

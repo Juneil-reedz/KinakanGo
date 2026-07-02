@@ -1,34 +1,7 @@
-﻿import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
+import { applicationsApi } from "../../services/api";
 import { FileText, Store, Bike, Check, X, Eye, Download, Filter, Clock } from "lucide-react";
-
-const INIT_APPS = [
-  {
-    id:"APP001", type:"restaurant", applicantName:"Juan dela Cruz", email:"juan@restaurant.com", phone:"+63 912 345 6789",
-    restaurantName:"Juan's Filipino Kitchen", businessAddress:"123 Main St, Manila", cuisine:"Filipino",
-    status:"pending", submittedDate:"2025-01-20",
-    documents:{ bir:"bir_certificate.pdf", businessPermit:"business_permit.pdf", foodSafety:"food_safety.pdf" }
-  },
-  {
-    id:"APP002", type:"rider", applicantName:"Maria Santos", email:"maria@email.com", phone:"+63 923 456 7890",
-    vehicleType:"Motorcycle", vehiclePlate:"ABC 1234",
-    status:"pending", submittedDate:"2025-01-21",
-    documents:{ driverLicense:"license.pdf", vehicleRegistration:"or_cr.pdf", nbiClearance:"nbi.pdf", validId:"id.pdf" }
-  },
-  {
-    id:"APP003", type:"restaurant", applicantName:"Pedro Garcia", email:"pedro@burgerhouse.com", phone:"+63 934 567 8901",
-    restaurantName:"Pedro's Burger House", businessAddress:"456 Food St, Quezon City", cuisine:"American",
-    status:"approved", submittedDate:"2025-01-18", approvedDate:"2025-01-20",
-    documents:{ bir:"bir_certificate.pdf", businessPermit:"business_permit.pdf" }
-  },
-  {
-    id:"APP004", type:"rider", applicantName:"Jose Reyes", email:"jose@email.com", phone:"+63 945 678 9012",
-    vehicleType:"Motorcycle", vehiclePlate:"XYZ 5678",
-    status:"rejected", submittedDate:"2025-01-19", rejectedDate:"2025-01-21",
-    rejectionReason:"Invalid driver's license - expired",
-    documents:{ driverLicense:"license.pdf", vehicleRegistration:"or_cr.pdf" }
-  },
-];
 
 const STATUS_CLS = {
   pending:"glass-orange text-ember-200",
@@ -37,13 +10,28 @@ const STATUS_CLS = {
 };
 
 export default function AdminApplications() {
-  const { showSuccess } = useNotification();
-  const [apps, setApps]         = useState(INIT_APPS);
+  const { addNotification } = useNotification();
+  const [apps, setApps]         = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [tab, setTab]           = useState("all");
   const [selected, setSelected] = useState(null);
   const [showModal, setModal]   = useState(false);
   const [rejectReason, setReason] = useState("");
   const [rejectId, setRejectId]   = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await applicationsApi.list({});
+        setApps(res.data || res || []);
+      } catch (err) {
+        addNotification("Failed to load applications", "error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const stats = {
     total:    apps.length,
@@ -62,18 +50,28 @@ export default function AdminApplications() {
   const viewDetails = (app) => { setSelected(app); setModal(true); };
   const closeModal  = ()    => { setModal(false); setSelected(null); setRejectId(null); setReason(""); };
 
-  const approve = (id) => {
-    setApps(prev => prev.map(a => a.id === id ? { ...a, status:"approved", approvedDate:new Date().toISOString().split("T")[0] } : a));
-    showSuccess("Application approved");
-    closeModal();
+  const approve = async (id) => {
+    try {
+      await applicationsApi.approve(id);
+      setApps(prev => prev.map(a => a.id === id ? { ...a, status:"approved", approvedDate:new Date().toISOString().split("T")[0] } : a));
+      addNotification("Application approved", "success");
+      closeModal();
+    } catch {
+      addNotification("Failed to approve application", "error");
+    }
   };
 
-  const reject = (id) => {
+  const reject = async (id) => {
     if (!rejectId) { setRejectId(id); return; }
     if (!rejectReason.trim()) return;
-    setApps(prev => prev.map(a => a.id === id ? { ...a, status:"rejected", rejectedDate:new Date().toISOString().split("T")[0], rejectionReason:rejectReason } : a));
-    showSuccess("Application rejected");
-    closeModal();
+    try {
+      await applicationsApi.reject(id, rejectReason);
+      setApps(prev => prev.map(a => a.id === id ? { ...a, status:"rejected", rejectedDate:new Date().toISOString().split("T")[0], rejectionReason:rejectReason } : a));
+      addNotification("Application rejected", "success");
+      closeModal();
+    } catch {
+      addNotification("Failed to reject application", "error");
+    }
   };
 
   const TABS = [
@@ -124,8 +122,12 @@ export default function AdminApplications() {
         ))}
       </div>
 
-      {/* Applications list */}
-      {filtered.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="glass rounded-2xl h-24 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
           <FileText className="w-10 h-10 text-forest-300/30" />
           <p className="text-forest-200/50 text-sm">No applications found</p>
@@ -179,7 +181,7 @@ export default function AdminApplications() {
                     </div>
                   </div>
                   <p className="text-forest-200/40 text-xs mt-1.5 flex items-center gap-1">
-                    <Clock className="w-3 h-3" /> Submitted {new Date(app.submittedDate).toLocaleDateString()}
+                    <Clock className="w-3 h-3" /> Submitted {app.submittedDate ? new Date(app.submittedDate).toLocaleDateString() : "—"}
                   </p>
                 </div>
               </div>
@@ -216,7 +218,7 @@ export default function AdminApplications() {
                   ["Name",      selected.applicantName],
                   ["Email",     selected.email],
                   ["Phone",     selected.phone],
-                  ["Submitted", new Date(selected.submittedDate).toLocaleDateString()],
+                  ["Submitted", selected.submittedDate ? new Date(selected.submittedDate).toLocaleDateString() : "—"],
                 ].map(([label, value]) => (
                   <div key={label}>
                     <p className="text-forest-200/40 text-xs">{label}</p>
@@ -246,25 +248,27 @@ export default function AdminApplications() {
             </div>
 
             {/* Documents */}
-            <div className="mb-4">
-              <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-2">Documents</p>
-              <div className="space-y-1.5">
-                {Object.entries(selected.documents).map(([key, value]) => (
-                  <div key={key} className="glass rounded-xl p-2.5 flex items-center justify-between">
-                    <div className="flex items-center gap-2">
-                      <FileText className="w-4 h-4 text-forest-300/50 flex-shrink-0" />
-                      <div>
-                        <p className="text-white text-xs font-medium">{key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}</p>
-                        <p className="text-forest-200/40 text-xs">{Array.isArray(value) ? `${value.length} file(s)` : value}</p>
+            {selected.documents && (
+              <div className="mb-4">
+                <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-2">Documents</p>
+                <div className="space-y-1.5">
+                  {Object.entries(selected.documents).map(([key, value]) => (
+                    <div key={key} className="glass rounded-xl p-2.5 flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        <FileText className="w-4 h-4 text-forest-300/50 flex-shrink-0" />
+                        <div>
+                          <p className="text-white text-xs font-medium">{key.replace(/([A-Z])/g, " $1").replace(/^./, s => s.toUpperCase())}</p>
+                          <p className="text-forest-200/40 text-xs">{Array.isArray(value) ? `${value.length} file(s)` : value}</p>
+                        </div>
                       </div>
+                      <button className="w-7 h-7 glass hover:glass-green rounded-lg flex items-center justify-center transition-all">
+                        <Download className="w-3.5 h-3.5 text-forest-200" />
+                      </button>
                     </div>
-                    <button className="w-7 h-7 glass hover:glass-green rounded-lg flex items-center justify-center transition-all">
-                      <Download className="w-3.5 h-3.5 text-forest-200" />
-                    </button>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Rejection reason */}
             {selected.status === "rejected" && selected.rejectionReason && (

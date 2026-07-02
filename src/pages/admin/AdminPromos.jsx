@@ -1,12 +1,7 @@
-﻿import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
+import { promosApi } from "../../services/api";
 import { Ticket, Plus, Edit, Trash2, Check, X, Calendar, Users, TrendingUp } from "lucide-react";
-
-const INIT_PROMOS = [
-  { id:1, code:"WELCOME20", type:"percentage", value:20,   minOrder:15.00, maxDiscount:10.00, usageLimit:100, usedCount:47,  startDate:"2024-01-01", endDate:"2024-12-31", status:"active",  targetUsers:"new",      description:"20% off for new customers" },
-  { id:2, code:"SAVE5",     type:"fixed",      value:5.00, minOrder:20.00, maxDiscount:null,  usageLimit:500, usedCount:234, startDate:"2024-01-01", endDate:"2024-06-30", status:"active",  targetUsers:"all",      description:"₱5 off orders over ₱20" },
-  { id:3, code:"FLASH50",   type:"percentage", value:50,   minOrder:30.00, maxDiscount:15.00, usageLimit:50,  usedCount:50,  startDate:"2024-01-15", endDate:"2024-01-15", status:"expired", targetUsers:"all",      description:"Flash sale - 50% off" },
-];
 
 const EMPTY_FORM = { code:"", type:"percentage", value:"", minOrder:"", maxDiscount:"", usageLimit:"", startDate:"", endDate:"", targetUsers:"all", description:"" };
 
@@ -17,12 +12,27 @@ const STATUS_CLS = {
 };
 
 export default function AdminPromos() {
-  const { showSuccess } = useNotification();
-  const [promos, setPromos]       = useState(INIT_PROMOS);
+  const { addNotification } = useNotification();
+  const [promos, setPromos]       = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [filter, setFilter]       = useState("all");
   const [modal, setModal]         = useState(null); // "create" | "edit"
   const [selectedPromo, setSelected] = useState(null);
   const [form, setForm]           = useState(EMPTY_FORM);
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await promosApi.list({});
+        setPromos(res.data || res || []);
+      } catch {
+        addNotification("Failed to load promos", "error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const f = (k, v) => setForm(p => ({ ...p, [k]:v }));
 
@@ -36,29 +46,52 @@ export default function AdminPromos() {
   };
   const close = () => { setModal(null); setSelected(null); setForm(EMPTY_FORM); };
 
-  const handleCreate = (e) => {
+  const handleCreate = async (e) => {
     e.preventDefault();
-    const promo = { id:Date.now(), code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, usedCount:0, startDate:form.startDate, endDate:form.endDate, status:"active", targetUsers:form.targetUsers, description:form.description };
-    setPromos(p => [promo, ...p]);
-    showSuccess(`Promo "${promo.code}" created!`);
-    close();
+    try {
+      const payload = { code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, startDate:form.startDate, endDate:form.endDate, status:"active", targetUsers:form.targetUsers, description:form.description };
+      const created = await promosApi.create(payload);
+      setPromos(p => [created, ...p]);
+      addNotification(`Promo "${payload.code}" created!`, "success");
+      close();
+    } catch {
+      addNotification("Failed to create promo", "error");
+    }
   };
 
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    setPromos(prev => prev.map(p => p.id === selectedPromo.id ? { ...p, code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, startDate:form.startDate, endDate:form.endDate, targetUsers:form.targetUsers, description:form.description } : p));
-    showSuccess("Promo updated!");
-    close();
+    try {
+      const payload = { code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, startDate:form.startDate, endDate:form.endDate, targetUsers:form.targetUsers, description:form.description };
+      const updated = await promosApi.update(selectedPromo.id, payload);
+      setPromos(prev => prev.map(p => p.id === selectedPromo.id ? { ...p, ...payload, ...(updated || {}) } : p));
+      addNotification("Promo updated!", "success");
+      close();
+    } catch {
+      addNotification("Failed to update promo", "error");
+    }
   };
 
-  const toggleStatus = (id) => {
-    setPromos(prev => prev.map(p => p.id === id ? { ...p, status:p.status === "active" ? "inactive" : "active" } : p));
-    showSuccess("Promo status updated");
+  const toggleStatus = async (id) => {
+    const promo = promos.find(p => p.id === id);
+    const newStatus = promo.status === "active" ? "inactive" : "active";
+    try {
+      await promosApi.update(id, { status: newStatus });
+      setPromos(prev => prev.map(p => p.id === id ? { ...p, status:newStatus } : p));
+      addNotification("Promo status updated", "success");
+    } catch {
+      addNotification("Failed to update promo status", "error");
+    }
   };
 
-  const deletePromo = (id) => {
-    setPromos(prev => prev.filter(p => p.id !== id));
-    showSuccess("Promo deleted");
+  const deletePromo = async (id) => {
+    try {
+      await promosApi.remove(id);
+      setPromos(prev => prev.filter(p => p.id !== id));
+      addNotification("Promo deleted", "success");
+    } catch {
+      addNotification("Failed to delete promo", "error");
+    }
   };
 
   const FILTER_OPTS = ["all","active","inactive","expired"];
@@ -75,7 +108,7 @@ export default function AdminPromos() {
           <label className="block text-forest-200/60 text-xs font-medium mb-1">Discount Type *</label>
           <select value={form.type} onChange={e => f("type", e.target.value)} className="w-full input-glass py-2.5 text-sm" required>
             <option value="percentage" style={{ background:"#0d2b1a" }}>Percentage (%)</option>
-            <option value="fixed"      style={{ background:"#0d2b1a" }}>Fixed Amount ($)</option>
+            <option value="fixed"      style={{ background:"#0d2b1a" }}>Fixed Amount (₱)</option>
           </select>
         </div>
         <div>
@@ -86,12 +119,12 @@ export default function AdminPromos() {
       </div>
       <div className="grid grid-cols-2 gap-3">
         <div>
-          <label className="block text-forest-200/60 text-xs font-medium mb-1">Min Order ($)</label>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Min Order (₱)</label>
           <input type="number" step="0.01" value={form.minOrder} onChange={e => f("minOrder", e.target.value)}
             className="w-full input-glass py-2.5 text-sm" placeholder="0.00" />
         </div>
         <div>
-          <label className="block text-forest-200/60 text-xs font-medium mb-1">Max Discount ($)</label>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Max Discount (₱)</label>
           <input type="number" step="0.01" value={form.maxDiscount} onChange={e => f("maxDiscount", e.target.value)}
             className="w-full input-glass py-2.5 text-sm" placeholder="Optional" />
         </div>
@@ -154,7 +187,7 @@ export default function AdminPromos() {
         {[
           { label:"Total Promos",  value:promos.length,                              icon:Ticket,     color:"btn-glow-green" },
           { label:"Active",        value:promos.filter(p=>p.status==="active").length,icon:TrendingUp, color:"glass-green" },
-          { label:"Total Uses",    value:promos.reduce((a,p)=>a+p.usedCount,0),      icon:Users,      color:"glass-orange" },
+          { label:"Total Uses",    value:promos.reduce((a,p)=>a+(p.usedCount||0),0), icon:Users,      color:"glass-orange" },
         ].map(({ label, value, icon:Icon, color }) => (
           <div key={label} className="glass card-3d rounded-2xl p-4">
             <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-2`}>
@@ -177,8 +210,12 @@ export default function AdminPromos() {
         ))}
       </div>
 
-      {/* Promo cards */}
-      {filtered.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {[1,2].map(i => <div key={i} className="glass rounded-2xl h-48 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
           <Ticket className="w-10 h-10 text-forest-300/30" />
           <p className="text-forest-200/50 text-sm">No promo codes found</p>
@@ -191,8 +228,8 @@ export default function AdminPromos() {
               <div className="flex items-start justify-between mb-3">
                 <div>
                   <div className="flex items-center gap-2 mb-1 flex-wrap">
-                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[promo.status]}`}>
-                      {promo.status.toUpperCase()}
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[promo.status] || "glass text-forest-200/60"}`}>
+                      {(promo.status || "active").toUpperCase()}
                     </span>
                     {promo.targetUsers === "new" && (
                       <span className="text-xs px-2 py-0.5 rounded-full glass text-forest-200/60">New Users</span>
@@ -203,7 +240,7 @@ export default function AdminPromos() {
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-ember-400 font-heading font-bold text-3xl">
-                    {promo.type === "percentage" ? `${promo.value}%` : `$${promo.value}`}
+                    {promo.type === "percentage" ? `${promo.value}%` : `₱${promo.value}`}
                   </p>
                   <p className="text-forest-200/40 text-xs">OFF</p>
                 </div>
@@ -213,17 +250,17 @@ export default function AdminPromos() {
               <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
                 <div className="glass rounded-xl px-2.5 py-2">
                   <p className="text-forest-200/40">Min Order</p>
-                  <p className="text-white font-medium">${promo.minOrder.toFixed(2)}</p>
+                  <p className="text-white font-medium">₱{Number(promo.minOrder || 0).toFixed(2)}</p>
                 </div>
                 {promo.maxDiscount && (
                   <div className="glass rounded-xl px-2.5 py-2">
                     <p className="text-forest-200/40">Max Discount</p>
-                    <p className="text-white font-medium">${promo.maxDiscount.toFixed(2)}</p>
+                    <p className="text-white font-medium">₱{Number(promo.maxDiscount).toFixed(2)}</p>
                   </div>
                 )}
                 <div className="glass rounded-xl px-2.5 py-2">
                   <p className="text-forest-200/40">Usage</p>
-                  <p className="text-white font-medium">{promo.usedCount} / {promo.usageLimit || "∞"}</p>
+                  <p className="text-white font-medium">{promo.usedCount || 0} / {promo.usageLimit || "∞"}</p>
                 </div>
                 <div className="glass rounded-xl px-2.5 py-2 flex items-start gap-1.5">
                   <Calendar className="w-3 h-3 text-forest-300/50 mt-0.5 flex-shrink-0" />
@@ -239,9 +276,9 @@ export default function AdminPromos() {
                 <div className="mb-4">
                   <div className="w-full glass h-1.5 rounded-full overflow-hidden">
                     <div className="h-full bg-gradient-to-r from-forest-500 to-ember-500 rounded-full transition-all"
-                      style={{ width:`${Math.min((promo.usedCount/promo.usageLimit)*100,100)}%` }} />
+                      style={{ width:`${Math.min(((promo.usedCount||0)/promo.usageLimit)*100,100)}%` }} />
                   </div>
-                  <p className="text-forest-200/30 text-xs mt-1 text-right">{Math.round((promo.usedCount/promo.usageLimit)*100)}% used</p>
+                  <p className="text-forest-200/30 text-xs mt-1 text-right">{Math.round(((promo.usedCount||0)/promo.usageLimit)*100)}% used</p>
                 </div>
               )}
 

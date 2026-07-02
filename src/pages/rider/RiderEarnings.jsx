@@ -1,50 +1,49 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRider } from '../../context/RiderContext';
+import { ordersApi } from '../../services/api';
 import { Banknote, Package, TrendingUp, Star, Clock, MapPin, Store, Download, CreditCard } from 'lucide-react';
-
-const DATA = {
-  week: {
-    total:487.50, deliveries:42, avg:11.61,
-    breakdown:[
-      { day:'Mon', deliveries:5,  earnings:58.50,  hours:4 },
-      { day:'Tue', deliveries:6,  earnings:72.00,  hours:5 },
-      { day:'Wed', deliveries:8,  earnings:89.50,  hours:6 },
-      { day:'Thu', deliveries:7,  earnings:78.00,  hours:5 },
-      { day:'Fri', deliveries:6,  earnings:69.50,  hours:5 },
-      { day:'Sat', deliveries:5,  earnings:62.00,  hours:4 },
-      { day:'Sun', deliveries:5,  earnings:58.00,  hours:4 },
-    ],
-  },
-  month: {
-    total:1987.50, deliveries:168, avg:11.83,
-    breakdown:[
-      { day:'Week 1', deliveries:38, earnings:445.50, hours:28 },
-      { day:'Week 2', deliveries:42, earnings:487.50, hours:32 },
-      { day:'Week 3', deliveries:45, earnings:534.00, hours:34 },
-      { day:'Week 4', deliveries:43, earnings:520.50, hours:33 },
-    ],
-  },
-};
-
-const TRIPS = [
-  { id:'12345', date:'Jan 15', time:'2:45 PM', restaurant:'Pizza Palace',    customer:'John Doe',       distance:'2.3 km', duration:'25 min', base:5.50, tip:3.00 },
-  { id:'12344', date:'Jan 15', time:'1:30 PM', restaurant:'Burger House',    customer:'Jane Smith',     distance:'1.8 km', duration:'18 min', base:4.00, tip:2.50 },
-  { id:'12343', date:'Jan 15', time:'12:15 PM',restaurant:'Sushi Masters',   customer:'Mike Johnson',   distance:'3.1 km', duration:'32 min', base:6.00, tip:4.00 },
-  { id:'12342', date:'Jan 14', time:'6:20 PM', restaurant:'Italian Kitchen', customer:'Sarah Williams', distance:'2.5 km', duration:'28 min', base:5.00, tip:3.50 },
-  { id:'12341', date:'Jan 14', time:'5:45 PM', restaurant:'Sweet Treats',    customer:'Tom Brown',      distance:'1.2 km', duration:'15 min', base:3.50, tip:2.00 },
-];
 
 export default function RiderEarnings() {
   const { rider }          = useRider();
+  const [trips, setTrips]  = useState([]);
+  const [loading, setLoading] = useState(true);
   const [range, setRange]  = useState('week');
-  const d                  = DATA[range];
-  const max                = Math.max(...d.breakdown.map(b => b.earnings));
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await ordersApi.list({ status: 'delivered', limit: 20 });
+        setTrips(res.data || res || []);
+      } catch {
+        // silently fail
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
+
+  // Compute summary from real delivered orders
+  const totalEarned   = trips.reduce((s, o) => s + Number(o.total || o.totalAmount || 0) * 0.1, 0);
+  const deliveries    = trips.length;
+  const avg           = deliveries > 0 ? totalEarned / deliveries : 0;
+
+  // Group by day for breakdown chart (last 7 days)
+  const dayMap = {};
+  trips.forEach(o => {
+    const day = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-US', { weekday:'short' }) : 'Other';
+    if (!dayMap[day]) dayMap[day] = { day, earnings:0, deliveries:0, hours:0 };
+    dayMap[day].earnings  += Number(o.total || o.totalAmount || 0) * 0.1;
+    dayMap[day].deliveries += 1;
+  });
+  const breakdown = Object.values(dayMap).slice(-7);
+  const max = breakdown.length ? Math.max(...breakdown.map(b => b.earnings)) : 1;
 
   const metrics = [
-    { label:'Rating',         value:`${rider?.rating || '4.8'}`, icon:Star,      sub:'out of 5.0' },
-    { label:'All-time Trips', value: rider?.totalDeliveries || '1,247', icon:Package, sub:'completed' },
-    { label:'Acceptance',     value:'95%', icon:TrendingUp, sub:'rate' },
-    { label:'On-Time',        value:'98%', icon:Clock,      sub:'rate' },
+    { label:'Rating',         value:`${rider?.rating || '—'}`, icon:Star,      sub:'out of 5.0' },
+    { label:'All-time Trips', value:rider?.totalDeliveries || deliveries, icon:Package, sub:'completed' },
+    { label:'Acceptance',     value:'—', icon:TrendingUp, sub:'rate' },
+    { label:'On-Time',        value:'—', icon:Clock,      sub:'rate' },
   ];
 
   return (
@@ -70,9 +69,9 @@ export default function RiderEarnings() {
       {/* Summary cards */}
       <div className="grid grid-cols-3 gap-3">
         {[
-          { label:'Total Earned', value:`₱${d.total.toFixed(2)}`, icon:Banknote,   color:'btn-glow-green' },
-          { label:'Deliveries',   value:d.deliveries,             icon:Package,    color:'btn-glow-orange' },
-          { label:'Avg / Trip',   value:`₱${d.avg.toFixed(2)}`,   icon:TrendingUp, color:'glass-green' },
+          { label:'Total Earned', value:`₱${totalEarned.toFixed(2)}`, icon:Banknote,   color:'btn-glow-green' },
+          { label:'Deliveries',   value:deliveries,                    icon:Package,    color:'btn-glow-orange' },
+          { label:'Avg / Trip',   value:`₱${avg.toFixed(2)}`,          icon:TrendingUp, color:'glass-green' },
         ].map(({ label, value, icon:Icon, color }) => (
           <div key={label} className="glass card-3d rounded-2xl p-4">
             <div className={`w-8 h-8 ${color} rounded-xl flex items-center justify-center mb-2`}>
@@ -85,26 +84,28 @@ export default function RiderEarnings() {
       </div>
 
       {/* Bar chart */}
-      <div className="glass rounded-2xl p-5">
-        <p className="text-white font-semibold mb-5">Earnings Breakdown</p>
-        <div className="space-y-3">
-          {d.breakdown.map((item, i) => (
-            <div key={i}>
-              <div className="flex items-center justify-between mb-1.5">
-                <span className="text-forest-200/70 text-xs font-medium w-10">{item.day}</span>
-                <div className="flex-1 mx-3 h-2.5 glass rounded-full overflow-hidden">
-                  <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
-                    style={{ width:`${(item.earnings / max) * 100}%` }} />
-                </div>
-                <div className="text-right min-w-[90px]">
-                  <span className="text-white text-xs font-bold">₱{item.earnings.toFixed(2)}</span>
-                  <span className="text-forest-200/40 text-xs ml-1.5">{item.deliveries}x · {item.hours}h</span>
+      {breakdown.length > 0 && (
+        <div className="glass rounded-2xl p-5">
+          <p className="text-white font-semibold mb-5">Earnings Breakdown</p>
+          <div className="space-y-3">
+            {breakdown.map((item, i) => (
+              <div key={i}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <span className="text-forest-200/70 text-xs font-medium w-10">{item.day}</span>
+                  <div className="flex-1 mx-3 h-2.5 glass rounded-full overflow-hidden">
+                    <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
+                      style={{ width:`${max > 0 ? (item.earnings / max) * 100 : 0}%` }} />
+                  </div>
+                  <div className="text-right min-w-[90px]">
+                    <span className="text-white text-xs font-bold">₱{item.earnings.toFixed(2)}</span>
+                    <span className="text-forest-200/40 text-xs ml-1.5">{item.deliveries}x</span>
+                  </div>
                 </div>
               </div>
-            </div>
-          ))}
+            ))}
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Performance */}
       <div className="glass rounded-2xl p-5">
@@ -129,39 +130,57 @@ export default function RiderEarnings() {
         <div className="p-4" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
           <p className="text-white font-semibold">Recent Trips</p>
         </div>
-        <div className="divide-y divide-white/5">
-          {TRIPS.map(trip => (
-            <div key={trip.id} className="p-4 hover:glass transition-all">
-              <div className="flex items-start justify-between gap-2">
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center gap-2 mb-1">
-                    <Store className="w-3.5 h-3.5 text-ember-400 flex-shrink-0" />
-                    <p className="text-white text-sm font-semibold truncate">{trip.restaurant}</p>
+        {loading ? (
+          <div className="p-4 space-y-3">
+            {[1,2,3].map(i => <div key={i} className="glass rounded-xl h-20 animate-pulse" />)}
+          </div>
+        ) : trips.length === 0 ? (
+          <div className="p-8 flex flex-col items-center gap-2">
+            <Package className="w-8 h-8 text-forest-300/30" />
+            <p className="text-forest-200/40 text-sm">No delivered orders yet</p>
+          </div>
+        ) : (
+          <>
+            <div className="divide-y divide-white/5">
+              {trips.map(trip => {
+                const restaurantName = trip.restaurant?.name || trip.restaurantName || 'Restaurant';
+                const customerName   = trip.customer?.name   || trip.customerName   || 'Customer';
+                const earning        = Number(trip.total || trip.totalAmount || 0) * 0.1;
+                return (
+                  <div key={trip.id} className="p-4 hover:glass transition-all">
+                    <div className="flex items-start justify-between gap-2">
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <Store className="w-3.5 h-3.5 text-ember-400 flex-shrink-0" />
+                          <p className="text-white text-sm font-semibold truncate">{restaurantName}</p>
+                        </div>
+                        <div className="flex items-center gap-2 mb-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-forest-400 flex-shrink-0" />
+                          <p className="text-forest-200/60 text-xs truncate">{customerName}</p>
+                        </div>
+                        {trip.createdAt && (
+                          <div className="flex items-center gap-3 text-xs text-forest-200/40">
+                            <span>{new Date(trip.createdAt).toLocaleDateString()}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="text-right flex-shrink-0">
+                        <p className="text-white font-heading font-bold">₱{earning.toFixed(2)}</p>
+                        <p className="text-forest-300 text-xs">10% of order</p>
+                      </div>
+                    </div>
                   </div>
-                  <div className="flex items-center gap-2 mb-1.5">
-                    <MapPin className="w-3.5 h-3.5 text-forest-400 flex-shrink-0" />
-                    <p className="text-forest-200/60 text-xs truncate">{trip.customer}</p>
-                  </div>
-                  <div className="flex items-center gap-3 text-xs text-forest-200/40">
-                    <span>{trip.date} · {trip.time}</span>
-                    <span>{trip.distance}</span>
-                    <span>{trip.duration}</span>
-                  </div>
-                </div>
-                <div className="text-right flex-shrink-0">
-                  <p className="text-white font-heading font-bold">₱{(trip.base + trip.tip).toFixed(2)}</p>
-                  <p className="text-forest-300 text-xs">+₱{trip.tip.toFixed(2)} tip</p>
-                </div>
-              </div>
+                );
+              })}
             </div>
-          ))}
-        </div>
-        <div className="p-4 glass-dark flex items-center justify-between" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
-          <p className="text-forest-200/60 text-sm">Total ({TRIPS.length} trips)</p>
-          <p className="text-white font-heading font-bold text-lg">
-            ₱{TRIPS.reduce((s,t) => s + t.base + t.tip, 0).toFixed(2)}
-          </p>
-        </div>
+            <div className="p-4 glass-dark flex items-center justify-between" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+              <p className="text-forest-200/60 text-sm">Total ({trips.length} trips)</p>
+              <p className="text-white font-heading font-bold text-lg">
+                ₱{totalEarned.toFixed(2)}
+              </p>
+            </div>
+          </>
+        )}
       </div>
 
       {/* Payout */}

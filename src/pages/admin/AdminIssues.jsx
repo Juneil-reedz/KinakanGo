@@ -1,29 +1,7 @@
-﻿import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
+import { issuesApi } from "../../services/api";
 import { AlertTriangle, DollarSign, Store, Bike, Package, Clock, CheckCircle, X, Check, CreditCard, UtensilsCrossed } from "lucide-react";
-
-const INIT_ISSUES = [
-  {
-    id:1, type:"refund",   orderId:"12340", customerName:"John Doe",    customerEmail:"john@example.com",
-    title:"Food never arrived",   description:"Rider marked as delivered but I never received my order",
-    orderAmount:40.76, requestedRefund:40.76, priority:"high", status:"pending", createdAt:"30 min ago",
-  },
-  {
-    id:2, type:"quality",  orderId:"12338", restaurantName:"Pizza Palace", restaurantId:"1", customerName:"Jane Smith",
-    title:"Food quality complaint", description:"Pizza arrived cold and soggy. Multiple items missing from order.",
-    orderAmount:52.30, requestedRefund:25.00, priority:"high", status:"pending", createdAt:"2 hours ago",
-  },
-  {
-    id:3, type:"payment",  orderId:"12335", customerName:"Mike Johnson",
-    title:"Double charge",  description:"Was charged twice for the same order",
-    orderAmount:28.99, requestedRefund:28.99, priority:"high", status:"pending", createdAt:"5 hours ago",
-  },
-  {
-    id:4, type:"rider",    orderId:"12333", riderName:"Tom Wilson", riderId:"23", customerName:"Sarah Brown",
-    title:"Unprofessional behavior", description:"Rider was rude and aggressive when delivering",
-    priority:"medium", status:"pending", createdAt:"1 day ago",
-  },
-];
 
 const PRIORITY_CLS = {
   high:"bg-red-500/20 text-red-300 border border-red-500/30",
@@ -40,14 +18,29 @@ const TYPE_ICON = {
 };
 
 export default function AdminIssues() {
-  const { showSuccess } = useNotification();
-  const [issues, setIssues]       = useState(INIT_ISSUES);
+  const { addNotification } = useNotification();
+  const [issues, setIssues]       = useState([]);
+  const [loading, setLoading]     = useState(true);
   const [filterType, setType]     = useState("all");
   const [filterStatus, setStatus] = useState("pending");
   const [selected, setSelected]   = useState(null);
   const [showRefundModal, setRefundModal] = useState(false);
   const [refundAmount, setAmount] = useState("");
   const [refundNotes, setNotes]   = useState("");
+
+  useEffect(() => {
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await issuesApi.list({});
+        setIssues(res.data || res || []);
+      } catch {
+        addNotification("Failed to load issues", "error");
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, []);
 
   const filtered = issues.filter(i => {
     const matchType   = filterType   === "all" || i.type   === filterType;
@@ -58,22 +51,37 @@ export default function AdminIssues() {
   const openRefund = (issue) => { setSelected(issue); setAmount(issue.requestedRefund?.toString() || ""); setRefundModal(true); };
   const close      = ()      => { setRefundModal(false); setSelected(null); setAmount(""); setNotes(""); };
 
-  const approveRefund = () => {
+  const approveRefund = async () => {
     const amt = parseFloat(refundAmount);
-    setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes:refundNotes } : i));
-    showSuccess(`Refund of $${amt.toFixed(2)} approved for ${selected.customerName}`);
-    close();
+    try {
+      await issuesApi.resolve(selected.id, { refundApproved: true, notes: refundNotes });
+      setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes } : i));
+      addNotification(`Refund of ₱${amt.toFixed(2)} approved for ${selected.customerName}`, "success");
+      close();
+    } catch {
+      addNotification("Failed to approve refund", "error");
+    }
   };
 
-  const denyRefund = () => {
-    setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"denied", refundNotes } : i));
-    showSuccess("Refund request denied");
-    close();
+  const denyRefund = async () => {
+    try {
+      await issuesApi.deny(selected.id, refundNotes);
+      setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"denied", refundNotes } : i));
+      addNotification("Refund request denied", "success");
+      close();
+    } catch {
+      addNotification("Failed to deny refund", "error");
+    }
   };
 
-  const resolve = (id) => {
-    setIssues(prev => prev.map(i => i.id === id ? { ...i, status:"resolved" } : i));
-    showSuccess("Issue marked as resolved");
+  const resolve = async (id) => {
+    try {
+      await issuesApi.resolve(id, { notes: "" });
+      setIssues(prev => prev.map(i => i.id === id ? { ...i, status:"resolved" } : i));
+      addNotification("Issue marked as resolved", "success");
+    } catch {
+      addNotification("Failed to resolve issue", "error");
+    }
   };
 
   const TYPES    = ["all","refund","quality","payment","rider"];
@@ -134,8 +142,12 @@ export default function AdminIssues() {
         </div>
       </div>
 
-      {/* Issues list */}
-      {filtered.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="glass rounded-2xl h-32 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
           <div className="w-14 h-14 glass-green rounded-2xl flex items-center justify-center">
             <CheckCircle className="w-7 h-7 text-forest-300" />
@@ -156,8 +168,8 @@ export default function AdminIssues() {
 
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-1 flex-wrap">
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PRIORITY_CLS[issue.priority]}`}>
-                        {issue.priority.toUpperCase()}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PRIORITY_CLS[issue.priority] || "glass text-forest-200/60"}`}>
+                        {(issue.priority || "low").toUpperCase()}
                       </span>
                       {issue.status !== "pending" && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${issue.status === "resolved" ? "glass-green text-forest-200" : "bg-red-500/20 text-red-300"}`}>
@@ -180,7 +192,7 @@ export default function AdminIssues() {
                         <div>
                           <p className="text-forest-200/40">Order</p>
                           <p className="text-forest-100/70">#{issue.orderId}</p>
-                          {issue.orderAmount && <p className="text-forest-200/40">${issue.orderAmount.toFixed(2)}</p>}
+                          {issue.orderAmount && <p className="text-forest-200/40">₱{Number(issue.orderAmount).toFixed(2)}</p>}
                         </div>
                       )}
                       {issue.restaurantName && (
@@ -199,12 +211,12 @@ export default function AdminIssues() {
 
                     {issue.requestedRefund && issue.status === "pending" && (
                       <div className="glass-orange rounded-xl px-3 py-2 mt-2">
-                        <p className="text-ember-200 text-xs font-semibold">Refund Requested: ${issue.requestedRefund.toFixed(2)}</p>
+                        <p className="text-ember-200 text-xs font-semibold">Refund Requested: ₱{Number(issue.requestedRefund).toFixed(2)}</p>
                       </div>
                     )}
                     {issue.refundAmount && (
                       <div className="glass-green rounded-xl px-3 py-2 mt-2">
-                        <p className="text-forest-200 text-xs font-semibold">Refund Approved: ${issue.refundAmount.toFixed(2)}</p>
+                        <p className="text-forest-200 text-xs font-semibold">Refund Approved: ₱{Number(issue.refundAmount).toFixed(2)}</p>
                         {issue.refundNotes && <p className="text-forest-200/50 text-xs mt-0.5">Note: {issue.refundNotes}</p>}
                       </div>
                     )}
@@ -249,8 +261,8 @@ export default function AdminIssues() {
               <div className="grid grid-cols-2 gap-2 text-xs">
                 <div><p className="text-forest-200/40">Customer</p><p className="text-white font-medium">{selected.customerName}</p></div>
                 <div><p className="text-forest-200/40">Order</p><p className="text-white font-medium">#{selected.orderId}</p></div>
-                <div><p className="text-forest-200/40">Order Amount</p><p className="text-white font-medium">${selected.orderAmount?.toFixed(2)}</p></div>
-                <div><p className="text-forest-200/40">Requested</p><p className="text-ember-400 font-medium">${selected.requestedRefund?.toFixed(2)}</p></div>
+                <div><p className="text-forest-200/40">Order Amount</p><p className="text-white font-medium">₱{Number(selected.orderAmount || 0).toFixed(2)}</p></div>
+                <div><p className="text-forest-200/40">Requested</p><p className="text-ember-400 font-medium">₱{Number(selected.requestedRefund || 0).toFixed(2)}</p></div>
               </div>
             </div>
 
@@ -260,7 +272,7 @@ export default function AdminIssues() {
             </div>
 
             <div className="mb-3">
-              <label className="block text-forest-200/60 text-xs font-medium mb-1">Refund Amount ($) *</label>
+              <label className="block text-forest-200/60 text-xs font-medium mb-1">Refund Amount (₱) *</label>
               <input type="number" step="0.01" value={refundAmount} onChange={e => setAmount(e.target.value)}
                 className="w-full input-glass py-2.5 text-sm" placeholder="0.00" />
               <div className="flex gap-1.5 mt-2 flex-wrap">

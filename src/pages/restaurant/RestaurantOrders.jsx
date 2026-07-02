@@ -1,5 +1,6 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotification } from '../../context/NotificationContext';
+import { ordersApi } from '../../services/api';
 import { Package, Search, MapPin, Clock, Check, X, AlertTriangle, ChevronDown, ChevronUp, User, Phone } from 'lucide-react';
 
 const STATUS_STYLE = {
@@ -10,73 +11,56 @@ const STATUS_STYLE = {
   rejected:  'bg-red-500/20 text-red-300',
 };
 
-const INIT_ORDERS = [
-  {
-    id:'12345', customerName:'John Doe',       customerPhone:'+63 917 123 4567',
-    deliveryAddress:'Purok 5, Brgy. Poblacion, Bongao', status:'pending', time:'2 min ago',
-    estimatedReady:'20 min', paymentMethod:'online', paymentStatus:'paid', subtotal:34.97, deliveryFee:2.99, tax:2.80, total:40.76,
-    specialInstructions:'Please ring doorbell',
-    items:[
-      { name:'Margherita Pizza', quantity:2, price:12.99, notes:'Extra cheese', image:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=200&h=150&fit=crop' },
-      { name:'Caesar Salad',     quantity:1, price:8.99,  notes:'',             image:'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=200&h=150&fit=crop' },
-    ],
-  },
-  {
-    id:'12344', customerName:'Jane Smith',     customerPhone:'+63 917 987 6543',
-    deliveryAddress:'Purok 2, Brgy. Masantong, Bongao', status:'preparing', time:'5 min ago',
-    estimatedReady:'15 min', paymentMethod:'card', paymentStatus:'paid', subtotal:28.98, deliveryFee:2.99, tax:2.32, total:34.29,
-    specialInstructions:'',
-    items:[
-      { name:'Pepperoni Pizza',     quantity:1, price:14.99, notes:'',               image:'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=200&h=150&fit=crop' },
-      { name:'Spaghetti Carbonara', quantity:1, price:13.99, notes:'Gluten-free',    image:'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=200&h=150&fit=crop' },
-    ],
-  },
-  {
-    id:'12343', customerName:'Mike Johnson',   customerPhone:'+63 917 456 7890',
-    deliveryAddress:'Purok 4, Brgy. Simandagit, Bongao', status:'ready', time:'10 min ago',
-    paymentMethod:'cash', paymentStatus:'pending', subtotal:38.97, deliveryFee:2.99, tax:3.12, total:45.08,
-    specialInstructions:'',
-    items:[
-      { name:'Margherita Pizza', quantity:3, price:12.99, notes:'', image:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=200&h=150&fit=crop' },
-    ],
-  },
-  {
-    id:'12342', customerName:'Sarah Williams', customerPhone:'+63 917 234 5678',
-    deliveryAddress:'Purok 8, Brgy. Pababag, Bongao', status:'completed', time:'1 hour ago',
-    paymentMethod:'online', paymentStatus:'paid', subtotal:47.96, deliveryFee:2.99, tax:3.84, total:54.79,
-    specialInstructions:'',
-    items:[
-      { name:'Pepperoni Pizza', quantity:2, price:14.99, notes:'',           image:'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=200&h=150&fit=crop' },
-      { name:'Caesar Salad',    quantity:2, price:8.99,  notes:'No croutons',image:'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=200&h=150&fit=crop' },
-    ],
-  },
-];
-
 export default function RestaurantOrders() {
-  const { showSuccess } = useNotification();
-  const [orders, setOrders]         = useState(INIT_ORDERS);
+  const { addNotification }         = useNotification();
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [filter, setFilter]         = useState('all');
   const [search, setSearch]         = useState('');
   const [expanded, setExpanded]     = useState(null);
   const [rejectId, setRejectId]     = useState(null);
   const [rejectReason, setRejectReason] = useState('');
 
+  const load = async () => {
+    try {
+      setLoading(true);
+      const res = await ordersApi.list({ limit: 50 });
+      setOrders(res.data || res || []);
+    } catch {
+      addNotification('Failed to load orders', 'error');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => { load(); }, []);
+
   const filtered = orders.filter(o => {
     const matchStatus = filter === 'all' || o.status === filter;
-    const matchSearch = !search || o.id.includes(search) || o.customerName.toLowerCase().includes(search.toLowerCase());
+    const matchSearch = !search || String(o.id).includes(search) || (o.customerName||o.customer?.name||'').toLowerCase().includes(search.toLowerCase());
     return matchStatus && matchSearch;
   });
 
-  const advance = (id, nextStatus, msg) => {
-    setOrders(prev => prev.map(o => o.id === id ? { ...o, status:nextStatus } : o));
-    showSuccess(msg);
+  const advance = async (id, nextStatus, msg) => {
+    try {
+      await ordersApi.updateStatus(id, nextStatus);
+      setOrders(prev => prev.map(o => o.id === id ? { ...o, status:nextStatus } : o));
+      addNotification(msg, 'success');
+    } catch {
+      addNotification('Failed to update order status', 'error');
+    }
   };
 
-  const reject = () => {
+  const reject = async () => {
     if (!rejectReason.trim()) return;
-    setOrders(prev => prev.map(o => o.id === rejectId ? { ...o, status:'rejected' } : o));
-    showSuccess('Order rejected.');
-    setRejectId(null); setRejectReason('');
+    try {
+      await ordersApi.updateStatus(rejectId, 'rejected', { reason: rejectReason });
+      setOrders(prev => prev.map(o => o.id === rejectId ? { ...o, status:'rejected' } : o));
+      addNotification('Order rejected.', 'success');
+      setRejectId(null); setRejectReason('');
+    } catch {
+      addNotification('Failed to reject order', 'error');
+    }
   };
 
   const FILTERS = [
@@ -117,8 +101,12 @@ export default function RestaurantOrders() {
         </div>
       </div>
 
-      {/* Order list */}
-      {filtered.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="space-y-3">
+          {[1,2,3].map(i => <div key={i} className="glass rounded-2xl h-20 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
           <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
             <Package className="w-7 h-7 text-forest-300/40" />
@@ -129,31 +117,35 @@ export default function RestaurantOrders() {
         <div className="space-y-3">
           {filtered.map(order => {
             const isOpen = expanded === order.id;
+            const customerName = order.customerName || order.customer?.name || 'Customer';
+            const items = order.items || order.orderItems || [];
+            const total = order.total || order.totalAmount || 0;
+            const firstItemName = items[0]?.name || items[0]?.menuItem?.name || 'Item';
             return (
               <div key={order.id} className="glass rounded-2xl overflow-hidden">
                 {/* Order header row */}
                 <button className="w-full p-4 flex items-start gap-3 hover:glass-green transition-all text-left"
                   onClick={() => setExpanded(isOpen ? null : order.id)}>
                   <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                    {order.items[0].name.charAt(0)}
+                    {firstItemName.charAt(0)}
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 mb-0.5 flex-wrap">
                       <p className="text-white font-semibold text-sm">Order #{order.id}</p>
-                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[order.status]}`}>
-                        {order.status.charAt(0).toUpperCase() + order.status.slice(1)}
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-medium ${STATUS_STYLE[order.status] || 'glass text-forest-200/60'}`}>
+                        {(order.status||'pending').charAt(0).toUpperCase() + (order.status||'pending').slice(1)}
                       </span>
                       {order.paymentStatus === 'paid' && (
                         <span className="text-xs px-2 py-0.5 rounded-full glass-green text-forest-200 font-medium">Paid</span>
                       )}
                     </div>
                     <div className="flex items-center gap-3 text-xs text-forest-200/50">
-                      <span className="flex items-center gap-1"><User className="w-3 h-3" />{order.customerName}</span>
-                      <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{order.time}</span>
+                      <span className="flex items-center gap-1"><User className="w-3 h-3" />{customerName}</span>
+                      {order.createdAt && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{new Date(order.createdAt).toLocaleTimeString()}</span>}
                     </div>
                   </div>
                   <div className="text-right flex-shrink-0 flex items-center gap-2">
-                    <p className="text-ember-400 font-heading font-bold">₱{order.total.toFixed(2)}</p>
+                    <p className="text-ember-400 font-heading font-bold">₱{Number(total).toFixed(2)}</p>
                     {isOpen ? <ChevronUp className="w-4 h-4 text-forest-200/40" /> : <ChevronDown className="w-4 h-4 text-forest-200/40" />}
                   </div>
                 </button>
@@ -165,29 +157,38 @@ export default function RestaurantOrders() {
                       {/* Items */}
                       <div className="glass rounded-xl p-3">
                         <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-2">Items</p>
-                        {order.items.map((item, i) => (
-                          <div key={i} className="flex items-center gap-2 py-1.5">
-                            <img src={item.image} alt={item.name} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white text-xs font-semibold truncate">{item.quantity}x {item.name}</p>
-                              {item.notes && <p className="text-ember-300/70 text-xs">Note: {item.notes}</p>}
+                        {items.map((item, i) => {
+                          const itemName = item.name || item.menuItem?.name || 'Item';
+                          const qty  = item.quantity || 1;
+                          const price = item.price || item.unitPrice || 0;
+                          return (
+                            <div key={i} className="flex items-center gap-2 py-1.5">
+                              {item.image && <img src={item.image} alt={itemName} className="w-10 h-10 rounded-lg object-cover flex-shrink-0" />}
+                              <div className="flex-1 min-w-0">
+                                <p className="text-white text-xs font-semibold truncate">{qty}x {itemName}</p>
+                                {item.notes && <p className="text-ember-300/70 text-xs">Note: {item.notes}</p>}
+                              </div>
+                              <p className="text-forest-200/60 text-xs">₱{(price * qty).toFixed(2)}</p>
                             </div>
-                            <p className="text-forest-200/60 text-xs">₱{(item.price * item.quantity).toFixed(2)}</p>
-                          </div>
-                        ))}
+                          );
+                        })}
                       </div>
 
                       {/* Delivery info */}
                       <div className="glass rounded-xl p-3 space-y-2">
                         <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-2">Delivery Info</p>
-                        <div className="flex items-start gap-2">
-                          <MapPin className="w-3.5 h-3.5 text-forest-400 flex-shrink-0 mt-0.5" />
-                          <p className="text-forest-100/70 text-xs">{order.deliveryAddress}</p>
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <Phone className="w-3.5 h-3.5 text-forest-400 flex-shrink-0" />
-                          <p className="text-forest-100/70 text-xs">{order.customerPhone}</p>
-                        </div>
+                        {(order.deliveryAddress || order.address) && (
+                          <div className="flex items-start gap-2">
+                            <MapPin className="w-3.5 h-3.5 text-forest-400 flex-shrink-0 mt-0.5" />
+                            <p className="text-forest-100/70 text-xs">{order.deliveryAddress || order.address}</p>
+                          </div>
+                        )}
+                        {(order.customerPhone || order.customer?.phone) && (
+                          <div className="flex items-center gap-2">
+                            <Phone className="w-3.5 h-3.5 text-forest-400 flex-shrink-0" />
+                            <p className="text-forest-100/70 text-xs">{order.customerPhone || order.customer?.phone}</p>
+                          </div>
+                        )}
                         {order.specialInstructions && (
                           <div className="flex items-start gap-2 glass rounded-lg px-2 py-1.5">
                             <AlertTriangle className="w-3.5 h-3.5 text-ember-400 flex-shrink-0 mt-0.5" />
@@ -196,13 +197,17 @@ export default function RestaurantOrders() {
                         )}
                         {/* Totals */}
                         <div className="space-y-1 pt-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
-                          {[['Subtotal', order.subtotal],['Delivery', order.deliveryFee],['Tax', order.tax]].map(([l,v]) => (
+                          {[
+                            ['Subtotal', order.subtotal],
+                            ['Delivery', order.deliveryFee],
+                            ['Tax', order.tax],
+                          ].filter(([,v]) => v != null).map(([l,v]) => (
                             <div key={l} className="flex justify-between text-xs text-forest-200/50">
-                              <span>{l}</span><span>₱{v.toFixed(2)}</span>
+                              <span>{l}</span><span>₱{Number(v).toFixed(2)}</span>
                             </div>
                           ))}
                           <div className="flex justify-between text-sm font-bold text-white pt-1">
-                            <span>Total</span><span>₱{order.total.toFixed(2)}</span>
+                            <span>Total</span><span>₱{Number(total).toFixed(2)}</span>
                           </div>
                         </div>
                       </div>

@@ -1,13 +1,8 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNotification } from '../../context/NotificationContext';
+import { useRestaurant } from '../../context/RestaurantContext';
+import { menuApi } from '../../services/api';
 import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check } from 'lucide-react';
-
-const INIT_ITEMS = [
-  { id:1, name:'Margherita Pizza',    category:'pizza',  price:12.99, description:'Classic pizza with tomato sauce, mozzarella, and fresh basil', image:'https://images.unsplash.com/photo-1574071318508-1cdbab80d002?w=400&h=300&fit=crop', isAvailable:true,  isVegetarian:true,  prepTime:20 },
-  { id:2, name:'Pepperoni Pizza',     category:'pizza',  price:14.99, description:'Loaded with pepperoni and extra cheese',                        image:'https://images.unsplash.com/photo-1628840042765-356cda07504e?w=400&h=300&fit=crop', isAvailable:true,  isVegetarian:false, prepTime:20 },
-  { id:3, name:'Spaghetti Carbonara', category:'pasta',  price:13.99, description:'Creamy pasta with bacon and parmesan cheese',                   image:'https://images.unsplash.com/photo-1612874742237-6526221588e3?w=400&h=300&fit=crop', isAvailable:true,  isVegetarian:false, prepTime:15 },
-  { id:4, name:'Caesar Salad',        category:'salads', price:8.99,  description:'Fresh romaine lettuce with caesar dressing and croutons',       image:'https://images.unsplash.com/photo-1546793665-c74683f339c1?w=400&h=300&fit=crop', isAvailable:false, isVegetarian:true,  prepTime:10 },
-];
 
 const CATEGORIES = [
   { id:'pizza',     name:'Pizza'    },
@@ -20,53 +15,89 @@ const CATEGORIES = [
 const EMPTY_FORM = { name:'', category:'pizza', price:'', description:'', image:'', isVegetarian:false, prepTime:'' };
 
 export default function RestaurantMenu() {
-  const { showSuccess } = useNotification();
-  const [items, setItems]       = useState(INIT_ITEMS);
+  const { addNotification }     = useNotification();
+  const { restaurant }          = useRestaurant();
+  const [items, setItems]       = useState([]);
+  const [loading, setLoading]   = useState(true);
   const [cat, setCat]           = useState('all');
   const [search, setSearch]     = useState('');
   const [modal, setModal]       = useState(null); // null | 'add' | 'edit'
   const [editItem, setEditItem] = useState(null);
   const [form, setForm]         = useState(EMPTY_FORM);
 
+  const restaurantId = restaurant?.id;
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    (async () => {
+      try {
+        setLoading(true);
+        const res = await menuApi.list(restaurantId);
+        setItems(res.data || res || []);
+      } catch {
+        addNotification('Failed to load menu', 'error');
+      } finally {
+        setLoading(false);
+      }
+    })();
+  }, [restaurantId]);
+
   const f = (k, v) => setForm(p => ({ ...p, [k]:v }));
 
   const filtered = items.filter(i => {
     const matchCat = cat === 'all' || i.category === cat;
-    const matchQ   = !search || i.name.toLowerCase().includes(search.toLowerCase());
+    const matchQ   = !search || (i.name||'').toLowerCase().includes(search.toLowerCase());
     return matchCat && matchQ;
   });
 
   const openAdd  = () => { setForm(EMPTY_FORM); setEditItem(null); setModal('add'); };
   const openEdit = (item) => {
     setEditItem(item);
-    setForm({ name:item.name, category:item.category, price:String(item.price), description:item.description, image:item.image||'', isVegetarian:item.isVegetarian, prepTime:String(item.prepTime) });
+    setForm({ name:item.name, category:item.category||'pizza', price:String(item.price), description:item.description||'', image:item.image||'', isVegetarian:item.isVegetarian||false, prepTime:String(item.prepTimeMins||item.prepTime||'') });
     setModal('edit');
   };
   const closeModal = () => { setModal(null); setEditItem(null); setForm(EMPTY_FORM); };
 
-  const submit = (e) => {
+  const submit = async (e) => {
     e.preventDefault();
-    if (modal === 'add') {
-      setItems(prev => [...prev, { id:Date.now(), ...form, price:parseFloat(form.price), prepTime:parseInt(form.prepTime), isAvailable:true }]);
-      showSuccess(`${form.name} added!`);
-    } else {
-      setItems(prev => prev.map(i => i.id === editItem.id ? { ...i, ...form, price:parseFloat(form.price), prepTime:parseInt(form.prepTime) } : i));
-      showSuccess('Item updated!');
+    const payload = { name:form.name, category:form.category, price:parseFloat(form.price), description:form.description, image:form.image||undefined, isVegetarian:form.isVegetarian, prepTimeMins:parseInt(form.prepTime)||15 };
+    try {
+      if (modal === 'add') {
+        const created = await menuApi.create(restaurantId, payload);
+        setItems(prev => [...prev, created]);
+        addNotification(`${form.name} added!`, 'success');
+      } else {
+        const updated = await menuApi.update(restaurantId, editItem.id, payload);
+        setItems(prev => prev.map(i => i.id === editItem.id ? { ...i, ...payload, ...(updated||{}) } : i));
+        addNotification('Item updated!', 'success');
+      }
+      closeModal();
+    } catch {
+      addNotification('Failed to save menu item', 'error');
     }
-    closeModal();
   };
 
-  const toggle = (id) => {
+  const toggle = async (id) => {
     const item = items.find(i => i.id === id);
-    setItems(prev => prev.map(i => i.id === id ? { ...i, isAvailable:!i.isAvailable } : i));
-    showSuccess(`${item.name} ${item.isAvailable ? 'disabled' : 'enabled'}`);
+    try {
+      await menuApi.update(restaurantId, id, { isAvailable: !item.isAvailable });
+      setItems(prev => prev.map(i => i.id === id ? { ...i, isAvailable:!i.isAvailable } : i));
+      addNotification(`${item.name} ${item.isAvailable ? 'disabled' : 'enabled'}`, 'success');
+    } catch {
+      addNotification('Failed to update availability', 'error');
+    }
   };
 
-  const del = (id) => {
+  const del = async (id) => {
     const item = items.find(i => i.id === id);
     if (!confirm(`Delete ${item.name}?`)) return;
-    setItems(prev => prev.filter(i => i.id !== id));
-    showSuccess('Item deleted.');
+    try {
+      await menuApi.remove(restaurantId, id);
+      setItems(prev => prev.filter(i => i.id !== id));
+      addNotification('Item deleted.', 'success');
+    } catch {
+      addNotification('Failed to delete item', 'error');
+    }
   };
 
   return (
@@ -101,8 +132,12 @@ export default function RestaurantMenu() {
         </div>
       </div>
 
-      {/* Grid */}
-      {filtered.length === 0 ? (
+      {/* Loading */}
+      {loading ? (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {[1,2,3].map(i => <div key={i} className="glass rounded-2xl h-64 animate-pulse" />)}
+        </div>
+      ) : filtered.length === 0 ? (
         <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
           <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
             <Package className="w-7 h-7 text-forest-300/40" />
@@ -115,7 +150,13 @@ export default function RestaurantMenu() {
             <div key={item.id} className="glass card-3d rounded-2xl overflow-hidden group">
               {/* Image */}
               <div className="relative h-44 overflow-hidden">
-                <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                {item.image ? (
+                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                ) : (
+                  <div className="w-full h-full glass flex items-center justify-center">
+                    <Package className="w-12 h-12 text-forest-300/30" />
+                  </div>
+                )}
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                 {/* Availability toggle */}
                 <button onClick={() => toggle(item.id)}
@@ -125,7 +166,7 @@ export default function RestaurantMenu() {
                 </button>
                 {/* Price overlay */}
                 <div className="absolute bottom-3 left-3">
-                  <p className="text-white font-heading font-bold text-xl">₱{item.price.toFixed(2)}</p>
+                  <p className="text-white font-heading font-bold text-xl">₱{Number(item.price).toFixed(2)}</p>
                 </div>
               </div>
 
@@ -148,7 +189,7 @@ export default function RestaurantMenu() {
                     </span>
                   )}
                   <span className="glass text-forest-200/70 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5" /> {item.prepTime}m
+                    <Clock className="w-2.5 h-2.5" /> {item.prepTimeMins || item.prepTime || "—"}m
                   </span>
                 </div>
 
