@@ -1,493 +1,300 @@
-import { useState } from 'react';
-import { useAdmin } from '../../context/AdminContext';
-import { useNotification } from '../../context/NotificationContext';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import Modal from '../../components/Modal';
+﻿import { useState } from "react";
+import { useNotification } from "../../context/NotificationContext";
+import { AlertTriangle, DollarSign, Store, Bike, Package, Clock, CheckCircle, X, Check, CreditCard, UtensilsCrossed } from "lucide-react";
+
+const INIT_ISSUES = [
+  {
+    id:1, type:"refund",   orderId:"12340", customerName:"John Doe",    customerEmail:"john@example.com",
+    title:"Food never arrived",   description:"Rider marked as delivered but I never received my order",
+    orderAmount:40.76, requestedRefund:40.76, priority:"high", status:"pending", createdAt:"30 min ago",
+  },
+  {
+    id:2, type:"quality",  orderId:"12338", restaurantName:"Pizza Palace", restaurantId:"1", customerName:"Jane Smith",
+    title:"Food quality complaint", description:"Pizza arrived cold and soggy. Multiple items missing from order.",
+    orderAmount:52.30, requestedRefund:25.00, priority:"high", status:"pending", createdAt:"2 hours ago",
+  },
+  {
+    id:3, type:"payment",  orderId:"12335", customerName:"Mike Johnson",
+    title:"Double charge",  description:"Was charged twice for the same order",
+    orderAmount:28.99, requestedRefund:28.99, priority:"high", status:"pending", createdAt:"5 hours ago",
+  },
+  {
+    id:4, type:"rider",    orderId:"12333", riderName:"Tom Wilson", riderId:"23", customerName:"Sarah Brown",
+    title:"Unprofessional behavior", description:"Rider was rude and aggressive when delivering",
+    priority:"medium", status:"pending", createdAt:"1 day ago",
+  },
+];
+
+const PRIORITY_CLS = {
+  high:"bg-red-500/20 text-red-300 border border-red-500/30",
+  medium:"glass-orange text-ember-200",
+  low:"glass-green text-forest-200",
+};
+
+const TYPE_ICON = {
+  refund:  DollarSign,
+  quality: UtensilsCrossed,
+  payment: CreditCard,
+  rider:   Bike,
+  missing: Package,
+};
 
 export default function AdminIssues() {
-  const { admin } = useAdmin();
   const { showSuccess } = useNotification();
+  const [issues, setIssues]       = useState(INIT_ISSUES);
+  const [filterType, setType]     = useState("all");
+  const [filterStatus, setStatus] = useState("pending");
+  const [selected, setSelected]   = useState(null);
+  const [showRefundModal, setRefundModal] = useState(false);
+  const [refundAmount, setAmount] = useState("");
+  const [refundNotes, setNotes]   = useState("");
 
-  const [issues, setIssues] = useState([
-    {
-      id: 1,
-      type: 'refund',
-      orderId: '12340',
-      customerName: 'John Doe',
-      customerEmail: 'john@example.com',
-      title: 'Food never arrived',
-      description: 'Rider marked as delivered but I never received my order',
-      orderAmount: 40.76,
-      requestedRefund: 40.76,
-      priority: 'high',
-      status: 'pending',
-      createdAt: '30 min ago',
-      attachments: ['photo1.jpg'],
-    },
-    {
-      id: 2,
-      type: 'quality',
-      orderId: '12338',
-      restaurantName: 'Pizza Palace',
-      restaurantId: '1',
-      customerName: 'Jane Smith',
-      title: 'Food quality complaint',
-      description: 'Pizza arrived cold and soggy. Multiple items missing from order.',
-      orderAmount: 52.30,
-      requestedRefund: 25.00,
-      priority: 'high',
-      status: 'pending',
-      createdAt: '2 hours ago',
-    },
-    {
-      id: 3,
-      type: 'payment',
-      orderId: '12335',
-      customerName: 'Mike Johnson',
-      title: 'Double charge',
-      description: 'Was charged twice for the same order',
-      orderAmount: 28.99,
-      requestedRefund: 28.99,
-      priority: 'high',
-      status: 'pending',
-      createdAt: '5 hours ago',
-    },
-    {
-      id: 4,
-      type: 'rider',
-      orderId: '12333',
-      riderName: 'Tom Wilson',
-      riderId: '23',
-      customerName: 'Sarah Brown',
-      title: 'Unprofessional behavior',
-      description: 'Rider was rude and aggressive when delivering',
-      priority: 'medium',
-      status: 'pending',
-      createdAt: '1 day ago',
-    },
-  ]);
+  const filtered = issues.filter(i => {
+    const matchType   = filterType   === "all" || i.type   === filterType;
+    const matchStatus = filterStatus === "all" || i.status === filterStatus;
+    return matchType && matchStatus;
+  });
 
-  const [filterType, setFilterType] = useState('all');
-  const [filterStatus, setFilterStatus] = useState('pending');
-  const [selectedIssue, setSelectedIssue] = useState(null);
-  const [showRefundModal, setShowRefundModal] = useState(false);
-  const [refundAmount, setRefundAmount] = useState('');
-  const [refundNotes, setRefundNotes] = useState('');
+  const openRefund = (issue) => { setSelected(issue); setAmount(issue.requestedRefund?.toString() || ""); setRefundModal(true); };
+  const close      = ()      => { setRefundModal(false); setSelected(null); setAmount(""); setNotes(""); };
 
-  const getFilteredIssues = () => {
-    let filtered = issues;
-
-    if (filterType !== 'all') {
-      filtered = filtered.filter(issue => issue.type === filterType);
-    }
-
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(issue => issue.status === filterStatus);
-    }
-
-    return filtered;
+  const approveRefund = () => {
+    const amt = parseFloat(refundAmount);
+    setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes:refundNotes } : i));
+    showSuccess(`Refund of $${amt.toFixed(2)} approved for ${selected.customerName}`);
+    close();
   };
 
-  const getPriorityColor = (priority) => {
-    const colors = {
-      high: 'bg-red-100 text-red-800 border-red-300',
-      medium: 'bg-yellow-100 text-yellow-800 border-yellow-300',
-      low: 'bg-green-100 text-green-800 border-green-300',
-    };
-    return colors[priority] || colors.medium;
+  const denyRefund = () => {
+    setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"denied", refundNotes } : i));
+    showSuccess("Refund request denied");
+    close();
   };
 
-  const getTypeIcon = (type) => {
-    const icons = {
-      refund: '💰',
-      quality: '🍽️',
-      payment: '💳',
-      rider: '🏍️',
-      missing: '📦',
-    };
-    return icons[type] || '⚠️';
+  const resolve = (id) => {
+    setIssues(prev => prev.map(i => i.id === id ? { ...i, status:"resolved" } : i));
+    showSuccess("Issue marked as resolved");
   };
 
-  const openRefundModal = (issue) => {
-    setSelectedIssue(issue);
-    setRefundAmount(issue.requestedRefund?.toString() || '');
-    setShowRefundModal(true);
-  };
-
-  const handleApproveRefund = (type) => {
-    const amount = type === 'full' ? selectedIssue.orderAmount : parseFloat(refundAmount);
-
-    setIssues(issues.map(issue =>
-      issue.id === selectedIssue.id
-        ? { ...issue, status: 'resolved', refundAmount: amount, refundNotes }
-        : issue
-    ));
-
-    showSuccess(`Refund of $${amount.toFixed(2)} approved for ${selectedIssue.customerName}`);
-    setShowRefundModal(false);
-    setRefundAmount('');
-    setRefundNotes('');
-    setSelectedIssue(null);
-  };
-
-  const handleDenyRefund = () => {
-    setIssues(issues.map(issue =>
-      issue.id === selectedIssue.id
-        ? { ...issue, status: 'denied', refundNotes }
-        : issue
-    ));
-
-    showSuccess('Refund request denied');
-    setShowRefundModal(false);
-    setRefundAmount('');
-    setRefundNotes('');
-    setSelectedIssue(null);
-  };
-
-  const handleResolveIssue = (issueId) => {
-    setIssues(issues.map(issue =>
-      issue.id === issueId
-        ? { ...issue, status: 'resolved' }
-        : issue
-    ));
-    showSuccess('Issue marked as resolved');
-  };
+  const TYPES    = ["all","refund","quality","payment","rider"];
+  const STATUSES = ["all","pending","resolved","denied"];
 
   return (
-    <div className="py-8 space-y-6">
+    <div className="space-y-5 pb-6 animate-fade-up">
+
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-heading font-bold mb-2">Issues & Moderation</h1>
-        <p className="text-secondary-600">Manage customer complaints and refund requests</p>
+        <p className="text-forest-200/50 text-sm">Moderation</p>
+        <h1 className="text-2xl font-heading font-bold text-white">Issues</h1>
+      </div>
+
+      {/* Summary */}
+      <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
+        {[
+          { label:"Total Issues", value:issues.length,                                icon:AlertTriangle, color:"btn-glow-green" },
+          { label:"Pending",      value:issues.filter(i=>i.status==="pending").length, icon:Clock,        color:"glass-orange" },
+          { label:"Resolved",     value:issues.filter(i=>i.status==="resolved").length,icon:CheckCircle,  color:"glass-green" },
+          { label:"Denied",       value:issues.filter(i=>i.status==="denied").length,  icon:X,            color:"bg-red-500/30" },
+        ].map(({ label, value, icon:Icon, color }) => (
+          <div key={label} className="glass card-3d rounded-2xl p-4">
+            <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-2`}>
+              <Icon className="w-4 h-4 text-white" />
+            </div>
+            <p className="text-white font-heading font-bold text-xl">{value}</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
+          </div>
+        ))}
       </div>
 
       {/* Filters */}
-      <Card>
-        <div className="flex flex-col gap-4">
-          <div>
-            <p className="text-sm font-medium text-secondary-700 mb-2">Filter by Type:</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setFilterType('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterType === 'all'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                All
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <div>
+          <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-2">Type</p>
+          <div className="flex flex-wrap gap-2">
+            {TYPES.map(t => (
+              <button key={t} onClick={() => setType(t)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all capitalize
+                  ${filterType===t ? "btn-glow-green text-white" : "glass text-forest-200/60 hover:text-forest-100"}`}>
+                {t === "all" ? "All Types" : t}
               </button>
-              <button
-                onClick={() => setFilterType('refund')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterType === 'refund'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                💰 Refunds
-              </button>
-              <button
-                onClick={() => setFilterType('quality')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterType === 'quality'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                🍽️ Quality
-              </button>
-              <button
-                onClick={() => setFilterType('payment')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterType === 'payment'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                💳 Payment
-              </button>
-              <button
-                onClick={() => setFilterType('rider')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterType === 'rider'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                🏍️ Rider
-              </button>
-            </div>
-          </div>
-
-          <div>
-            <p className="text-sm font-medium text-secondary-700 mb-2">Filter by Status:</p>
-            <div className="flex flex-wrap gap-2">
-              <button
-                onClick={() => setFilterStatus('all')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterStatus === 'all'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                All
-              </button>
-              <button
-                onClick={() => setFilterStatus('pending')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterStatus === 'pending'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                Pending ({issues.filter(i => i.status === 'pending').length})
-              </button>
-              <button
-                onClick={() => setFilterStatus('resolved')}
-                className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                  filterStatus === 'resolved'
-                    ? 'bg-primary-500 text-white'
-                    : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-                }`}
-              >
-                Resolved
-              </button>
-            </div>
+            ))}
           </div>
         </div>
-      </Card>
+        <div>
+          <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-2">Status</p>
+          <div className="flex flex-wrap gap-2">
+            {STATUSES.map(s => (
+              <button key={s} onClick={() => setStatus(s)}
+                className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all capitalize
+                  ${filterStatus===s ? "btn-glow-green text-white" : "glass text-forest-200/60 hover:text-forest-100"}`}>
+                {s === "all" ? `All Statuses` : `${s} (${issues.filter(i=>i.status===s).length})`}
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
 
-      {/* Issues List */}
-      <div className="space-y-4">
-        {getFilteredIssues().length === 0 ? (
-          <Card>
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">✅</div>
-              <p className="text-secondary-600 text-lg">No issues found</p>
-            </div>
-          </Card>
-        ) : (
-          getFilteredIssues().map((issue) => (
-            <Card key={issue.id}>
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-start gap-3 flex-1">
-                  <div className="text-3xl">{getTypeIcon(issue.type)}</div>
-                  <div className="flex-1">
-                    <div className="flex items-center gap-2 mb-2">
-                      <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getPriorityColor(issue.priority)}`}>
-                        {issue.priority.toUpperCase()} PRIORITY
+      {/* Issues list */}
+      {filtered.length === 0 ? (
+        <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
+          <div className="w-14 h-14 glass-green rounded-2xl flex items-center justify-center">
+            <CheckCircle className="w-7 h-7 text-forest-300" />
+          </div>
+          <p className="text-forest-200/50 text-sm">No issues found</p>
+        </div>
+      ) : (
+        <div className="space-y-3">
+          {filtered.map(issue => {
+            const Icon = TYPE_ICON[issue.type] || AlertTriangle;
+            return (
+              <div key={issue.id} className="glass rounded-2xl p-4 hover:glass-green transition-all">
+                <div className="flex items-start gap-3">
+                  {/* Type icon */}
+                  <div className={`w-11 h-11 rounded-xl flex items-center justify-center flex-shrink-0 ${issue.priority === "high" ? "bg-red-500/30" : "glass-orange"}`}>
+                    <Icon className={`w-5 h-5 ${issue.priority === "high" ? "text-red-300" : "text-ember-300"}`} />
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PRIORITY_CLS[issue.priority]}`}>
+                        {issue.priority.toUpperCase()}
                       </span>
-                      <span className="text-xs text-secondary-500">{issue.createdAt}</span>
+                      {issue.status !== "pending" && (
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${issue.status === "resolved" ? "glass-green text-forest-200" : "bg-red-500/20 text-red-300"}`}>
+                          {issue.status.toUpperCase()}
+                        </span>
+                      )}
+                      <span className="text-forest-200/40 text-xs flex items-center gap-1"><Clock className="w-3 h-3" />{issue.createdAt}</span>
                     </div>
-                    <h3 className="font-semibold text-xl mb-2">{issue.title}</h3>
-                    <p className="text-sm text-secondary-600 mb-3">{issue.description}</p>
 
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
+                    <p className="text-white font-semibold text-sm">{issue.title}</p>
+                    <p className="text-forest-200/50 text-xs mt-0.5">{issue.description}</p>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-xs">
                       <div>
-                        <p className="font-medium text-secondary-700">Customer:</p>
-                        <p>{issue.customerName}</p>
-                        {issue.customerEmail && <p className="text-secondary-600">{issue.customerEmail}</p>}
+                        <p className="text-forest-200/40">Customer</p>
+                        <p className="text-forest-100/70">{issue.customerName}</p>
+                        {issue.customerEmail && <p className="text-forest-200/40">{issue.customerEmail}</p>}
                       </div>
-
                       {issue.orderId && (
                         <div>
-                          <p className="font-medium text-secondary-700">Order:</p>
-                          <p>#{issue.orderId}</p>
-                          {issue.orderAmount && (
-                            <p className="text-secondary-600">Amount: ${issue.orderAmount.toFixed(2)}</p>
-                          )}
+                          <p className="text-forest-200/40">Order</p>
+                          <p className="text-forest-100/70">#{issue.orderId}</p>
+                          {issue.orderAmount && <p className="text-forest-200/40">${issue.orderAmount.toFixed(2)}</p>}
                         </div>
                       )}
-
                       {issue.restaurantName && (
                         <div>
-                          <p className="font-medium text-secondary-700">Restaurant:</p>
-                          <p>{issue.restaurantName}</p>
+                          <p className="text-forest-200/40">Restaurant</p>
+                          <p className="text-forest-100/70">{issue.restaurantName}</p>
                         </div>
                       )}
-
                       {issue.riderName && (
                         <div>
-                          <p className="font-medium text-secondary-700">Rider:</p>
-                          <p>{issue.riderName}</p>
+                          <p className="text-forest-200/40">Rider</p>
+                          <p className="text-forest-100/70">{issue.riderName}</p>
                         </div>
                       )}
                     </div>
 
-                    {issue.requestedRefund && (
-                      <div className="mt-3 p-3 bg-yellow-50 border border-yellow-200 rounded-lg">
-                        <p className="text-sm font-semibold text-yellow-800">
-                          Refund Requested: ${issue.requestedRefund.toFixed(2)}
-                        </p>
+                    {issue.requestedRefund && issue.status === "pending" && (
+                      <div className="glass-orange rounded-xl px-3 py-2 mt-2">
+                        <p className="text-ember-200 text-xs font-semibold">Refund Requested: ${issue.requestedRefund.toFixed(2)}</p>
+                      </div>
+                    )}
+                    {issue.refundAmount && (
+                      <div className="glass-green rounded-xl px-3 py-2 mt-2">
+                        <p className="text-forest-200 text-xs font-semibold">Refund Approved: ${issue.refundAmount.toFixed(2)}</p>
+                        {issue.refundNotes && <p className="text-forest-200/50 text-xs mt-0.5">Note: {issue.refundNotes}</p>}
                       </div>
                     )}
 
-                    {issue.refundAmount && (
-                      <div className="mt-3 p-3 bg-green-50 border border-green-200 rounded-lg">
-                        <p className="text-sm font-semibold text-green-800">
-                          Refund Approved: ${issue.refundAmount.toFixed(2)}
-                        </p>
-                        {issue.refundNotes && (
-                          <p className="text-sm text-green-700 mt-1">Note: {issue.refundNotes}</p>
+                    {issue.status === "pending" && (
+                      <div className="flex gap-2 flex-wrap mt-3">
+                        {["refund","quality","payment"].includes(issue.type) && (
+                          <button onClick={() => openRefund(issue)}
+                            className="btn-glow-green text-white text-xs font-semibold px-3 py-1.5 rounded-xl">
+                            Process Refund
+                          </button>
                         )}
+                        <button onClick={() => resolve(issue.id)}
+                          className="glass hover:glass-green transition-all text-forest-200 text-xs font-medium px-3 py-1.5 rounded-xl">
+                          Mark Resolved
+                        </button>
+                        <button className="glass text-forest-200/60 text-xs font-medium px-3 py-1.5 rounded-xl hover:glass transition-all">
+                          Contact Customer
+                        </button>
                       </div>
                     )}
                   </div>
                 </div>
               </div>
-
-              {issue.status === 'pending' && (
-                <div className="flex gap-2 flex-wrap">
-                  {(issue.type === 'refund' || issue.type === 'quality' || issue.type === 'payment') && (
-                    <Button
-                      variant="success"
-                      size="sm"
-                      onClick={() => openRefundModal(issue)}
-                    >
-                      Process Refund
-                    </Button>
-                  )}
-                  <Button
-                    variant="primary"
-                    size="sm"
-                    onClick={() => handleResolveIssue(issue.id)}
-                  >
-                    Mark Resolved
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    Contact Customer
-                  </Button>
-                  <Button variant="outline" size="sm">
-                    View Order Details
-                  </Button>
-                </div>
-              )}
-            </Card>
-          ))
-        )}
-      </div>
+            );
+          })}
+        </div>
+      )}
 
       {/* Refund Modal */}
-      {showRefundModal && selectedIssue && (
-        <Modal
-          isOpen={showRefundModal}
-          onClose={() => {
-            setShowRefundModal(false);
-            setRefundAmount('');
-            setRefundNotes('');
-            setSelectedIssue(null);
-          }}
-          title="Process Refund Request"
-        >
-          <div className="space-y-4">
-            <div className="bg-blue-50 border border-blue-200 rounded-lg p-4">
-              <div className="grid grid-cols-2 gap-3 text-sm">
-                <div>
-                  <p className="font-medium text-blue-900">Customer:</p>
-                  <p className="text-blue-800">{selectedIssue.customerName}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-blue-900">Order:</p>
-                  <p className="text-blue-800">#{selectedIssue.orderId}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-blue-900">Order Amount:</p>
-                  <p className="text-blue-800">${selectedIssue.orderAmount?.toFixed(2)}</p>
-                </div>
-                <div>
-                  <p className="font-medium text-blue-900">Requested:</p>
-                  <p className="text-blue-800">${selectedIssue.requestedRefund?.toFixed(2)}</p>
-                </div>
+      {showRefundModal && selected && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm my-4">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-semibold">Process Refund</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
+              </button>
+            </div>
+
+            <div className="glass rounded-xl p-3 mb-4">
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                <div><p className="text-forest-200/40">Customer</p><p className="text-white font-medium">{selected.customerName}</p></div>
+                <div><p className="text-forest-200/40">Order</p><p className="text-white font-medium">#{selected.orderId}</p></div>
+                <div><p className="text-forest-200/40">Order Amount</p><p className="text-white font-medium">${selected.orderAmount?.toFixed(2)}</p></div>
+                <div><p className="text-forest-200/40">Requested</p><p className="text-ember-400 font-medium">${selected.requestedRefund?.toFixed(2)}</p></div>
               </div>
             </div>
 
-            <div>
-              <p className="text-sm font-medium text-secondary-700 mb-2">Issue:</p>
-              <p className="text-sm text-secondary-600 bg-secondary-50 p-3 rounded-lg">
-                {selectedIssue.description}
-              </p>
+            <div className="glass rounded-xl p-3 mb-4">
+              <p className="text-forest-200/40 text-xs mb-1">Issue</p>
+              <p className="text-forest-100/70 text-xs">{selected.description}</p>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Refund Amount ($) *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={refundAmount}
-                onChange={(e) => setRefundAmount(e.target.value)}
-                className="w-full px-4 py-3 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="0.00"
-              />
-              <div className="flex gap-2 mt-2">
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRefundAmount(selectedIssue.requestedRefund?.toString() || '')}
-                >
-                  Requested Amount
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRefundAmount(selectedIssue.orderAmount?.toString() || '')}
-                >
-                  Full Amount
-                </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setRefundAmount((selectedIssue.orderAmount / 2)?.toFixed(2) || '')}
-                >
-                  50%
-                </Button>
+            <div className="mb-3">
+              <label className="block text-forest-200/60 text-xs font-medium mb-1">Refund Amount ($) *</label>
+              <input type="number" step="0.01" value={refundAmount} onChange={e => setAmount(e.target.value)}
+                className="w-full input-glass py-2.5 text-sm" placeholder="0.00" />
+              <div className="flex gap-1.5 mt-2 flex-wrap">
+                {[
+                  { label:"Requested", val:selected.requestedRefund?.toString() },
+                  { label:"Full",      val:selected.orderAmount?.toString() },
+                  { label:"50%",       val:(selected.orderAmount/2)?.toFixed(2) },
+                ].map(({ label, val }) => (
+                  <button key={label} onClick={() => setAmount(val || "")}
+                    className="glass text-forest-200/70 text-xs px-2.5 py-1 rounded-lg hover:glass-green transition-all">{label}</button>
+                ))}
               </div>
             </div>
 
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Admin Notes
-              </label>
-              <textarea
-                value={refundNotes}
-                onChange={(e) => setRefundNotes(e.target.value)}
-                className="w-full px-4 py-3 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                rows="3"
-                placeholder="Add notes about this refund decision..."
-              />
+            <div className="mb-4">
+              <label className="block text-forest-200/60 text-xs font-medium mb-1">Admin Notes</label>
+              <textarea value={refundNotes} onChange={e => setNotes(e.target.value)} rows={2}
+                className="w-full input-glass py-2.5 text-sm resize-none"
+                placeholder="Notes about this decision..." />
             </div>
 
-            <div className="flex gap-2 justify-end pt-4 border-t">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowRefundModal(false);
-                  setRefundAmount('');
-                  setRefundNotes('');
-                  setSelectedIssue(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                onClick={handleDenyRefund}
-              >
-                Deny Refund
-              </Button>
-              <Button
-                variant="success"
-                onClick={() => handleApproveRefund('partial')}
-                disabled={!refundAmount || parseFloat(refundAmount) <= 0}
-              >
-                Approve ${refundAmount || '0.00'}
-              </Button>
+            <div className="flex gap-2">
+              <button onClick={close} className="flex-1 glass hover:glass-green transition-all text-forest-200 text-xs font-medium py-2.5 rounded-xl">Cancel</button>
+              <button onClick={denyRefund}
+                className="flex-1 bg-red-500/80 hover:bg-red-500 text-white text-xs font-semibold py-2.5 rounded-xl transition-all">
+                Deny
+              </button>
+              <button onClick={approveRefund} disabled={!refundAmount || parseFloat(refundAmount) <= 0}
+                className="flex-1 btn-glow-green text-white text-xs font-semibold py-2.5 rounded-xl disabled:opacity-40 flex items-center justify-center gap-1">
+                <Check className="w-3.5 h-3.5" /> Approve
+              </button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );

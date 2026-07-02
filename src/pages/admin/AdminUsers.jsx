@@ -1,397 +1,278 @@
-import { useState } from 'react';
-import { useAdmin } from '../../context/AdminContext';
-import { useNotification } from '../../context/NotificationContext';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import Modal from '../../components/Modal';
+﻿import { useState } from "react";
+import { useNotification } from "../../context/NotificationContext";
+import { Users, Search, Shield, ShieldOff, Eye, Clock, Package, DollarSign, AlertTriangle, X, Check } from "lucide-react";
+
+const INIT_USERS = [
+  { id:1, name:"John Doe",      email:"john.doe@example.com",  phone:"+63 917 123 4567", status:"active", joinDate:"2024-01-15", totalOrders:24,  totalSpent:487.50,  lastOrder:"2 days ago",  issues:0, banReason:null },
+  { id:2, name:"Jane Smith",    email:"jane.smith@example.com",phone:"+63 917 987 6543", status:"active", joinDate:"2024-02-10", totalOrders:15,  totalSpent:324.80,  lastOrder:"1 week ago",  issues:1, banReason:null },
+  { id:3, name:"Mike Johnson",  email:"mike.j@example.com",    phone:"+63 917 456 7890", status:"banned", joinDate:"2023-12-05", totalOrders:8,   totalSpent:156.30,  lastOrder:"3 weeks ago", issues:5, banReason:"Multiple fraudulent payment attempts" },
+  { id:4, name:"Sarah Williams",email:"sarah.w@example.com",   phone:"+63 917 234 5678", status:"active", joinDate:"2024-03-01", totalOrders:42,  totalSpent:1247.90, lastOrder:"Today",        issues:0, banReason:null },
+];
+
+const STATUS_CLS = {
+  active:"glass-green text-forest-200",
+  banned:"bg-red-500/20 text-red-300 border border-red-500/30",
+  suspended:"glass-orange text-ember-200",
+};
 
 export default function AdminUsers() {
-  const { admin } = useAdmin();
   const { showSuccess, showError } = useNotification();
-
-  const [users, setUsers] = useState([
-    {
-      id: 1,
-      name: 'John Doe',
-      email: 'john.doe@example.com',
-      phone: '+63 917 123 4567',
-      status: 'active',
-      joinDate: '2024-01-15',
-      totalOrders: 24,
-      totalSpent: 487.50,
-      lastOrder: '2 days ago',
-      issues: 0,
-      banReason: null,
-    },
-    {
-      id: 2,
-      name: 'Jane Smith',
-      email: 'jane.smith@example.com',
-      phone: '+63 917 987 6543',
-      status: 'active',
-      joinDate: '2024-02-10',
-      totalOrders: 15,
-      totalSpent: 324.80,
-      lastOrder: '1 week ago',
-      issues: 1,
-      banReason: null,
-    },
-    {
-      id: 3,
-      name: 'Mike Johnson',
-      email: 'mike.j@example.com',
-      phone: '+63 917 456 7890',
-      status: 'banned',
-      joinDate: '2023-12-05',
-      totalOrders: 8,
-      totalSpent: 156.30,
-      lastOrder: '3 weeks ago',
-      issues: 5,
-      banReason: 'Multiple fraudulent payment attempts',
-    },
-    {
-      id: 4,
-      name: 'Sarah Williams',
-      email: 'sarah.w@example.com',
-      phone: '+63 917 234 5678',
-      status: 'active',
-      joinDate: '2024-03-01',
-      totalOrders: 42,
-      totalSpent: 1247.90,
-      lastOrder: 'Today',
-      issues: 0,
-      banReason: null,
-    },
-  ]);
-
-  const [searchTerm, setSearchTerm] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+  const [users, setUsers]           = useState(INIT_USERS);
+  const [search, setSearch]         = useState("");
+  const [filter, setFilter]         = useState("all");
   const [selectedUser, setSelectedUser] = useState(null);
-  const [showBanModal, setShowBanModal] = useState(false);
-  const [showUnbanModal, setShowUnbanModal] = useState(false);
-  const [banReason, setBanReason] = useState('');
+  const [modal, setModal]           = useState(null); // "ban" | "unban" | "view"
+  const [banReason, setBanReason]   = useState("");
 
-  const getFilteredUsers = () => {
-    let filtered = users;
+  const filtered = users.filter(u => {
+    const matchFilter = filter === "all" || u.status === filter;
+    const matchSearch = !search || u.name.toLowerCase().includes(search.toLowerCase()) || u.email.toLowerCase().includes(search.toLowerCase()) || u.phone.includes(search);
+    return matchFilter && matchSearch;
+  });
 
-    if (filterStatus !== 'all') {
-      filtered = filtered.filter(user => user.status === filterStatus);
-    }
+  const openBan   = (u) => { setSelectedUser(u); setModal("ban"); };
+  const openUnban = (u) => { setSelectedUser(u); setModal("unban"); };
+  const openView  = (u) => { setSelectedUser(u); setModal("view"); };
+  const close     = ()  => { setModal(null); setSelectedUser(null); setBanReason(""); };
 
-    if (searchTerm) {
-      filtered = filtered.filter(user =>
-        user.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        user.phone.includes(searchTerm)
-      );
-    }
-
-    return filtered;
-  };
-
-  const getStatusBadge = (status) => {
-    const badges = {
-      active: 'bg-green-100 text-green-800 border-green-200',
-      banned: 'bg-red-100 text-red-800 border-red-200',
-      suspended: 'bg-yellow-100 text-yellow-800 border-yellow-200',
-    };
-    return badges[status] || badges.active;
-  };
-
-  const handleBanUser = () => {
-    if (!banReason.trim()) {
-      showError('Please provide a reason for banning');
-      return;
-    }
-
-    setUsers(users.map(user =>
-      user.id === selectedUser.id
-        ? { ...user, status: 'banned', banReason: banReason }
-        : user
-    ));
-
+  const handleBan = () => {
+    if (!banReason.trim()) { showError("Please provide a reason"); return; }
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"banned", banReason } : u));
     showSuccess(`${selectedUser.name} has been banned`);
-    setShowBanModal(false);
-    setBanReason('');
-    setSelectedUser(null);
+    close();
   };
 
-  const handleUnbanUser = () => {
-    setUsers(users.map(user =>
-      user.id === selectedUser.id
-        ? { ...user, status: 'active', banReason: null }
-        : user
-    ));
-
+  const handleUnban = () => {
+    setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"active", banReason:null } : u));
     showSuccess(`${selectedUser.name} has been unbanned`);
-    setShowUnbanModal(false);
-    setSelectedUser(null);
+    close();
   };
 
-  const openBanModal = (user) => {
-    setSelectedUser(user);
-    setShowBanModal(true);
-  };
-
-  const openUnbanModal = (user) => {
-    setSelectedUser(user);
-    setShowUnbanModal(true);
-  };
+  const FILTERS = [
+    { key:"all",    label:`All (${users.length})` },
+    { key:"active", label:`Active (${users.filter(u=>u.status==="active").length})` },
+    { key:"banned", label:`Banned (${users.filter(u=>u.status==="banned").length})` },
+  ];
 
   return (
-    <div className="py-8 space-y-6">
+    <div className="space-y-5 pb-6 animate-fade-up">
+
       {/* Header */}
       <div>
-        <h1 className="text-3xl font-heading font-bold mb-2">User Management</h1>
-        <p className="text-secondary-600">Manage customer accounts and moderation</p>
+        <p className="text-forest-200/50 text-sm">Management</p>
+        <h1 className="text-2xl font-heading font-bold text-white">User Management</h1>
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <div className="flex flex-col md:flex-row gap-4 items-start md:items-center justify-between">
-          <div className="flex-1 w-full md:max-w-md">
-            <input
-              type="text"
-              placeholder="Search by name, email, or phone..."
-              value={searchTerm}
-              onChange={(e) => setSearchTerm(e.target.value)}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
+      {/* Summary cards */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label:"Total Users",   value:users.length,                              icon:Users,         color:"btn-glow-green" },
+          { label:"Active",        value:users.filter(u=>u.status==="active").length,icon:Shield,        color:"glass-green" },
+          { label:"Banned",        value:users.filter(u=>u.status==="banned").length,icon:ShieldOff,     color:"bg-red-500/30" },
+        ].map(({ label, value, icon:Icon, color }) => (
+          <div key={label} className="glass card-3d rounded-2xl p-4">
+            <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-2`}>
+              <Icon className="w-4 h-4 text-white" />
+            </div>
+            <p className="text-white font-heading font-bold text-xl">{value}</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
           </div>
+        ))}
+      </div>
 
-          <div className="flex flex-wrap gap-2">
-            <button
-              onClick={() => setFilterStatus('all')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filterStatus === 'all'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-              }`}
-            >
-              All ({users.length})
-            </button>
-            <button
-              onClick={() => setFilterStatus('active')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filterStatus === 'active'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-              }`}
-            >
-              Active ({users.filter(u => u.status === 'active').length})
-            </button>
-            <button
-              onClick={() => setFilterStatus('banned')}
-              className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-                filterStatus === 'banned'
-                  ? 'bg-primary-500 text-white'
-                  : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-              }`}
-            >
-              Banned ({users.filter(u => u.status === 'banned').length})
-            </button>
-          </div>
+      {/* Search + Filters */}
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, email or phone..." className="w-full input-glass pl-9 py-2.5 text-sm" />
         </div>
-      </Card>
+        <div className="flex gap-2 flex-wrap">
+          {FILTERS.map(f => (
+            <button key={f.key} onClick={() => setFilter(f.key)}
+              className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all
+                ${filter===f.key ? "btn-glow-green text-white" : "glass text-forest-200/60 hover:text-forest-100"}`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+      </div>
 
-      {/* Users Table */}
-      <Card>
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr className="border-b border-secondary-200">
-                <th className="text-left py-3 px-4 font-semibold text-secondary-700">User</th>
-                <th className="text-left py-3 px-4 font-semibold text-secondary-700">Contact</th>
-                <th className="text-left py-3 px-4 font-semibold text-secondary-700">Status</th>
-                <th className="text-right py-3 px-4 font-semibold text-secondary-700">Orders</th>
-                <th className="text-right py-3 px-4 font-semibold text-secondary-700">Total Spent</th>
-                <th className="text-left py-3 px-4 font-semibold text-secondary-700">Last Order</th>
-                <th className="text-center py-3 px-4 font-semibold text-secondary-700">Issues</th>
-                <th className="text-center py-3 px-4 font-semibold text-secondary-700">Actions</th>
-              </tr>
-            </thead>
-            <tbody>
-              {getFilteredUsers().map((user) => (
-                <tr key={user.id} className="border-b border-secondary-100 hover:bg-secondary-50 transition-colors">
-                  <td className="py-4 px-4">
+      {/* Users list */}
+      {filtered.length === 0 ? (
+        <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
+          <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
+            <Users className="w-7 h-7 text-forest-300/40" />
+          </div>
+          <p className="text-forest-200/50 text-sm">No users found</p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {filtered.map(user => (
+            <div key={user.id} className="glass rounded-2xl p-4 hover:glass-green transition-all">
+              <div className="flex items-start gap-3">
+                <div className="w-11 h-11 btn-glow-green rounded-xl flex items-center justify-center text-white font-bold text-lg flex-shrink-0">
+                  {user.name.charAt(0)}
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-start justify-between gap-2 flex-wrap">
                     <div>
-                      <p className="font-medium">{user.name}</p>
-                      <p className="text-xs text-secondary-500">Joined {user.joinDate}</p>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="text-sm">
-                      <p>{user.email}</p>
-                      <p className="text-secondary-600">{user.phone}</p>
-                    </div>
-                  </td>
-                  <td className="py-4 px-4">
-                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(user.status)}`}>
-                      {user.status.toUpperCase()}
-                    </span>
-                    {user.banReason && (
-                      <p className="text-xs text-red-600 mt-1">{user.banReason}</p>
-                    )}
-                  </td>
-                  <td className="py-4 px-4 text-right">{user.totalOrders}</td>
-                  <td className="py-4 px-4 text-right font-semibold text-green-600">
-                    ${user.totalSpent.toFixed(2)}
-                  </td>
-                  <td className="py-4 px-4 text-sm">{user.lastOrder}</td>
-                  <td className="py-4 px-4 text-center">
-                    <span className={`inline-flex items-center justify-center w-8 h-8 rounded-full text-sm font-bold ${
-                      user.issues > 0 ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'
-                    }`}>
-                      {user.issues}
-                    </span>
-                  </td>
-                  <td className="py-4 px-4">
-                    <div className="flex justify-center gap-2">
-                      {user.status === 'active' ? (
-                        <Button
-                          variant="danger"
-                          size="sm"
-                          onClick={() => openBanModal(user)}
-                        >
-                          Ban User
-                        </Button>
-                      ) : (
-                        <Button
-                          variant="success"
-                          size="sm"
-                          onClick={() => openUnbanModal(user)}
-                        >
-                          Unban
-                        </Button>
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <p className="text-white font-semibold text-sm">{user.name}</p>
+                        <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[user.status]}`}>
+                          {user.status.toUpperCase()}
+                        </span>
+                        {user.issues > 0 && (
+                          <span className="text-xs px-2 py-0.5 rounded-full bg-red-500/20 text-red-300 flex items-center gap-0.5">
+                            <AlertTriangle className="w-2.5 h-2.5" /> {user.issues} issues
+                          </span>
+                        )}
+                      </div>
+                      <p className="text-forest-200/50 text-xs mt-0.5">{user.email} · {user.phone}</p>
+                      {user.banReason && (
+                        <p className="text-red-400/70 text-xs mt-1 flex items-center gap-1">
+                          <ShieldOff className="w-3 h-3" /> {user.banReason}
+                        </p>
                       )}
-                      <Button variant="outline" size="sm">
-                        View Details
-                      </Button>
                     </div>
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-
-          {getFilteredUsers().length === 0 && (
-            <div className="text-center py-12">
-              <div className="text-6xl mb-4">🔍</div>
-              <p className="text-secondary-600">No users found</p>
-            </div>
-          )}
-        </div>
-      </Card>
-
-      {/* Ban User Modal */}
-      {showBanModal && selectedUser && (
-        <Modal
-          isOpen={showBanModal}
-          onClose={() => {
-            setShowBanModal(false);
-            setBanReason('');
-            setSelectedUser(null);
-          }}
-          title="Ban User Account"
-        >
-          <div className="space-y-4">
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
-              <p className="text-sm text-red-800">
-                <strong>Warning:</strong> This will ban {selectedUser.name} from using the platform. They will not be able to place orders or access their account.
-              </p>
-            </div>
-
-            <div>
-              <p className="text-sm font-medium text-secondary-700 mb-2">User Details:</p>
-              <div className="text-sm space-y-1">
-                <p><strong>Name:</strong> {selectedUser.name}</p>
-                <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p><strong>Total Orders:</strong> {selectedUser.totalOrders}</p>
-                <p><strong>Issues Reported:</strong> {selectedUser.issues}</p>
+                    <div className="flex items-center gap-2 flex-shrink-0">
+                      <button onClick={() => openView(user)}
+                        className="w-8 h-8 glass hover:glass-green rounded-xl flex items-center justify-center transition-all">
+                        <Eye className="w-3.5 h-3.5 text-forest-200" />
+                      </button>
+                      {user.status === "active" ? (
+                        <button onClick={() => openBan(user)}
+                          className="glass hover:bg-red-500/30 transition-all text-red-400 text-xs font-medium px-3 py-1.5 rounded-xl">
+                          Ban
+                        </button>
+                      ) : (
+                        <button onClick={() => openUnban(user)}
+                          className="btn-glow-green text-white text-xs font-medium px-3 py-1.5 rounded-xl">
+                          Unban
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-4 mt-2 text-xs text-forest-200/50">
+                    <span className="flex items-center gap-1"><Package className="w-3 h-3" />{user.totalOrders} orders</span>
+                    <span className="flex items-center gap-1"><DollarSign className="w-3 h-3" />${user.totalSpent.toFixed(2)} spent</span>
+                    <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{user.lastOrder}</span>
+                  </div>
+                </div>
               </div>
             </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Reason for Ban *
-              </label>
-              <textarea
-                value={banReason}
-                onChange={(e) => setBanReason(e.target.value)}
-                className="w-full px-4 py-3 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                rows="4"
-                placeholder="e.g., Multiple fraudulent payment attempts, Abusive behavior towards riders..."
-              />
-            </div>
-
-            <div className="flex gap-2 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowBanModal(false);
-                  setBanReason('');
-                  setSelectedUser(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="danger"
-                onClick={handleBanUser}
-                disabled={!banReason.trim()}
-              >
-                Confirm Ban
-              </Button>
-            </div>
-          </div>
-        </Modal>
+          ))}
+        </div>
       )}
 
-      {/* Unban User Modal */}
-      {showUnbanModal && selectedUser && (
-        <Modal
-          isOpen={showUnbanModal}
-          onClose={() => {
-            setShowUnbanModal(false);
-            setSelectedUser(null);
-          }}
-          title="Unban User Account"
-        >
-          <div className="space-y-4">
-            <div className="bg-green-50 border border-green-200 rounded-lg p-4">
-              <p className="text-sm text-green-800">
-                This will restore {selectedUser.name}'s account access. They will be able to place orders and use the platform again.
-              </p>
+      {/* View modal */}
+      {modal === "view" && selectedUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-white font-semibold">User Details</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
+              </button>
             </div>
-
-            <div>
-              <p className="text-sm font-medium text-secondary-700 mb-2">User Details:</p>
-              <div className="text-sm space-y-1">
-                <p><strong>Name:</strong> {selectedUser.name}</p>
-                <p><strong>Email:</strong> {selectedUser.email}</p>
-                <p><strong>Ban Reason:</strong> {selectedUser.banReason}</p>
+            <div className="flex items-center gap-3 mb-5">
+              <div className="w-14 h-14 btn-glow-green rounded-xl flex items-center justify-center text-white font-bold text-2xl">
+                {selectedUser.name.charAt(0)}
+              </div>
+              <div>
+                <p className="text-white font-semibold">{selectedUser.name}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[selectedUser.status]}`}>
+                  {selectedUser.status.toUpperCase()}
+                </span>
               </div>
             </div>
-
-            <div className="flex gap-2 justify-end pt-4">
-              <Button
-                variant="outline"
-                onClick={() => {
-                  setShowUnbanModal(false);
-                  setSelectedUser(null);
-                }}
-              >
-                Cancel
-              </Button>
-              <Button
-                variant="success"
-                onClick={handleUnbanUser}
-              >
-                Confirm Unban
-              </Button>
+            <div className="space-y-3">
+              {[
+                { label:"Email",        value:selectedUser.email },
+                { label:"Phone",        value:selectedUser.phone },
+                { label:"Joined",       value:selectedUser.joinDate },
+                { label:"Total Orders", value:selectedUser.totalOrders },
+                { label:"Total Spent",  value:`$${selectedUser.totalSpent.toFixed(2)}` },
+                { label:"Last Order",   value:selectedUser.lastOrder },
+                { label:"Issues",       value:selectedUser.issues },
+              ].map(({ label, value }) => (
+                <div key={label} className="glass rounded-xl px-3 py-2 flex justify-between">
+                  <span className="text-forest-200/50 text-xs">{label}</span>
+                  <span className="text-white text-xs font-medium">{value}</span>
+                </div>
+              ))}
+              {selectedUser.banReason && (
+                <div className="glass rounded-xl p-3 bg-red-500/10">
+                  <p className="text-forest-200/50 text-xs mb-1">Ban Reason</p>
+                  <p className="text-red-300 text-sm">{selectedUser.banReason}</p>
+                </div>
+              )}
             </div>
           </div>
-        </Modal>
+        </div>
+      )}
+
+      {/* Ban modal */}
+      {modal === "ban" && selectedUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-semibold">Ban User</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
+              </button>
+            </div>
+            <div className="glass rounded-xl p-3 mb-4 bg-red-500/10">
+              <p className="text-red-300 text-sm">
+                <strong>{selectedUser.name}</strong> will be banned and lose access to their account.
+              </p>
+            </div>
+            <div className="mb-4">
+              <label className="block text-forest-200/60 text-xs font-medium mb-1">Reason for Ban *</label>
+              <textarea value={banReason} onChange={e => setBanReason(e.target.value)} rows={3}
+                className="w-full input-glass py-2.5 text-sm resize-none"
+                placeholder="e.g., Multiple fraudulent payment attempts..." />
+            </div>
+            <div className="flex gap-2">
+              <button onClick={close} className="flex-1 glass hover:glass-green transition-all text-forest-200 text-sm font-medium py-2.5 rounded-xl">
+                Cancel
+              </button>
+              <button onClick={handleBan} disabled={!banReason.trim()}
+                className="flex-1 bg-red-500/80 hover:bg-red-500 disabled:opacity-40 text-white text-sm font-semibold py-2.5 rounded-xl transition-all">
+                Confirm Ban
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Unban modal */}
+      {modal === "unban" && selectedUser && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm">
+            <div className="flex items-center justify-between mb-4">
+              <p className="text-white font-semibold">Unban User</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
+              </button>
+            </div>
+            <div className="glass rounded-xl p-3 mb-4 glass-green">
+              <p className="text-forest-100 text-sm">
+                <strong>{selectedUser.name}</strong> will have their account restored.
+              </p>
+              {selectedUser.banReason && <p className="text-forest-200/50 text-xs mt-1">Ban reason: {selectedUser.banReason}</p>}
+            </div>
+            <div className="flex gap-2">
+              <button onClick={close} className="flex-1 glass hover:glass-orange transition-all text-forest-200 text-sm font-medium py-2.5 rounded-xl">
+                Cancel
+              </button>
+              <button onClick={handleUnban}
+                className="flex-1 btn-glow-green text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
+                <Check className="w-4 h-4" /> Confirm Unban
+              </button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   );

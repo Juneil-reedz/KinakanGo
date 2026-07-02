@@ -1,701 +1,286 @@
-import { useState } from 'react';
-import { useAdmin } from '../../context/AdminContext';
-import { useNotification } from '../../context/NotificationContext';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import Modal from '../../components/Modal';
+﻿import { useState } from "react";
+import { useNotification } from "../../context/NotificationContext";
+import { Ticket, Plus, Edit, Trash2, Check, X, Calendar, Users, TrendingUp } from "lucide-react";
+
+const INIT_PROMOS = [
+  { id:1, code:"WELCOME20", type:"percentage", value:20,   minOrder:15.00, maxDiscount:10.00, usageLimit:100, usedCount:47,  startDate:"2024-01-01", endDate:"2024-12-31", status:"active",  targetUsers:"new",      description:"20% off for new customers" },
+  { id:2, code:"SAVE5",     type:"fixed",      value:5.00, minOrder:20.00, maxDiscount:null,  usageLimit:500, usedCount:234, startDate:"2024-01-01", endDate:"2024-06-30", status:"active",  targetUsers:"all",      description:"$5 off orders over $20" },
+  { id:3, code:"FLASH50",   type:"percentage", value:50,   minOrder:30.00, maxDiscount:15.00, usageLimit:50,  usedCount:50,  startDate:"2024-01-15", endDate:"2024-01-15", status:"expired", targetUsers:"all",      description:"Flash sale - 50% off" },
+];
+
+const EMPTY_FORM = { code:"", type:"percentage", value:"", minOrder:"", maxDiscount:"", usageLimit:"", startDate:"", endDate:"", targetUsers:"all", description:"" };
+
+const STATUS_CLS = {
+  active:"glass-green text-forest-200",
+  inactive:"glass text-forest-200/60",
+  expired:"bg-red-500/20 text-red-300 border border-red-500/30",
+};
 
 export default function AdminPromos() {
-  const { admin } = useAdmin();
   const { showSuccess } = useNotification();
+  const [promos, setPromos]       = useState(INIT_PROMOS);
+  const [filter, setFilter]       = useState("all");
+  const [modal, setModal]         = useState(null); // "create" | "edit"
+  const [selectedPromo, setSelected] = useState(null);
+  const [form, setForm]           = useState(EMPTY_FORM);
 
-  const [promos, setPromos] = useState([
-    {
-      id: 1,
-      code: 'WELCOME20',
-      type: 'percentage',
-      value: 20,
-      minOrder: 15.00,
-      maxDiscount: 10.00,
-      usageLimit: 100,
-      usedCount: 47,
-      startDate: '2024-01-01',
-      endDate: '2024-12-31',
-      status: 'active',
-      targetUsers: 'new',
-      description: '20% off for new customers',
-    },
-    {
-      id: 2,
-      code: 'SAVE5',
-      type: 'fixed',
-      value: 5.00,
-      minOrder: 20.00,
-      maxDiscount: null,
-      usageLimit: 500,
-      usedCount: 234,
-      startDate: '2024-01-01',
-      endDate: '2024-06-30',
-      status: 'active',
-      targetUsers: 'all',
-      description: '$5 off orders over $20',
-    },
-    {
-      id: 3,
-      code: 'FLASH50',
-      type: 'percentage',
-      value: 50,
-      minOrder: 30.00,
-      maxDiscount: 15.00,
-      usageLimit: 50,
-      usedCount: 50,
-      startDate: '2024-01-15',
-      endDate: '2024-01-15',
-      status: 'expired',
-      targetUsers: 'all',
-      description: 'Flash sale - 50% off',
-    },
-  ]);
+  const f = (k, v) => setForm(p => ({ ...p, [k]:v }));
 
-  const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [selectedPromo, setSelectedPromo] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all');
+  const filtered = filter === "all" ? promos : promos.filter(p => p.status === filter);
 
-  const [formData, setFormData] = useState({
-    code: '',
-    type: 'percentage',
-    value: '',
-    minOrder: '',
-    maxDiscount: '',
-    usageLimit: '',
-    startDate: '',
-    endDate: '',
-    targetUsers: 'all',
-    description: '',
-  });
-
-  const getFilteredPromos = () => {
-    if (filterStatus === 'all') return promos;
-    return promos.filter(promo => promo.status === filterStatus);
+  const openCreate = () => { setForm(EMPTY_FORM); setSelected(null); setModal("create"); };
+  const openEdit   = (p) => {
+    setSelected(p);
+    setForm({ code:p.code, type:p.type, value:String(p.value), minOrder:String(p.minOrder), maxDiscount:p.maxDiscount?.toString()||"", usageLimit:p.usageLimit?.toString()||"", startDate:p.startDate, endDate:p.endDate, targetUsers:p.targetUsers, description:p.description });
+    setModal("edit");
   };
+  const close = () => { setModal(null); setSelected(null); setForm(EMPTY_FORM); };
 
-  const getStatusBadge = (status) => {
-    const badges = {
-      active: 'bg-green-100 text-green-800 border-green-200',
-      inactive: 'bg-secondary-100 text-secondary-800 border-secondary-200',
-      expired: 'bg-red-100 text-red-800 border-red-200',
-    };
-    return badges[status] || badges.inactive;
-  };
-
-  const handleCreatePromo = (e) => {
+  const handleCreate = (e) => {
     e.preventDefault();
-
-    const newPromo = {
-      id: promos.length + 1,
-      code: formData.code.toUpperCase(),
-      type: formData.type,
-      value: parseFloat(formData.value),
-      minOrder: parseFloat(formData.minOrder) || 0,
-      maxDiscount: formData.maxDiscount ? parseFloat(formData.maxDiscount) : null,
-      usageLimit: parseInt(formData.usageLimit) || null,
-      usedCount: 0,
-      startDate: formData.startDate,
-      endDate: formData.endDate,
-      status: 'active',
-      targetUsers: formData.targetUsers,
-      description: formData.description,
-    };
-
-    setPromos([newPromo, ...promos]);
-    showSuccess(`Promo code "${newPromo.code}" created successfully!`);
-    setShowCreateModal(false);
-    resetForm();
+    const promo = { id:Date.now(), code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, usedCount:0, startDate:form.startDate, endDate:form.endDate, status:"active", targetUsers:form.targetUsers, description:form.description };
+    setPromos(p => [promo, ...p]);
+    showSuccess(`Promo "${promo.code}" created!`);
+    close();
   };
 
-  const handleUpdatePromo = (e) => {
+  const handleUpdate = (e) => {
     e.preventDefault();
-
-    setPromos(promos.map(promo =>
-      promo.id === selectedPromo.id
-        ? {
-            ...promo,
-            code: formData.code.toUpperCase(),
-            type: formData.type,
-            value: parseFloat(formData.value),
-            minOrder: parseFloat(formData.minOrder) || 0,
-            maxDiscount: formData.maxDiscount ? parseFloat(formData.maxDiscount) : null,
-            usageLimit: parseInt(formData.usageLimit) || null,
-            startDate: formData.startDate,
-            endDate: formData.endDate,
-            targetUsers: formData.targetUsers,
-            description: formData.description,
-          }
-        : promo
-    ));
-
-    showSuccess('Promo code updated successfully!');
-    setShowEditModal(false);
-    resetForm();
+    setPromos(prev => prev.map(p => p.id === selectedPromo.id ? { ...p, code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, startDate:form.startDate, endDate:form.endDate, targetUsers:form.targetUsers, description:form.description } : p));
+    showSuccess("Promo updated!");
+    close();
   };
 
-  const handleToggleStatus = (promoId) => {
-    setPromos(promos.map(promo =>
-      promo.id === promoId
-        ? { ...promo, status: promo.status === 'active' ? 'inactive' : 'active' }
-        : promo
-    ));
-    showSuccess('Promo status updated');
+  const toggleStatus = (id) => {
+    setPromos(prev => prev.map(p => p.id === id ? { ...p, status:p.status === "active" ? "inactive" : "active" } : p));
+    showSuccess("Promo status updated");
   };
 
-  const handleDeletePromo = (promoId) => {
-    if (confirm('Are you sure you want to delete this promo code?')) {
-      setPromos(promos.filter(promo => promo.id !== promoId));
-      showSuccess('Promo code deleted');
-    }
+  const deletePromo = (id) => {
+    setPromos(prev => prev.filter(p => p.id !== id));
+    showSuccess("Promo deleted");
   };
 
-  const openEditModal = (promo) => {
-    setSelectedPromo(promo);
-    setFormData({
-      code: promo.code,
-      type: promo.type,
-      value: promo.value.toString(),
-      minOrder: promo.minOrder.toString(),
-      maxDiscount: promo.maxDiscount?.toString() || '',
-      usageLimit: promo.usageLimit?.toString() || '',
-      startDate: promo.startDate,
-      endDate: promo.endDate,
-      targetUsers: promo.targetUsers,
-      description: promo.description,
-    });
-    setShowEditModal(true);
-  };
+  const FILTER_OPTS = ["all","active","inactive","expired"];
 
-  const resetForm = () => {
-    setFormData({
-      code: '',
-      type: 'percentage',
-      value: '',
-      minOrder: '',
-      maxDiscount: '',
-      usageLimit: '',
-      startDate: '',
-      endDate: '',
-      targetUsers: 'all',
-      description: '',
-    });
-    setSelectedPromo(null);
-  };
+  const PromoForm = ({ onSubmit, submitLabel }) => (
+    <form onSubmit={onSubmit} className="space-y-3">
+      <div>
+        <label className="block text-forest-200/60 text-xs font-medium mb-1">Promo Code *</label>
+        <input type="text" value={form.code} onChange={e => f("code", e.target.value.toUpperCase())}
+          className="w-full input-glass py-2.5 text-sm font-mono" placeholder="e.g., WELCOME20" required />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Discount Type *</label>
+          <select value={form.type} onChange={e => f("type", e.target.value)} className="w-full input-glass py-2.5 text-sm" required>
+            <option value="percentage" style={{ background:"#0d2b1a" }}>Percentage (%)</option>
+            <option value="fixed"      style={{ background:"#0d2b1a" }}>Fixed Amount ($)</option>
+          </select>
+        </div>
+        <div>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Value *</label>
+          <input type="number" step="0.01" value={form.value} onChange={e => f("value", e.target.value)}
+            className="w-full input-glass py-2.5 text-sm" placeholder={form.type === "percentage" ? "20" : "5.00"} required />
+        </div>
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Min Order ($)</label>
+          <input type="number" step="0.01" value={form.minOrder} onChange={e => f("minOrder", e.target.value)}
+            className="w-full input-glass py-2.5 text-sm" placeholder="0.00" />
+        </div>
+        <div>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Max Discount ($)</label>
+          <input type="number" step="0.01" value={form.maxDiscount} onChange={e => f("maxDiscount", e.target.value)}
+            className="w-full input-glass py-2.5 text-sm" placeholder="Optional" />
+        </div>
+      </div>
+      <div>
+        <label className="block text-forest-200/60 text-xs font-medium mb-1">Usage Limit</label>
+        <input type="number" value={form.usageLimit} onChange={e => f("usageLimit", e.target.value)}
+          className="w-full input-glass py-2.5 text-sm" placeholder="Leave empty for unlimited" />
+      </div>
+      <div className="grid grid-cols-2 gap-3">
+        <div>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">Start Date *</label>
+          <input type="date" value={form.startDate} onChange={e => f("startDate", e.target.value)}
+            className="w-full input-glass py-2.5 text-sm" required />
+        </div>
+        <div>
+          <label className="block text-forest-200/60 text-xs font-medium mb-1">End Date *</label>
+          <input type="date" value={form.endDate} onChange={e => f("endDate", e.target.value)}
+            className="w-full input-glass py-2.5 text-sm" required />
+        </div>
+      </div>
+      <div>
+        <label className="block text-forest-200/60 text-xs font-medium mb-1">Target Users *</label>
+        <select value={form.targetUsers} onChange={e => f("targetUsers", e.target.value)} className="w-full input-glass py-2.5 text-sm" required>
+          <option value="all"       style={{ background:"#0d2b1a" }}>All Users</option>
+          <option value="new"       style={{ background:"#0d2b1a" }}>New Users Only</option>
+          <option value="returning" style={{ background:"#0d2b1a" }}>Returning Users Only</option>
+        </select>
+      </div>
+      <div>
+        <label className="block text-forest-200/60 text-xs font-medium mb-1">Description *</label>
+        <textarea value={form.description} onChange={e => f("description", e.target.value)} rows={2}
+          className="w-full input-glass py-2.5 text-sm resize-none" required />
+      </div>
+      <div className="flex gap-2 pt-2">
+        <button type="button" onClick={close} className="flex-1 glass hover:glass-green transition-all text-forest-200 text-sm font-medium py-2.5 rounded-xl">Cancel</button>
+        <button type="submit" className="flex-1 btn-glow-green text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
+          <Check className="w-4 h-4" /> {submitLabel}
+        </button>
+      </div>
+    </form>
+  );
 
   return (
-    <div className="py-8 space-y-6">
+    <div className="space-y-5 pb-6 animate-fade-up">
+
       {/* Header */}
-      <div className="flex items-center justify-between">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-3xl font-heading font-bold mb-2">Promo & Campaign Manager</h1>
-          <p className="text-secondary-600">Create and manage promotional codes</p>
+          <p className="text-forest-200/50 text-sm">Management</p>
+          <h1 className="text-2xl font-heading font-bold text-white">Promos</h1>
         </div>
-        <Button variant="primary" onClick={() => setShowCreateModal(true)}>
-          Create New Promo
-        </Button>
+        <button onClick={openCreate} className="btn-glow-green text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5">
+          <Plus className="w-4 h-4" /> Create Promo
+        </button>
       </div>
 
-      {/* Filters */}
-      <Card>
-        <div className="flex flex-wrap gap-2">
-          <button
-            onClick={() => setFilterStatus('all')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'all'
-                ? 'bg-primary-500 text-white'
-                : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-            }`}
-          >
-            All ({promos.length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('active')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'active'
-                ? 'bg-primary-500 text-white'
-                : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-            }`}
-          >
-            Active ({promos.filter(p => p.status === 'active').length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('inactive')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'inactive'
-                ? 'bg-primary-500 text-white'
-                : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-            }`}
-          >
-            Inactive ({promos.filter(p => p.status === 'inactive').length})
-          </button>
-          <button
-            onClick={() => setFilterStatus('expired')}
-            className={`px-4 py-2 rounded-lg font-medium transition-colors ${
-              filterStatus === 'expired'
-                ? 'bg-primary-500 text-white'
-                : 'bg-secondary-100 text-secondary-700 hover:bg-secondary-200'
-            }`}
-          >
-            Expired ({promos.filter(p => p.status === 'expired').length})
-          </button>
-        </div>
-      </Card>
-
-      {/* Promos Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        {getFilteredPromos().map((promo) => (
-          <Card key={promo.id}>
-            <div className="flex items-start justify-between mb-4">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-2">
-                  <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusBadge(promo.status)}`}>
-                    {promo.status.toUpperCase()}
-                  </span>
-                  {promo.targetUsers === 'new' && (
-                    <span className="px-2 py-1 bg-blue-100 text-blue-700 rounded text-xs">
-                      New Users Only
-                    </span>
-                  )}
-                </div>
-                <h3 className="text-2xl font-bold font-mono mb-1">{promo.code}</h3>
-                <p className="text-sm text-secondary-600 mb-3">{promo.description}</p>
-              </div>
-              <div className="text-right">
-                <div className="text-3xl font-bold text-primary-600">
-                  {promo.type === 'percentage' ? `${promo.value}%` : `$${promo.value}`}
-                </div>
-                <p className="text-xs text-secondary-500">
-                  {promo.type === 'percentage' ? 'OFF' : 'OFF'}
-                </p>
-              </div>
+      {/* Summary */}
+      <div className="grid grid-cols-3 gap-3">
+        {[
+          { label:"Total Promos",  value:promos.length,                              icon:Ticket,     color:"btn-glow-green" },
+          { label:"Active",        value:promos.filter(p=>p.status==="active").length,icon:TrendingUp, color:"glass-green" },
+          { label:"Total Uses",    value:promos.reduce((a,p)=>a+p.usedCount,0),      icon:Users,      color:"glass-orange" },
+        ].map(({ label, value, icon:Icon, color }) => (
+          <div key={label} className="glass card-3d rounded-2xl p-4">
+            <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-2`}>
+              <Icon className="w-4 h-4 text-white" />
             </div>
-
-            <div className="grid grid-cols-2 gap-3 mb-4 text-sm">
-              <div>
-                <p className="font-medium text-secondary-700">Min Order:</p>
-                <p>${promo.minOrder.toFixed(2)}</p>
-              </div>
-              {promo.maxDiscount && (
-                <div>
-                  <p className="font-medium text-secondary-700">Max Discount:</p>
-                  <p>${promo.maxDiscount.toFixed(2)}</p>
-                </div>
-              )}
-              <div>
-                <p className="font-medium text-secondary-700">Usage:</p>
-                <p>
-                  {promo.usedCount} / {promo.usageLimit || '∞'}
-                  {promo.usageLimit && (
-                    <span className="text-secondary-500">
-                      {' '}({Math.round((promo.usedCount / promo.usageLimit) * 100)}%)
-                    </span>
-                  )}
-                </p>
-              </div>
-              <div>
-                <p className="font-medium text-secondary-700">Valid Until:</p>
-                <p>{promo.endDate}</p>
-              </div>
-            </div>
-
-            {promo.usageLimit && (
-              <div className="mb-4">
-                <div className="w-full bg-secondary-200 rounded-full h-2">
-                  <div
-                    className="bg-primary-500 h-2 rounded-full transition-all"
-                    style={{ width: `${Math.min((promo.usedCount / promo.usageLimit) * 100, 100)}%` }}
-                  />
-                </div>
-              </div>
-            )}
-
-            <div className="flex gap-2 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => openEditModal(promo)}
-              >
-                Edit
-              </Button>
-              <Button
-                variant={promo.status === 'active' ? 'secondary' : 'success'}
-                size="sm"
-                onClick={() => handleToggleStatus(promo.id)}
-              >
-                {promo.status === 'active' ? 'Deactivate' : 'Activate'}
-              </Button>
-              <Button
-                variant="danger"
-                size="sm"
-                onClick={() => handleDeletePromo(promo.id)}
-              >
-                Delete
-              </Button>
-            </div>
-          </Card>
+            <p className="text-white font-heading font-bold text-xl">{value}</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
+          </div>
         ))}
       </div>
 
-      {getFilteredPromos().length === 0 && (
-        <Card>
-          <div className="text-center py-12">
-            <div className="text-6xl mb-4">🎟️</div>
-            <p className="text-secondary-600 text-lg">No promo codes found</p>
-          </div>
-        </Card>
+      {/* Filters */}
+      <div className="flex glass rounded-xl overflow-hidden w-fit">
+        {FILTER_OPTS.map(s => (
+          <button key={s} onClick={() => setFilter(s)}
+            className={`px-3 py-2 text-xs font-semibold transition-all capitalize
+              ${filter===s ? "btn-glow-green text-white" : "text-forest-200/60 hover:text-forest-100"}`}>
+            {s === "all" ? `All (${promos.length})` : `${s.charAt(0).toUpperCase()+s.slice(1)} (${promos.filter(p=>p.status===s).length})`}
+          </button>
+        ))}
+      </div>
+
+      {/* Promo cards */}
+      {filtered.length === 0 ? (
+        <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
+          <Ticket className="w-10 h-10 text-forest-300/30" />
+          <p className="text-forest-200/50 text-sm">No promo codes found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+          {filtered.map(promo => (
+            <div key={promo.id} className="glass card-3d rounded-2xl p-5 hover:glass-green transition-all">
+              {/* Header row */}
+              <div className="flex items-start justify-between mb-3">
+                <div>
+                  <div className="flex items-center gap-2 mb-1 flex-wrap">
+                    <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${STATUS_CLS[promo.status]}`}>
+                      {promo.status.toUpperCase()}
+                    </span>
+                    {promo.targetUsers === "new" && (
+                      <span className="text-xs px-2 py-0.5 rounded-full glass text-forest-200/60">New Users</span>
+                    )}
+                  </div>
+                  <p className="text-white font-mono font-bold text-xl">{promo.code}</p>
+                  <p className="text-forest-200/50 text-xs mt-0.5">{promo.description}</p>
+                </div>
+                <div className="text-right flex-shrink-0">
+                  <p className="text-ember-400 font-heading font-bold text-3xl">
+                    {promo.type === "percentage" ? `${promo.value}%` : `$${promo.value}`}
+                  </p>
+                  <p className="text-forest-200/40 text-xs">OFF</p>
+                </div>
+              </div>
+
+              {/* Details grid */}
+              <div className="grid grid-cols-2 gap-2 mb-3 text-xs">
+                <div className="glass rounded-xl px-2.5 py-2">
+                  <p className="text-forest-200/40">Min Order</p>
+                  <p className="text-white font-medium">${promo.minOrder.toFixed(2)}</p>
+                </div>
+                {promo.maxDiscount && (
+                  <div className="glass rounded-xl px-2.5 py-2">
+                    <p className="text-forest-200/40">Max Discount</p>
+                    <p className="text-white font-medium">${promo.maxDiscount.toFixed(2)}</p>
+                  </div>
+                )}
+                <div className="glass rounded-xl px-2.5 py-2">
+                  <p className="text-forest-200/40">Usage</p>
+                  <p className="text-white font-medium">{promo.usedCount} / {promo.usageLimit || "∞"}</p>
+                </div>
+                <div className="glass rounded-xl px-2.5 py-2 flex items-start gap-1.5">
+                  <Calendar className="w-3 h-3 text-forest-300/50 mt-0.5 flex-shrink-0" />
+                  <div>
+                    <p className="text-forest-200/40">Valid Until</p>
+                    <p className="text-white font-medium">{promo.endDate}</p>
+                  </div>
+                </div>
+              </div>
+
+              {/* Usage bar */}
+              {promo.usageLimit && (
+                <div className="mb-4">
+                  <div className="w-full glass h-1.5 rounded-full overflow-hidden">
+                    <div className="h-full bg-gradient-to-r from-forest-500 to-ember-500 rounded-full transition-all"
+                      style={{ width:`${Math.min((promo.usedCount/promo.usageLimit)*100,100)}%` }} />
+                  </div>
+                  <p className="text-forest-200/30 text-xs mt-1 text-right">{Math.round((promo.usedCount/promo.usageLimit)*100)}% used</p>
+                </div>
+              )}
+
+              {/* Actions */}
+              <div className="flex gap-2 pt-3" style={{ borderTop:"1px solid rgba(255,255,255,.07)" }}>
+                <button onClick={() => openEdit(promo)} className="flex-1 glass hover:glass-green transition-all text-forest-200/80 text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1.5">
+                  <Edit className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button onClick={() => toggleStatus(promo.id)}
+                  className={`flex-1 transition-all text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1.5
+                    ${promo.status === "active" ? "glass hover:glass-orange text-forest-200/80" : "btn-glow-green text-white"}`}>
+                  {promo.status === "active" ? "Deactivate" : "Activate"}
+                </button>
+                <button onClick={() => deletePromo(promo.id)} className="w-9 glass hover:bg-red-500/30 rounded-xl flex items-center justify-center transition-all flex-shrink-0">
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
       )}
 
-      {/* Create Promo Modal */}
-      <Modal
-        isOpen={showCreateModal}
-        onClose={() => {
-          setShowCreateModal(false);
-          resetForm();
-        }}
-        title="Create New Promo Code"
-      >
-        <form onSubmit={handleCreatePromo} className="space-y-4">
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Promo Code *
-            </label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
-              placeholder="e.g., WELCOME20"
-              required
+      {/* Create / Edit Modal */}
+      {modal && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass rounded-3xl p-6 w-full max-w-md my-4">
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-white font-semibold">{modal === "create" ? "Create Promo Code" : "Edit Promo Code"}</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
+              </button>
+            </div>
+            <PromoForm
+              onSubmit={modal === "create" ? handleCreate : handleUpdate}
+              submitLabel={modal === "create" ? "Create Promo" : "Save Changes"}
             />
           </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Discount Type *
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              >
-                <option value="percentage">Percentage (%)</option>
-                <option value="fixed">Fixed Amount ($)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Value *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder={formData.type === 'percentage' ? '20' : '5.00'}
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Min Order Amount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.minOrder}
-                onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="0.00"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Max Discount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.maxDiscount}
-                onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                placeholder="Optional"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Usage Limit
-            </label>
-            <input
-              type="number"
-              value={formData.usageLimit}
-              onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              placeholder="Leave empty for unlimited"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                End Date *
-              </label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Target Users *
-            </label>
-            <select
-              value={formData.targetUsers}
-              onChange={(e) => setFormData({ ...formData, targetUsers: e.target.value })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              required
-            >
-              <option value="all">All Users</option>
-              <option value="new">New Users Only</option>
-              <option value="returning">Returning Users Only</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Description *
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              rows="2"
-              placeholder="e.g., 20% off for new customers"
-              required
-            />
-          </div>
-
-          <div className="flex gap-2 justify-end pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowCreateModal(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Create Promo Code
-            </Button>
-          </div>
-        </form>
-      </Modal>
-
-      {/* Edit Promo Modal - Similar to Create */}
-      <Modal
-        isOpen={showEditModal}
-        onClose={() => {
-          setShowEditModal(false);
-          resetForm();
-        }}
-        title="Edit Promo Code"
-      >
-        <form onSubmit={handleUpdatePromo} className="space-y-4">
-          {/* Same fields as create modal */}
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Promo Code *
-            </label>
-            <input
-              type="text"
-              value={formData.code}
-              onChange={(e) => setFormData({ ...formData, code: e.target.value.toUpperCase() })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500 font-mono"
-              required
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Discount Type *
-              </label>
-              <select
-                value={formData.type}
-                onChange={(e) => setFormData({ ...formData, type: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              >
-                <option value="percentage">Percentage (%)</option>
-                <option value="fixed">Fixed Amount ($)</option>
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Value *
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.value}
-                onChange={(e) => setFormData({ ...formData, value: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Min Order Amount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.minOrder}
-                onChange={(e) => setFormData({ ...formData, minOrder: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Max Discount ($)
-              </label>
-              <input
-                type="number"
-                step="0.01"
-                value={formData.maxDiscount}
-                onChange={(e) => setFormData({ ...formData, maxDiscount: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Usage Limit
-            </label>
-            <input
-              type="number"
-              value={formData.usageLimit}
-              onChange={(e) => setFormData({ ...formData, usageLimit: e.target.value })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-            />
-          </div>
-
-          <div className="grid grid-cols-2 gap-4">
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                Start Date *
-              </label>
-              <input
-                type="date"
-                value={formData.startDate}
-                onChange={(e) => setFormData({ ...formData, startDate: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">
-                End Date *
-              </label>
-              <input
-                type="date"
-                value={formData.endDate}
-                onChange={(e) => setFormData({ ...formData, endDate: e.target.value })}
-                className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-                required
-              />
-            </div>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Target Users *
-            </label>
-            <select
-              value={formData.targetUsers}
-              onChange={(e) => setFormData({ ...formData, targetUsers: e.target.value })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              required
-            >
-              <option value="all">All Users</option>
-              <option value="new">New Users Only</option>
-              <option value="returning">Returning Users Only</option>
-            </select>
-          </div>
-
-          <div>
-            <label className="block text-sm font-medium text-secondary-700 mb-2">
-              Description *
-            </label>
-            <textarea
-              value={formData.description}
-              onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-              className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-primary-500"
-              rows="2"
-              required
-            />
-          </div>
-
-          <div className="flex gap-2 justify-end pt-4">
-            <Button
-              type="button"
-              variant="outline"
-              onClick={() => {
-                setShowEditModal(false);
-                resetForm();
-              }}
-            >
-              Cancel
-            </Button>
-            <Button type="submit" variant="primary">
-              Update Promo Code
-            </Button>
-          </div>
-        </form>
-      </Modal>
+        </div>
+      )}
     </div>
   );
 }

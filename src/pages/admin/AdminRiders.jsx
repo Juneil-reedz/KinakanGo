@@ -1,582 +1,309 @@
-import { useState } from 'react';
-import { riders } from '../../data/mockData';
-import Card from '../../components/Card';
-import Button from '../../components/Button';
-import Modal from '../../components/Modal';
-import {
-  Bike,
-  Search,
-  Star,
-  MapPin,
-  Phone,
-  Mail,
-  Edit,
-  Trash2,
-  Eye,
-  DollarSign,
-  TrendingUp,
-  Package,
-  CheckCircle,
-  XCircle,
-  Clock,
-  Award,
-  Calendar,
-  Truck,
-  Filter,
-  X,
-  ToggleLeft,
-  ToggleRight
-} from 'lucide-react';
+﻿import { useState } from "react";
+import { riders } from "../../data/mockData";
+import { Bike, Search, Star, MapPin, Phone, Edit, Trash2, Eye, DollarSign, TrendingUp, Package, CheckCircle, Clock, Calendar, Truck, X, Check, ToggleLeft, ToggleRight } from "lucide-react";
+
+const STATUS_CLS = {
+  active:"glass-green text-forest-200",
+  busy:"glass-orange text-ember-200",
+  offline:"bg-red-500/20 text-red-300 border border-red-500/30",
+};
+
+const STATUS_DOT = {
+  active:"bg-forest-400 animate-pulse",
+  busy:"bg-ember-500",
+  offline:"bg-red-500",
+};
 
 export default function AdminRiders() {
-  const [searchQuery, setSearchQuery] = useState('');
-  const [selectedRider, setSelectedRider] = useState(null);
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [filterZone, setFilterZone] = useState('all');
-  const [sortBy, setSortBy] = useState('name');
-  const [showViewModal, setShowViewModal] = useState(false);
-  const [showEditModal, setShowEditModal] = useState(false);
-  const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [ridersList, setRidersList] = useState(riders);
+  const [search, setSearch]           = useState("");
+  const [filterStatus, setFilterStatus] = useState("all");
+  const [filterZone, setFilterZone]   = useState("all");
+  const [sortBy, setSortBy]           = useState("name");
+  const [selected, setSelected]       = useState(null);
+  const [modal, setModal]             = useState(null); // "view" | "edit" | "delete"
+  const [list, setList]               = useState(riders);
 
-  const zones = ['all', ...new Set(ridersList.map(r => r.zone))];
+  const zones = ["all", ...new Set(list.map(r => r.zone))];
 
-  const filteredRiders = ridersList
-    .filter((rider) => {
-      const matchesSearch = rider.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rider.email.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        rider.vehicleNumber.toLowerCase().includes(searchQuery.toLowerCase());
-
-      const matchesStatus = filterStatus === 'all' || rider.status === filterStatus;
-      const matchesZone = filterZone === 'all' || rider.zone === filterZone;
-
-      return matchesSearch && matchesStatus && matchesZone;
+  const filtered = list
+    .filter(r => {
+      const matchSearch = r.name.toLowerCase().includes(search.toLowerCase()) || r.email.toLowerCase().includes(search.toLowerCase()) || r.vehicleNumber?.toLowerCase().includes(search.toLowerCase());
+      const matchStatus = filterStatus === "all" || r.status === filterStatus;
+      const matchZone   = filterZone   === "all" || r.zone   === filterZone;
+      return matchSearch && matchStatus && matchZone;
     })
-    .sort((a, b) => {
-      switch (sortBy) {
-        case 'rating':
-          return b.rating - a.rating;
-        case 'deliveries':
-          return b.totalDeliveries - a.totalDeliveries;
-        case 'earnings':
-          return b.earnings - a.earnings;
-        default:
-          return a.name.localeCompare(b.name);
-      }
+    .sort((a,b) => {
+      if (sortBy === "rating")     return b.rating - a.rating;
+      if (sortBy === "deliveries") return b.totalDeliveries - a.totalDeliveries;
+      if (sortBy === "earnings")   return b.earnings - a.earnings;
+      return a.name.localeCompare(b.name);
     });
 
-  const getStatusColor = (status) => {
-    switch (status) {
-      case 'active':
-        return 'bg-green-100 text-green-700 border-green-300';
-      case 'busy':
-        return 'bg-yellow-100 text-yellow-700 border-yellow-300';
-      case 'offline':
-        return 'bg-red-100 text-red-700 border-red-300';
-      default:
-        return 'bg-secondary-100 text-secondary-700 border-secondary-300';
-    }
-  };
+  const openView   = (r) => { setSelected(r); setModal("view"); };
+  const openEdit   = (r) => { setSelected(r); setModal("edit"); };
+  const openDelete = (r) => { setSelected(r); setModal("delete"); };
+  const close      = ()  => { setModal(null); setSelected(null); };
 
-  const getVehicleIcon = (vehicleType) => {
-    switch (vehicleType) {
-      case 'motorcycle':
-      case 'bicycle':
-      case 'scooter':
-        return <Bike className="w-4 h-4" />;
-      default:
-        return <Truck className="w-4 h-4" />;
-    }
-  };
+  const confirmDelete      = () => { setList(prev => prev.filter(r => r.id !== selected.id)); close(); };
+  const toggleAvailability = (id) => setList(prev => prev.map(r => r.id === id ? { ...r, availability:!r.availability } : r));
 
-  const handleView = (rider) => {
-    setSelectedRider(rider);
-    setShowViewModal(true);
-  };
+  const totalDeliveries = list.reduce((a,r) => a + r.totalDeliveries, 0);
+  const avgRating       = (list.reduce((a,r) => a + r.rating, 0) / list.length).toFixed(1);
 
-  const handleEdit = (rider) => {
-    setSelectedRider(rider);
-    setShowEditModal(true);
-  };
-
-  const handleDelete = (rider) => {
-    setSelectedRider(rider);
-    setShowDeleteModal(true);
-  };
-
-  const confirmDelete = () => {
-    setRidersList(ridersList.filter(r => r.id !== selectedRider.id));
-    setShowDeleteModal(false);
-    setSelectedRider(null);
-  };
-
-  const toggleRiderAvailability = (riderId) => {
-    setRidersList(ridersList.map(r =>
-      r.id === riderId ? { ...r, availability: !r.availability } : r
-    ));
-  };
+  const FILTERS = ["all","active","busy","offline"];
 
   return (
-    <div className="py-8 space-y-6">
+    <div className="space-y-5 pb-6 animate-fade-up">
+
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+      <div className="flex items-start justify-between gap-3 flex-wrap">
         <div>
-          <h1 className="text-4xl font-bold mb-2 text-slate-800">
-            Rider Management
-          </h1>
-          <p className="text-slate-600">Manage delivery riders and their performance</p>
+          <p className="text-forest-200/50 text-sm">Management</p>
+          <h1 className="text-2xl font-heading font-bold text-white">Riders</h1>
         </div>
-        <Button variant="primary" className="flex items-center gap-2 bg-slate-800 hover:bg-slate-900">
-          <Bike className="w-4 h-4" />
-          Add New Rider
-        </Button>
+        <button className="btn-glow-green text-white text-sm font-semibold px-4 py-2.5 rounded-xl flex items-center gap-1.5">
+          <Bike className="w-4 h-4" /> Add Rider
+        </button>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-5">
-        <Card className="bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-600 text-sm mb-1">Total Riders</p>
-              <p className="text-3xl font-bold text-slate-900">{ridersList.length}</p>
+      {/* Stats */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+        {[
+          { label:"Total Riders",     value:list.length,                              icon:Bike,        color:"btn-glow-green" },
+          { label:"Active Now",       value:list.filter(r=>r.status==="active").length,icon:CheckCircle, color:"glass-green" },
+          { label:"Avg Rating",       value:avgRating,                                icon:Star,        color:"glass-orange" },
+          { label:"Total Deliveries", value:totalDeliveries.toLocaleString(),          icon:Package,     color:"glass" },
+          { label:"Today",            value:list.reduce((a,r)=>a+r.completedToday,0), icon:TrendingUp,  color:"glass" },
+        ].map(({ label, value, icon:Icon, color }) => (
+          <div key={label} className="glass card-3d rounded-2xl p-4">
+            <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-2`}>
+              <Icon className="w-4 h-4 text-white" />
             </div>
-            <div className="p-3 bg-slate-100 rounded-lg">
-              <Bike className="w-6 h-6 text-slate-600" />
-            </div>
+            <p className="text-white font-heading font-bold text-xl">{value}</p>
+            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
           </div>
-        </Card>
-
-        <Card className="bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-600 text-sm mb-1">Active Now</p>
-              <p className="text-3xl font-bold text-slate-900">{ridersList.filter(r => r.status === 'active').length}</p>
-            </div>
-            <div className="p-3 bg-green-50 rounded-lg">
-              <CheckCircle className="w-6 h-6 text-green-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-600 text-sm mb-1">Avg Rating</p>
-              <p className="text-3xl font-bold text-slate-900">
-                {(ridersList.reduce((acc, r) => acc + r.rating, 0) / ridersList.length).toFixed(1)}
-              </p>
-            </div>
-            <div className="p-3 bg-slate-100 rounded-lg">
-              <Star className="w-6 h-6 text-yellow-500" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-600 text-sm mb-1">Total Deliveries</p>
-              <p className="text-3xl font-bold text-slate-900">
-                {ridersList.reduce((acc, r) => acc + r.totalDeliveries, 0).toLocaleString()}
-              </p>
-            </div>
-            <div className="p-3 bg-slate-100 rounded-lg">
-              <Package className="w-6 h-6 text-slate-600" />
-            </div>
-          </div>
-        </Card>
-
-        <Card className="bg-white border border-slate-200">
-          <div className="flex items-center justify-between">
-            <div>
-              <p className="text-slate-600 text-sm mb-1">Today's Deliveries</p>
-              <p className="text-3xl font-bold text-slate-900">
-                {ridersList.reduce((acc, r) => acc + r.completedToday, 0)}
-              </p>
-            </div>
-            <div className="p-3 bg-slate-100 rounded-lg">
-              <TrendingUp className="w-6 h-6 text-slate-600" />
-            </div>
-          </div>
-        </Card>
+        ))}
       </div>
 
-      {/* Search and Filters */}
-      <Card>
-        <div className="space-y-4">
-          <div className="relative">
-            <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 w-5 h-5 text-secondary-400" />
-            <input
-              type="text"
-              placeholder="Search riders by name, email, or vehicle number..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-3 border border-secondary-300 rounded-xl focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-            />
-          </div>
-
-          <div className="flex flex-wrap gap-4">
-            <div className="flex-1 min-w-[200px]">
-              <label className="block text-sm font-medium text-secondary-700 mb-2">Status</label>
-              <div className="flex gap-2">
-                <button
-                  onClick={() => setFilterStatus('all')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                    filterStatus === 'all'
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  All
-                </button>
-                <button
-                  onClick={() => setFilterStatus('active')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                    filterStatus === 'active'
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Active
-                </button>
-                <button
-                  onClick={() => setFilterStatus('busy')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                    filterStatus === 'busy'
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Busy
-                </button>
-                <button
-                  onClick={() => setFilterStatus('offline')}
-                  className={`px-4 py-2 rounded-lg font-medium transition-colors text-sm ${
-                    filterStatus === 'offline'
-                      ? 'bg-slate-800 text-white'
-                      : 'bg-slate-100 text-slate-700 hover:bg-slate-200'
-                  }`}
-                >
-                  Offline
-                </button>
-              </div>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">Zone</label>
-              <select
-                value={filterZone}
-                onChange={(e) => setFilterZone(e.target.value)}
-                className="px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                {zones.map(zone => (
-                  <option key={zone} value={zone}>{zone === 'all' ? 'All Zones' : zone}</option>
-                ))}
-              </select>
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-secondary-700 mb-2">Sort By</label>
-              <select
-                value={sortBy}
-                onChange={(e) => setSortBy(e.target.value)}
-                className="px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500 focus:border-transparent"
-              >
-                <option value="name">Name</option>
-                <option value="rating">Rating</option>
-                <option value="deliveries">Total Deliveries</option>
-                <option value="earnings">Earnings</option>
-              </select>
-            </div>
-          </div>
+      {/* Search + Filters */}
+      <div className="glass rounded-2xl p-4 space-y-3">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+          <input value={search} onChange={e => setSearch(e.target.value)}
+            placeholder="Search by name, email or vehicle number..." className="w-full input-glass pl-9 py-2.5 text-sm" />
         </div>
-      </Card>
-
-      {/* Results Count */}
-      <div className="text-sm text-secondary-600">
-        Showing <span className="font-semibold">{filteredRiders.length}</span> rider(s)
+        <div className="flex flex-wrap gap-3">
+          <div className="flex gap-2 flex-wrap">
+            {FILTERS.map(s => (
+              <button key={s} onClick={() => setFilterStatus(s)}
+                className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all capitalize
+                  ${filterStatus===s ? "btn-glow-green text-white" : "glass text-forest-200/60 hover:text-forest-100"}`}>
+                {s === "all" ? "All" : s}
+              </button>
+            ))}
+          </div>
+          <select value={filterZone} onChange={e => setFilterZone(e.target.value)}
+            className="input-glass py-1.5 text-xs rounded-xl flex-shrink-0">
+            {zones.map(z => <option key={z} value={z} style={{ background:"#0d2b1a" }}>{z === "all" ? "All Zones" : z}</option>)}
+          </select>
+          <select value={sortBy} onChange={e => setSortBy(e.target.value)}
+            className="input-glass py-1.5 text-xs rounded-xl flex-shrink-0">
+            <option value="name" style={{ background:"#0d2b1a" }}>Sort: Name</option>
+            <option value="rating" style={{ background:"#0d2b1a" }}>Sort: Rating</option>
+            <option value="deliveries" style={{ background:"#0d2b1a" }}>Sort: Deliveries</option>
+            <option value="earnings" style={{ background:"#0d2b1a" }}>Sort: Earnings</option>
+          </select>
+        </div>
       </div>
 
-      {/* Riders Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
-        {filteredRiders.map((rider) => (
-          <Card key={rider.id} className="border border-slate-200 hover:border-slate-300 hover:shadow-md transition-all duration-200">
-            <div className="space-y-4">
-              <div className="flex items-start justify-between">
+      <p className="text-forest-200/40 text-xs">Showing {filtered.length} rider(s)</p>
+
+      {/* Riders grid */}
+      {filtered.length === 0 ? (
+        <div className="glass rounded-2xl py-14 flex flex-col items-center gap-3">
+          <Bike className="w-10 h-10 text-forest-300/30" />
+          <p className="text-forest-200/50 text-sm">No riders found</p>
+        </div>
+      ) : (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          {filtered.map(rider => (
+            <div key={rider.id} className="glass card-3d rounded-2xl p-4 hover:glass-green transition-all">
+              {/* Avatar + Status */}
+              <div className="flex items-start justify-between mb-3">
                 <div className="flex items-center gap-3">
                   {rider.image ? (
-                    <img
-                      src={rider.image}
-                      alt={rider.name}
-                      className="w-14 h-14 rounded-full object-cover border-2 border-slate-200"
-                    />
+                    <img src={rider.image} alt={rider.name} className="w-14 h-14 rounded-xl object-cover" />
                   ) : (
-                    <div className="w-14 h-14 bg-slate-800 rounded-full flex items-center justify-center text-white font-bold text-xl">
+                    <div className="w-14 h-14 btn-glow-green rounded-xl flex items-center justify-center text-white font-bold text-xl">
                       {rider.name.charAt(0)}
                     </div>
                   )}
                   <div>
-                    <h3 className="font-bold text-base text-slate-900">{rider.name}</h3>
-                    <p className="text-xs text-slate-600">{rider.email}</p>
+                    <p className="text-white font-semibold text-sm">{rider.name}</p>
+                    <p className="text-forest-200/50 text-xs">{rider.email}</p>
                   </div>
                 </div>
-                <span className={`px-2.5 py-1 rounded-full text-xs font-semibold flex items-center gap-1 ${getStatusColor(rider.status)}`}>
-                  <div className={`w-1.5 h-1.5 rounded-full ${
-                    rider.status === 'active' ? 'bg-green-500 animate-pulse' :
-                    rider.status === 'busy' ? 'bg-yellow-500' :
-                    'bg-red-500'
-                  }`}></div>
+                <span className={`text-xs px-2.5 py-1 rounded-full font-semibold flex items-center gap-1 ${STATUS_CLS[rider.status]}`}>
+                  <span className={`w-1.5 h-1.5 rounded-full ${STATUS_DOT[rider.status]}`} />
                   {rider.status}
                 </span>
               </div>
 
-              <div className="grid grid-cols-2 gap-3">
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-slate-600 mb-1">
-                    <Star className="w-4 h-4 text-yellow-500" />
-                    <span className="text-xs">Rating</span>
+              {/* Stats grid */}
+              <div className="grid grid-cols-2 gap-2 mb-3">
+                {[
+                  { label:"Rating",     value:rider.rating,                        icon:Star,      fill:true },
+                  { label:"Deliveries", value:rider.totalDeliveries,               icon:Package,   fill:false },
+                  { label:"Today",      value:rider.completedToday,                icon:TrendingUp,fill:false },
+                  { label:"Earnings",   value:`$${rider.earnings.toLocaleString()}`,icon:DollarSign,fill:false },
+                ].map(({ label, value, icon:Icon, fill }) => (
+                  <div key={label} className="glass rounded-xl p-2.5">
+                    <div className="flex items-center gap-1.5 text-forest-200/50 mb-1">
+                      <Icon className={`w-3 h-3 ${fill ? "fill-ember-400 text-ember-400" : ""}`} />
+                      <span className="text-xs">{label}</span>
+                    </div>
+                    <p className="text-white font-bold text-base">{value}</p>
                   </div>
-                  <p className="text-xl font-bold text-slate-900">{rider.rating}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-slate-600 mb-1">
-                    <Package className="w-4 h-4 text-slate-600" />
-                    <span className="text-xs">Deliveries</span>
-                  </div>
-                  <p className="text-xl font-bold text-slate-900">{rider.totalDeliveries}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-slate-600 mb-1">
-                    <TrendingUp className="w-4 h-4 text-slate-600" />
-                    <span className="text-xs">Today</span>
-                  </div>
-                  <p className="text-xl font-bold text-slate-900">{rider.completedToday}</p>
-                </div>
-                <div className="bg-slate-50 rounded-lg p-3">
-                  <div className="flex items-center gap-2 text-slate-600 mb-1">
-                    <DollarSign className="w-4 h-4 text-slate-600" />
-                    <span className="text-xs">Earnings</span>
-                  </div>
-                  <p className="text-xl font-bold text-slate-900">${rider.earnings.toLocaleString()}</p>
-                </div>
+                ))}
               </div>
 
-              <div className="space-y-2 text-sm">
-                <div className="flex items-center gap-2 text-secondary-600">
-                  <Phone className="w-4 h-4" />
-                  <span>{rider.phone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-secondary-600">
-                  <MapPin className="w-4 h-4" />
-                  <span>{rider.zone}</span>
-                </div>
-                <div className="flex items-center gap-2 text-secondary-600">
-                  {getVehicleIcon(rider.vehicleType)}
+              {/* Details */}
+              <div className="space-y-1.5 text-xs text-forest-200/60 mb-3">
+                <div className="flex items-center gap-2"><Phone className="w-3 h-3" />{rider.phone}</div>
+                <div className="flex items-center gap-2"><MapPin className="w-3 h-3" />{rider.zone}</div>
+                <div className="flex items-center gap-2">
+                  {rider.vehicleType === "truck" ? <Truck className="w-3 h-3" /> : <Bike className="w-3 h-3" />}
                   <span className="capitalize">{rider.vehicleType} - {rider.vehicleNumber}</span>
                 </div>
-                <div className="flex items-center gap-2 text-secondary-600">
-                  <Calendar className="w-4 h-4" />
-                  <span>Joined {new Date(rider.joinedDate).toLocaleDateString()}</span>
-                </div>
-                <div className="flex items-center justify-between pt-2 border-t border-secondary-200">
-                  <span className="text-xs text-secondary-600">Availability</span>
-                  <button
-                    onClick={() => toggleRiderAvailability(rider.id)}
-                    className="flex items-center gap-2"
-                  >
-                    {rider.availability ? (
-                      <ToggleRight className="w-8 h-8 text-green-500" />
-                    ) : (
-                      <ToggleLeft className="w-8 h-8 text-secondary-400" />
-                    )}
-                  </button>
-                </div>
+                <div className="flex items-center gap-2"><Calendar className="w-3 h-3" />Joined {new Date(rider.joinedDate).toLocaleDateString()}</div>
               </div>
 
-              <div className="flex gap-2 pt-3 border-t border-slate-200">
-                <button
-                  onClick={() => handleView(rider)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                >
-                  <Eye className="w-4 h-4" />
-                  <span className="text-sm font-medium">View</span>
+              {/* Availability toggle */}
+              <div className="flex items-center justify-between py-2.5 mb-3" style={{ borderTop:"1px solid rgba(255,255,255,.07)", borderBottom:"1px solid rgba(255,255,255,.07)" }}>
+                <span className="text-forest-200/50 text-xs">Availability</span>
+                <button onClick={() => toggleAvailability(rider.id)} className="flex items-center gap-1.5">
+                  {rider.availability
+                    ? <ToggleRight className="w-7 h-7 text-forest-400" />
+                    : <ToggleLeft  className="w-7 h-7 text-forest-200/30" />}
+                  <span className="text-xs text-forest-200/50">{rider.availability ? "On" : "Off"}</span>
                 </button>
-                <button
-                  onClick={() => handleEdit(rider)}
-                  className="flex-1 flex items-center justify-center gap-2 px-4 py-2 text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors"
-                >
-                  <Edit className="w-4 h-4" />
-                  <span className="text-sm font-medium">Edit</span>
+              </div>
+
+              {/* Actions */}
+              <div className="flex gap-2">
+                <button onClick={() => openView(rider)} className="flex-1 glass hover:glass-green transition-all text-forest-200/80 text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1">
+                  <Eye className="w-3.5 h-3.5" /> View
                 </button>
-                <button
-                  onClick={() => handleDelete(rider)}
-                  className="px-4 py-2 text-red-600 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
+                <button onClick={() => openEdit(rider)} className="flex-1 glass hover:glass-green transition-all text-forest-200/80 text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1">
+                  <Edit className="w-3.5 h-3.5" /> Edit
+                </button>
+                <button onClick={() => openDelete(rider)} className="w-9 glass hover:bg-red-500/30 transition-all rounded-xl flex items-center justify-center">
+                  <Trash2 className="w-3.5 h-3.5 text-red-400" />
                 </button>
               </div>
             </div>
-          </Card>
-        ))}
-      </div>
-
-      {/* No Results */}
-      {filteredRiders.length === 0 && (
-        <Card className="text-center py-12">
-          <Bike className="w-16 h-16 text-secondary-300 mx-auto mb-4" />
-          <h3 className="text-xl font-bold text-secondary-900 mb-2">No riders found</h3>
-          <p className="text-secondary-600">Try adjusting your search or filters</p>
-        </Card>
+          ))}
+        </div>
       )}
 
       {/* View Modal */}
-      {showViewModal && selectedRider && (
-        <Modal onClose={() => setShowViewModal(false)}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-secondary-900">Rider Details</h2>
-              <button onClick={() => setShowViewModal(false)} className="p-2 hover:bg-secondary-100 rounded-lg">
-                <X className="w-5 h-5" />
+      {modal === "view" && selected && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm my-4">
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-white font-semibold">Rider Details</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
               </button>
             </div>
-            <div className="space-y-4">
-              <div className="flex items-center gap-4">
-                {selectedRider.image ? (
-                  <img src={selectedRider.image} alt={selectedRider.name} className="w-24 h-24 rounded-full object-cover shadow-lg" />
-                ) : (
-                  <div className="w-24 h-24 bg-gradient-to-br from-orange-500 to-orange-600 rounded-full flex items-center justify-center text-white font-bold text-3xl shadow-lg">
-                    {selectedRider.name.charAt(0)}
-                  </div>
-                )}
-                <div>
-                  <h3 className="text-xl font-bold">{selectedRider.name}</h3>
-                  <p className="text-secondary-600">{selectedRider.email}</p>
-                  <span className={`inline-block mt-2 px-3 py-1 rounded-full text-xs font-semibold ${getStatusColor(selectedRider.status)}`}>
-                    {selectedRider.status}
-                  </span>
-                </div>
-              </div>
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <p className="text-sm text-secondary-600">Rating</p>
-                  <p className="font-semibold">{selectedRider.rating} / 5.0</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Total Deliveries</p>
-                  <p className="font-semibold">{selectedRider.totalDeliveries}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Today's Deliveries</p>
-                  <p className="font-semibold">{selectedRider.completedToday}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Total Earnings</p>
-                  <p className="font-semibold">${selectedRider.earnings.toLocaleString()}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Phone</p>
-                  <p className="font-semibold">{selectedRider.phone}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Zone</p>
-                  <p className="font-semibold">{selectedRider.zone}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Vehicle</p>
-                  <p className="font-semibold capitalize">{selectedRider.vehicleType}</p>
-                </div>
-                <div>
-                  <p className="text-sm text-secondary-600">Vehicle Number</p>
-                  <p className="font-semibold">{selectedRider.vehicleNumber}</p>
-                </div>
+            <div className="flex items-center gap-3 mb-5">
+              {selected.image
+                ? <img src={selected.image} alt={selected.name} className="w-16 h-16 rounded-xl object-cover" />
+                : <div className="w-16 h-16 btn-glow-green rounded-xl flex items-center justify-center text-white font-bold text-2xl">{selected.name.charAt(0)}</div>}
+              <div>
+                <p className="text-white font-semibold">{selected.name}</p>
+                <p className="text-forest-200/50 text-xs">{selected.email}</p>
+                <span className={`text-xs px-2 py-0.5 rounded-full font-semibold mt-1 inline-block ${STATUS_CLS[selected.status]}`}>{selected.status}</span>
               </div>
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              {[
+                ["Rating",     `${selected.rating} / 5.0`],
+                ["Deliveries", selected.totalDeliveries],
+                ["Today",      selected.completedToday],
+                ["Earnings",   `$${selected.earnings?.toLocaleString()}`],
+                ["Phone",      selected.phone],
+                ["Zone",       selected.zone],
+                ["Vehicle",    selected.vehicleType],
+                ["Plate",      selected.vehicleNumber],
+              ].map(([label, value]) => (
+                <div key={label} className="glass rounded-xl px-3 py-2">
+                  <p className="text-forest-200/50 text-xs">{label}</p>
+                  <p className="text-white text-sm font-semibold capitalize">{value}</p>
+                </div>
+              ))}
+            </div>
           </div>
-        </Modal>
+        </div>
       )}
 
       {/* Edit Modal */}
-      {showEditModal && selectedRider && (
-        <Modal onClose={() => setShowEditModal(false)}>
-          <div className="p-6">
-            <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-secondary-900">Edit Rider</h2>
-              <button onClick={() => setShowEditModal(false)} className="p-2 hover:bg-secondary-100 rounded-lg">
-                <X className="w-5 h-5" />
+      {modal === "edit" && selected && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm my-4">
+            <div className="flex items-center justify-between mb-5">
+              <p className="text-white font-semibold">Edit Rider</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
               </button>
             </div>
-            <form className="space-y-4">
+            <form className="space-y-3" onSubmit={e => { e.preventDefault(); close(); }}>
+              {[
+                { label:"Name",  key:"name",  type:"text" },
+                { label:"Email", key:"email", type:"email" },
+                { label:"Phone", key:"phone", type:"tel" },
+              ].map(({ label, key, type }) => (
+                <div key={key}>
+                  <label className="block text-forest-200/60 text-xs font-medium mb-1">{label}</label>
+                  <input type={type} defaultValue={selected[key]} className="w-full input-glass py-2.5 text-sm" />
+                </div>
+              ))}
               <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-1">Rider Name</label>
-                <input
-                  type="text"
-                  defaultValue={selectedRider.name}
-                  className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-1">Email</label>
-                <input
-                  type="email"
-                  defaultValue={selectedRider.email}
-                  className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-1">Phone</label>
-                <input
-                  type="tel"
-                  defaultValue={selectedRider.phone}
-                  className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                />
-              </div>
-              <div>
-                <label className="block text-sm font-medium text-secondary-700 mb-1">Zone</label>
-                <select
-                  defaultValue={selectedRider.zone}
-                  className="w-full px-4 py-2 border border-secondary-300 rounded-lg focus:ring-2 focus:ring-primary-500"
-                >
-                  {zones.filter(z => z !== 'all').map(zone => (
-                    <option key={zone} value={zone}>{zone}</option>
-                  ))}
+                <label className="block text-forest-200/60 text-xs font-medium mb-1">Zone</label>
+                <select defaultValue={selected.zone} className="w-full input-glass py-2.5 text-sm">
+                  {zones.filter(z => z !== "all").map(z => <option key={z} value={z} style={{ background:"#0d2b1a" }}>{z}</option>)}
                 </select>
               </div>
-              <div className="flex gap-4">
-                <Button type="button" variant="outline" onClick={() => setShowEditModal(false)}>
-                  Cancel
-                </Button>
-                <Button type="submit" variant="primary">
-                  Save Changes
-                </Button>
+              <div className="flex gap-2 pt-2">
+                <button type="button" onClick={close} className="flex-1 glass hover:glass-green transition-all text-forest-200 text-sm font-medium py-2.5 rounded-xl">Cancel</button>
+                <button type="submit" className="flex-1 btn-glow-green text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
+                  <Check className="w-4 h-4" /> Save Changes
+                </button>
               </div>
             </form>
           </div>
-        </Modal>
+        </div>
       )}
 
       {/* Delete Modal */}
-      {showDeleteModal && selectedRider && (
-        <Modal onClose={() => setShowDeleteModal(false)}>
-          <div className="p-6">
+      {modal === "delete" && selected && (
+        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="glass rounded-3xl p-6 w-full max-w-sm">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-2xl font-bold text-red-600">Delete Rider</h2>
-              <button onClick={() => setShowDeleteModal(false)} className="p-2 hover:bg-secondary-100 rounded-lg">
-                <X className="w-5 h-5" />
+              <p className="text-white font-semibold">Delete Rider</p>
+              <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
+                <X className="w-4 h-4 text-forest-200" />
               </button>
             </div>
-            <p className="text-secondary-600 mb-6">
-              Are you sure you want to delete <strong>{selectedRider.name}</strong>? This action cannot be undone.
-            </p>
-            <div className="flex gap-4">
-              <Button variant="outline" onClick={() => setShowDeleteModal(false)}>
-                Cancel
-              </Button>
-              <Button variant="primary" onClick={confirmDelete} className="bg-red-600 hover:bg-red-700">
-                Delete
-              </Button>
+            <div className="glass rounded-xl p-3 mb-4 bg-red-500/10">
+              <p className="text-red-300 text-sm">Delete <strong>{selected.name}</strong>? This action cannot be undone.</p>
+            </div>
+            <div className="flex gap-2">
+              <button onClick={close} className="flex-1 glass hover:glass-green transition-all text-forest-200 text-sm font-medium py-2.5 rounded-xl">Cancel</button>
+              <button onClick={confirmDelete} className="flex-1 bg-red-500/80 hover:bg-red-500 text-white text-sm font-semibold py-2.5 rounded-xl transition-all">Delete</button>
             </div>
           </div>
-        </Modal>
+        </div>
       )}
     </div>
   );
