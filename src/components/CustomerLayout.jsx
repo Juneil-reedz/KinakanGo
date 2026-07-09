@@ -1,12 +1,13 @@
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useNotification } from '../context/NotificationContext';
 import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
-  Crown, Utensils, Star, Zap, User
+  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2
 } from 'lucide-react';
 
 const NAV = [
@@ -23,9 +24,18 @@ export default function CustomerLayout() {
   const location = useLocation();
   const { user } = useAuth();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
-  const [collapsed, setCollapsed] = useState(false);
-  const [mobileOpen, setMobileOpen] = useState(false);
+  const { notifications, unreadCount, markAllRead, clearAll } = useNotification();
+  const [collapsed, setCollapsed]     = useState(false);
+  const [mobileOpen, setMobileOpen]   = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
+  const [bellOpen, setBellOpen]       = useState(false);
+  const bellRef                        = useRef(null);
+
+  useEffect(() => {
+    const handler = (e) => { if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false); };
+    document.addEventListener('mousedown', handler);
+    return () => document.removeEventListener('mousedown', handler);
+  }, []);
 
   const getActive = () => {
     const p = location.pathname;
@@ -174,10 +184,67 @@ export default function CustomerLayout() {
                   </span>
                 )}
               </button>
-              <button className="relative w-9 h-9 glass rounded-xl hidden xs:flex items-center justify-center text-forest-100 hover:glass-green transition-all">
-                <Bell className="w-5 h-5" />
-                <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-400 rounded-full" />
-              </button>
+              <div ref={bellRef} className="relative hidden xs:block">
+                <button
+                  onClick={() => { setBellOpen(o => !o); if (!bellOpen) markAllRead(); }}
+                  className="relative w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
+                  <Bell className="w-5 h-5" />
+                  {unreadCount > 0 && (
+                    <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                      {unreadCount > 9 ? '9+' : unreadCount}
+                    </span>
+                  )}
+                </button>
+
+                {bellOpen && (
+                  <div className="absolute right-0 top-11 w-80 glass rounded-2xl shadow-2xl z-50 overflow-hidden"
+                    style={{ boxShadow: '0 24px 48px rgba(0,0,0,.5)' }}>
+                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+                      <p className="text-white font-semibold text-sm">Notifications</p>
+                      <div className="flex gap-2">
+                        {notifications.length > 0 && (
+                          <>
+                            <button onClick={markAllRead} title="Mark all read"
+                              className="text-forest-300/60 hover:text-forest-200 transition-colors">
+                              <CheckCheck className="w-4 h-4" />
+                            </button>
+                            <button onClick={clearAll} title="Clear all"
+                              className="text-forest-300/60 hover:text-red-400 transition-colors">
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </>
+                        )}
+                      </div>
+                    </div>
+
+                    <div className="max-h-72 overflow-y-auto scrollbar-hide">
+                      {notifications.length === 0 ? (
+                        <div className="flex flex-col items-center gap-2 py-10 text-center">
+                          <Bell className="w-8 h-8 text-forest-300/20" />
+                          <p className="text-forest-200/50 text-sm">No notifications yet</p>
+                        </div>
+                      ) : (
+                        notifications.map(n => (
+                          <div key={n.id}
+                            className={`px-4 py-3 border-b border-white/5 flex items-start gap-3 ${!n.read ? 'bg-white/5' : ''}`}>
+                            <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                              n.type === 'success' ? 'bg-forest-400' :
+                              n.type === 'error'   ? 'bg-red-400' :
+                              n.type === 'warning' ? 'bg-ember-400' : 'bg-forest-300/50'
+                            }`} />
+                            <div className="flex-1 min-w-0">
+                              <p className="text-white text-xs leading-relaxed">{n.message}</p>
+                              <p className="text-forest-200/40 text-[10px] mt-0.5">
+                                {new Date(n.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                              </p>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
               <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })}
                 className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all flex items-center justify-center glass-dark">
                 {user?.avatar
