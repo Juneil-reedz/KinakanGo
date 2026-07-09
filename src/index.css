@@ -1,31 +1,36 @@
 @import "tailwindcss";
 
 @theme {
-  /* Forest Green Palette */
-  --color-forest-950: #030f07;
-  --color-forest-900: #071a0e;
-  --color-forest-800: #0d2b1a;
-  --color-forest-700: #133d25;
-  --color-forest-600: #1a5233;
-  --color-forest-500: #216640;
-  --color-forest-400: #2d8a57;
-  --color-forest-300: #3db870;
-  --color-forest-200: #6de09a;
-  --color-forest-100: #a8f0c0;
-  --color-forest-50:  #e4fded;
+  /* Forest Green Palette — Tawi-Tawi Flag Green #005E1A */
+  --color-forest-950: #010e05;
+  --color-forest-900: #021a09;
+  --color-forest-800: #042d10;
+  --color-forest-700: #074219;
+  --color-forest-600: #005e1a;
+  --color-forest-500: #007b23;
+  --color-forest-400: #009b2e;
+  --color-forest-300: #2eba57;
+  --color-forest-200: #70d988;
+  --color-forest-100: #b0efbe;
+  --color-forest-50:  #e5f9ea;
 
-  /* Ember Orange Palette */
-  --color-ember-950: #300a00;
-  --color-ember-900: #7c1d00;
-  --color-ember-800: #a32900;
-  --color-ember-700: #c83800;
-  --color-ember-600: #e84e00;
-  --color-ember-500: #f97316;
-  --color-ember-400: #fb923c;
-  --color-ember-300: #fdba74;
-  --color-ember-200: #fed7aa;
-  --color-ember-100: #ffedd5;
-  --color-ember-50:  #fff7ed;
+  /* Ember / Gold Palette — Tawi-Tawi Flag Gold #FFC343 */
+  --color-ember-950: #3a1c00;
+  --color-ember-900: #6b3500;
+  --color-ember-800: #924c00;
+  --color-ember-700: #b86200;
+  --color-ember-600: #d97d00;
+  --color-ember-500: #f59d00;
+  --color-ember-400: #ffc343;
+  --color-ember-300: #ffd47c;
+  --color-ember-200: #ffe4a8;
+  --color-ember-100: #fff0d4;
+  --color-ember-50:  #fffaee;
+
+  /* Tawi-Tawi Teal #07ACA2 */
+  --color-tawi-teal: #07aca2;
+  /* Tawi-Tawi Blue #2E28A6 */
+  --color-tawi-blue: #2e28a6;
 
   /* Breakpoints */
   --breakpoint-xs: 20rem;
@@ -73,9 +78,10 @@
     margin: 0;
     font-family: var(--font-sans);
     font-size: var(--font-size-base);
-    background: radial-gradient(ellipse at 10% 0%,  rgba(45,138,87,.25) 0%, transparent 55%),
-                radial-gradient(ellipse at 90% 100%, rgba(249,115,22,.15) 0%, transparent 55%),
-                linear-gradient(160deg, #071a0e 0%, #030f07 60%, #0d1a0a 100%);
+    background: radial-gradient(ellipse at 10% 0%,  rgba(0,94,26,.30) 0%, transparent 55%),
+                radial-gradient(ellipse at 90% 100%, rgba(46,40,166,.20) 0%, transparent 55%),
+                radial-gradient(ellipse at 50% 50%,  rgba(7,172,162,.08) 0%, transparent 60%),
+                linear-gradient(160deg, #021a09 0%, #010e05 60%, #050418 100%);
     background-attachment: fixed;
     color: #e8f5ee;
     overflow-x: hidden;
@@ -99,22 +105,34 @@
     border: 1px solid rgba(255, 255, 255, 0.12);
   }
   .glass-green {
-    background: rgba(45, 138, 87, 0.15);
+    background: rgba(0, 94, 26, 0.18);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(109, 224, 154, 0.2);
+    border: 1px solid rgba(46, 186, 87, 0.22);
   }
   .glass-orange {
-    background: rgba(249, 115, 22, 0.15);
+    background: rgba(255, 195, 67, 0.14);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(251, 146, 60, 0.25);
+    border: 1px solid rgba(255, 195, 67, 0.28);
   }
   .glass-dark {
-    background: rgba(7, 26, 14, 0.6);
+    background: rgba(1, 14, 5, 0.65);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
     border: 1px solid rgba(255, 255, 255, 0.08);
+  }
+  .glass-teal {
+    background: rgba(7, 172, 162, 0.14);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(7, 172, 162, 0.25);
+  }
+  .glass-blue {
+    background: rgba(46, 40, 166, 0.18);
+    backdrop-filter: blur(20px) saturate(160%);
+    -webkit-backdrop-filter: blur(20px) saturate(160%);
+    border: 1px solid rgba(46, 40, 166, 0.30);
   }
 
   /* 3-D lift card */
@@ -134,35 +152,47 @@
       0 2px 4px rgba(0,0,0,.3),
       0 8px 20px rgba(0,0,0,.35),
       0 24px 48px rgba(0,0,0,.3),
-      0 0 40px rgba(45,138,87,.12),
+      0 0 40px rgba(0,94,26,.15),
       0 0 0 1px rgba(255,255,255,.1) inset;
   }
 
   /* Glow button */
   .btn-glow-green {
-    background: linear-gradient(135deg, #2d8a57 0%, #216640 100%);
-    box-shadow: 0 4px 15px rgba(45,138,87,.5), 0 0 0 1px rgba(109,224,154,.2) inset;
+    background: linear-gradient(135deg, #009b2e 0%, #005e1a 100%);
+    box-shadow: 0 4px 15px rgba(0,94,26,.55), 0 0 0 1px rgba(46,186,87,.25) inset;
     transition: all .25s ease;
   }
   .btn-glow-green:hover {
-    background: linear-gradient(135deg, #3db870 0%, #2d8a57 100%);
-    box-shadow: 0 6px 24px rgba(45,138,87,.7), 0 0 20px rgba(45,138,87,.3);
+    background: linear-gradient(135deg, #2eba57 0%, #009b2e 100%);
+    box-shadow: 0 6px 24px rgba(0,94,26,.75), 0 0 20px rgba(0,94,26,.35);
     transform: translateY(-2px);
   }
   .btn-glow-orange {
-    background: linear-gradient(135deg, #f97316 0%, #e84e00 100%);
-    box-shadow: 0 4px 15px rgba(249,115,22,.5), 0 0 0 1px rgba(253,186,116,.2) inset;
+    background: linear-gradient(135deg, #ffc343 0%, #d97d00 100%);
+    box-shadow: 0 4px 15px rgba(255,195,67,.45), 0 0 0 1px rgba(255,212,124,.25) inset;
     transition: all .25s ease;
+    color: #1a0d00;
   }
   .btn-glow-orange:hover {
-    background: linear-gradient(135deg, #fb923c 0%, #f97316 100%);
-    box-shadow: 0 6px 24px rgba(249,115,22,.7), 0 0 20px rgba(249,115,22,.3);
+    background: linear-gradient(135deg, #ffd47c 0%, #ffc343 100%);
+    box-shadow: 0 6px 24px rgba(255,195,67,.65), 0 0 20px rgba(255,195,67,.35);
+    transform: translateY(-2px);
+  }
+  .btn-glow-teal {
+    background: linear-gradient(135deg, #07aca2 0%, #057a73 100%);
+    box-shadow: 0 4px 15px rgba(7,172,162,.45), 0 0 0 1px rgba(7,172,162,.25) inset;
+    transition: all .25s ease;
+  }
+  .btn-glow-teal:hover {
+    background: linear-gradient(135deg, #09cfc4 0%, #07aca2 100%);
+    box-shadow: 0 6px 24px rgba(7,172,162,.65), 0 0 20px rgba(7,172,162,.35);
     transform: translateY(-2px);
   }
 
   /* Neon text glow */
-  .text-glow-green { text-shadow: 0 0 20px rgba(109,224,154,.6), 0 0 40px rgba(45,138,87,.4); }
-  .text-glow-orange { text-shadow: 0 0 20px rgba(253,186,116,.6), 0 0 40px rgba(249,115,22,.4); }
+  .text-glow-green  { text-shadow: 0 0 20px rgba(46,186,87,.65),   0 0 40px rgba(0,94,26,.45); }
+  .text-glow-orange { text-shadow: 0 0 20px rgba(255,212,124,.65), 0 0 40px rgba(255,195,67,.45); }
+  .text-glow-teal   { text-shadow: 0 0 20px rgba(7,172,162,.65),   0 0 40px rgba(7,172,162,.35); }
 
   /* Ambient orb */
   .orb {
@@ -187,8 +217,9 @@
     transform: translateY(-4px) scale(1.05);
   }
   .category-pill.active {
-    background: linear-gradient(135deg, #f97316 0%, #e84e00 100%);
-    box-shadow: 0 4px 20px rgba(249,115,22,.5);
+    background: linear-gradient(135deg, #ffc343 0%, #d97d00 100%);
+    box-shadow: 0 4px 20px rgba(255,195,67,.5);
+    color: #1a0d00;
   }
 
   /* Restaurant card */
@@ -210,11 +241,11 @@
     color: #e8f5ee;
     transition: border-color .2s, box-shadow .2s;
   }
-  .input-glass::placeholder { color: rgba(168,240,192,.45); }
+  .input-glass::placeholder { color: rgba(176,239,190,.40); }
   .input-glass:focus {
     outline: none;
-    border-color: rgba(109,224,154,.5);
-    box-shadow: 0 0 0 3px rgba(45,138,87,.2), 0 0 20px rgba(45,138,87,.1);
+    border-color: rgba(46,186,87,.5);
+    box-shadow: 0 0 0 3px rgba(0,94,26,.22), 0 0 20px rgba(0,94,26,.12);
   }
 
   /* Scrollbar utility */
@@ -259,7 +290,7 @@
   .animate-spin-slow    { animation: spin-slow 12s linear infinite; }
   .animate-breathe      { animation: breathe 4s ease-in-out infinite; }
   .animate-shimmer {
-    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.08) 50%, transparent 100%);
+    background: linear-gradient(90deg, transparent 0%, rgba(255,255,255,.07) 50%, transparent 100%);
     background-size: 400px 100%;
     animation: shimmer 2s infinite;
   }
