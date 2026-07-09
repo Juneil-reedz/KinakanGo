@@ -178,7 +178,7 @@ export default function CustomerLayout() {
                 <Bell className="w-5 h-5" />
                 <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-400 rounded-full" />
               </button>
-              <button onClick={() => navigate('/profile')}
+              <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })}
                 className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all flex items-center justify-center glass-dark">
                 {user?.avatar
                   ? <img src={user.avatar} alt="user" className="w-full h-full object-cover" />

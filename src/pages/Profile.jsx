@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
@@ -20,11 +20,16 @@ const QUICK_ACTIONS = [
 
 export default function Profile() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { user, logout, updateUser } = useAuth();
   const { addToCart, clearCart }     = useCart();
   const { addNotification }          = useNotification();
 
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState(location.state?.tab || 'profile');
+
+  useEffect(() => {
+    if (location.state?.tab) setActiveTab(location.state.tab);
+  }, [location.state]);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm]           = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [orders, setOrders]       = useState([]);
