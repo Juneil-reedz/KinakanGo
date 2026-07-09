@@ -26,6 +26,7 @@ import Profile from './pages/Profile';
 import Login from './pages/Login';
 import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
+import ResetPassword from './pages/ResetPassword';
 import Welcome from './pages/Welcome';
 import Favorites from './pages/Favorites';
 import Messages from './pages/Messages';
@@ -69,6 +70,7 @@ function App() {
                   <Route path="/login" element={<Login />} />
                   <Route path="/register" element={<Register />} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
+                  <Route path="/reset-password" element={<ResetPassword />} />
 
                   {/* Cart Route (No Header/Footer/BottomNav) */}
                   <Route path="/cart" element={<Cart />} />

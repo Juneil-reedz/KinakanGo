@@ -23,8 +23,10 @@ router.post('/login',
   ctrl.login
 );
 
-router.post('/refresh', ctrl.refresh);
-router.post('/logout',  ctrl.logout);
-router.get('/me', authenticate, ctrl.me);
+router.post('/refresh',         ctrl.refresh);
+router.post('/logout',          ctrl.logout);
+router.get('/me',               authenticate, ctrl.me);
+router.post('/forgot-password', ctrl.forgotPassword);
+router.post('/reset-password',  ctrl.resetPassword);
 
 module.exports = router;

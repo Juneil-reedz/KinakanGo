@@ -1,6 +1,10 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
+const crypto = require('crypto');
+const { Resend } = require('resend');
 const pool   = require('../config/db');
+
+const resend = new Resend(process.env.RESEND_API_KEY);
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL = '7d';
@@ -110,4 +114,65 @@ async function me(req, res) {
   res.json(rows[0]);
 }
 
-module.exports = { register, login, refresh, logout, me };
+async function forgotPassword(req, res) {
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  const { rows } = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
+  // Always return success to prevent email enumeration
+  if (!rows.length) return res.json({ message: 'If that email exists, a reset link was sent.' });
+
+  const user  = rows[0];
+  const token = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+
+  await pool.query(
+    'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
+    [user.id, token, expires]
+  );
+
+  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
+
+  await resend.emails.send({
+    from: 'KinakanGo <onboarding@resend.dev>',
+    to: email,
+    subject: 'Reset your KinakanGo password',
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
+        <h2 style="color:#1a1a1a">Reset your password</h2>
+        <p>Hi ${user.name},</p>
+        <p>Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
+        <a href="${resetUrl}"
+           style="display:inline-block;margin:16px 0;padding:12px 24px;background:#e8540a;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">
+          Reset Password
+        </a>
+        <p style="color:#666;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
+      </div>
+    `,
+  });
+
+  res.json({ message: 'If that email exists, a reset link was sent.' });
+}
+
+async function resetPassword(req, res) {
+  const { token, password } = req.body;
+  if (!token || !password) return res.status(400).json({ error: 'Token and password are required' });
+  if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  const { rows } = await pool.query(
+    'SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW() AND used = false',
+    [token]
+  );
+  if (!rows.length) return res.status(400).json({ error: 'Reset link is invalid or has expired' });
+
+  const resetRow = rows[0];
+  const hash = await bcrypt.hash(password, 12);
+
+  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, resetRow.user_id]);
+  await pool.query('UPDATE password_reset_tokens SET used = true WHERE id = $1', [resetRow.id]);
+  await pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [resetRow.user_id]);
+
+  res.json({ message: 'Password reset successfully. Please log in.' });
+}
+
+module.exports = { register, login, refresh, logout, me, forgotPassword, resetPassword };

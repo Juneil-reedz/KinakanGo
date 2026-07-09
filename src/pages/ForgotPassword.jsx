@@ -2,24 +2,30 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { Mail, ArrowLeft, Utensils, ChevronRight, Check } from 'lucide-react';
+import { authApi } from '../services/api';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
-  const [email, setEmail]       = useState('');
-  const [error, setError]       = useState('');
-  const [loading, setLoading]   = useState(false);
-  const [sent, setSent]         = useState(false);
+  const [email, setEmail]     = useState('');
+  const [error, setError]     = useState('');
+  const [loading, setLoading] = useState(false);
+  const [sent, setSent]       = useState(false);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!email.trim()) { setError('Email is required'); return; }
     if (!/\S+@\S+\.\S+/.test(email)) { setError('Invalid email address'); return; }
     setLoading(true);
-    await new Promise(r => setTimeout(r, 1500));
-    setLoading(false);
-    setSent(true);
-    addNotification('Password reset link sent!', 'success');
+    try {
+      await authApi.forgotPassword(email);
+      setSent(true);
+      addNotification('Reset link sent!', 'success');
+    } catch (err) {
+      setError(err?.data?.error || err?.message || 'Something went wrong. Try again.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
@@ -40,9 +46,9 @@ export default function ForgotPassword() {
                 <Check className="w-8 h-8 text-white" />
               </div>
               <h2 className="text-xl font-heading font-bold text-white mb-2">Check Your Email</h2>
-              <p className="text-forest-200/60 text-sm mb-2">We've sent a reset link to:</p>
+              <p className="text-forest-200/60 text-sm mb-2">We sent a reset link to:</p>
               <p className="text-ember-400 font-semibold mb-5">{email}</p>
-              <p className="text-forest-200/50 text-xs mb-8">The link expires in 24 hours.</p>
+              <p className="text-forest-200/50 text-xs mb-8">The link expires in 1 hour.</p>
               <div className="space-y-3">
                 <button onClick={() => navigate('/login')} className="w-full btn-glow-orange text-white font-bold py-3.5 rounded-xl">
                   Back to Login
