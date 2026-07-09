@@ -297,16 +297,28 @@ export default function CustomerLayout() {
           <div className="p-5 flex flex-col gap-5">
 
             {/* Address */}
-            <div className="glass rounded-2xl p-4">
-              <div className="flex items-center justify-between mb-2">
-                <p className="text-white text-sm font-semibold">Delivery Address</p>
-                <button className="text-ember-400 text-xs font-medium hover:text-ember-300">Change</button>
-              </div>
-              <div className="flex items-start gap-2">
-                <MapPin className="w-4 h-4 text-forest-300 mt-0.5 flex-shrink-0" />
-                <p className="text-forest-100/70 text-xs">Elm Street, 23</p>
-              </div>
-            </div>
+            {(() => {
+              const defaultAddr = (user?.addresses || []).find(a => a.isDefault) || (user?.addresses || [])[0];
+              return (
+                <div className="glass rounded-2xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <p className="text-white text-sm font-semibold">Delivery Address</p>
+                    <button
+                      onClick={() => { navigate('/addresses'); setMobileOpen(false); }}
+                      className="text-ember-400 text-xs font-medium hover:text-ember-300 transition-colors">
+                      {defaultAddr ? 'Change' : 'Add Address'}
+                    </button>
+                  </div>
+                  <div className="flex items-start gap-2">
+                    <MapPin className="w-4 h-4 text-forest-300 mt-0.5 flex-shrink-0" />
+                    {defaultAddr
+                      ? <p className="text-forest-100/70 text-xs">{defaultAddr.label ? `${defaultAddr.label} — ` : ''}{defaultAddr.address || defaultAddr.street || 'No address set'}</p>
+                      : <p className="text-forest-100/40 text-xs italic">No delivery address set</p>
+                    }
+                  </div>
+                </div>
+              );
+            })()}
 
             {/* Cart items */}
             <div>
