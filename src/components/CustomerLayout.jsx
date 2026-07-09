@@ -94,26 +94,6 @@ export default function CustomerLayout() {
           </button>
         </div>
 
-        {/* User chip */}
-        {!collapsed && (
-          <div className="mx-4 mb-4 p-3 glass-green rounded-2xl flex items-center gap-3">
-            <div className="relative">
-              <div className="w-9 h-9 rounded-full overflow-hidden border-2 border-forest-300/40 flex items-center justify-center glass-dark">
-                {user?.avatar
-                  ? <img src={user.avatar} alt="user" className="w-full h-full object-cover" />
-                  : <User className="w-5 h-5 text-forest-300/70" />
-                }
-              </div>
-              <div className="absolute -bottom-0.5 -right-0.5 w-3 h-3 bg-forest-300 rounded-full border-2 border-forest-900" />
-            </div>
-            <div className="min-w-0 flex-1">
-              <p className="text-white font-semibold text-sm truncate">{user?.name || 'Patricia'}</p>
-              <p className="text-forest-200 text-xs truncate flex items-center gap-1">
-                <Crown className="w-3 h-3 text-ember-300" /> Premium
-              </p>
-            </div>
-          </div>
-        )}
 
         {/* Nav items */}
         <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide space-y-1">
