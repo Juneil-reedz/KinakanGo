@@ -29,6 +29,7 @@ import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Welcome from './pages/Welcome';
 import Favorites from './pages/Favorites';
+import Addresses from './pages/Addresses';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import CustomerService from './pages/CustomerService';
@@ -92,6 +93,7 @@ function App() {
                     <Route path="orders" element={<OrderTracking />} />
                     <Route path="profile" element={<Profile />} />
                     <Route path="favorites" element={<Favorites />} />
+                    <Route path="addresses" element={<Addresses />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="customer-service" element={<CustomerService />} />
