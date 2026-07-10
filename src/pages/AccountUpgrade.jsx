@@ -185,8 +185,8 @@ export default function AccountUpgrade() {
     }
   };
 
-  /* ── Already has a role — skip straight to dashboard ── */
-  if (user?.role === 'restaurant_owner') {
+  /* ── Already has capabilities — skip straight to dashboard ── */
+  if (user?.has_restaurant) {
     return (
       <div className="space-y-4 animate-fade-up">
         <h1 className="text-2xl font-heading font-bold text-white">Restaurant Dashboard</h1>
@@ -215,7 +215,7 @@ export default function AccountUpgrade() {
     );
   }
 
-  if (user?.role === 'rider') {
+  if (user?.has_rider_profile) {
     return (
       <div className="space-y-4 animate-fade-up">
         <h1 className="text-2xl font-heading font-bold text-white">Rider Dashboard</h1>

@@ -144,7 +144,7 @@ export default function CustomerLayout() {
         {/* Upgrade / Dashboard card */}
         {!collapsed && (
           <div className="p-4">
-            {user?.role === 'restaurant_owner' ? (
+            {user?.has_restaurant ? (
               <div className="glass-green rounded-2xl p-4 relative overflow-hidden">
                 <div className="orb w-24 h-24 bg-forest-400/20 -top-4 -right-4" />
                 <Store className="w-6 h-6 text-forest-300 mb-2" />
@@ -156,7 +156,7 @@ export default function CustomerLayout() {
                   {dashLoading ? 'Opening...' : 'Open Dashboard'}
                 </button>
               </div>
-            ) : user?.role === 'rider' ? (
+            ) : user?.has_rider_profile ? (
               <div className="glass-teal rounded-2xl p-4 relative overflow-hidden">
                 <div className="orb w-24 h-24 bg-tawi-teal/20 -top-4 -right-4" />
                 <Bike className="w-6 h-6 text-teal-300 mb-2" />

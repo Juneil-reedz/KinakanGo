@@ -33,12 +33,10 @@ export function RestaurantProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await authApi.login(email, password);
-    if (res.user.role !== 'restaurant_owner') {
-      throw new Error('Not a restaurant owner account');
-    }
+    if (res.user.role === 'admin') throw new Error('Use the admin panel to log in as admin');
     storage.setTokens(res.accessToken, res.refreshToken);
-    // Fetch the restaurant profile after login
     const restaurantData = await restaurantsApi.myRestaurant();
+    if (!restaurantData) throw new Error('No restaurant found for this account');
     persist(restaurantData);
     return { success: true, restaurant: restaurantData };
   };

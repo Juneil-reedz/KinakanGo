@@ -76,7 +76,8 @@ async function approveRequest(req, res) {
       [admin_note || null, req.user.id, id]
     );
 
-    await client.query(`UPDATE users SET role=$1 WHERE id=$2`, [role, upgradeReq.user_id]);
+    // Do NOT change the user's primary role — access is determined by
+    // owning a restaurant or rider_profile, not by role field.
 
     // Create starter restaurant only for restaurant_owner applicants
     if (role === 'restaurant_owner') {

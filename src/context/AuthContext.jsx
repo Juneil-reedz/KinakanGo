@@ -13,13 +13,22 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage, then refresh capabilities from server
   useEffect(() => {
     const saved = localStorage.getItem('kkg_user');
     if (saved && storage.getAccess()) {
-      setUser(JSON.parse(saved));
+      const cached = JSON.parse(saved);
+      setUser(cached);
+      // Refresh has_restaurant / has_rider_profile in background
+      authApi.me()
+        .then(fresh => {
+          if (fresh) persist({ ...cached, ...fresh });
+        })
+        .catch(() => {})
+        .finally(() => setLoading(false));
+    } else {
+      setLoading(false);
     }
-    setLoading(false);
   }, []);
 
   const persist = (u) => {
