@@ -92,7 +92,8 @@ export default function RestaurantMenu() {
   const f = (k, v) => setForm(p => ({ ...p, [k]:v }));
 
   const filtered = items.filter(i => {
-    const matchCat = cat === 'all' || i.category === cat;
+    const itemCat = i.category_name || i.category || '';
+    const matchCat = cat === 'all' || itemCat.toLowerCase() === cat.toLowerCase();
     const matchQ   = !search || (i.name||'').toLowerCase().includes(search.toLowerCase());
     return matchCat && matchQ;
   });
@@ -119,11 +120,14 @@ export default function RestaurantMenu() {
     try {
       if (modal === 'add') {
         const created = await menuApi.create(restaurantId, payload);
-        setItems(prev => [...prev, created]);
+        // Backend returns full row; fall back to payload fields if needed
+        setItems(prev => [...prev, { ...payload, image_url: payload.image, is_vegetarian: payload.isVegetarian, prep_time_mins: payload.prepTimeMins, is_available: true, ...created }]);
         addNotification(`${form.name} added!`, 'success');
       } else {
         const updated = await menuApi.update(restaurantId, editItem.id, payload);
-        setItems(prev => prev.map(i => i.id === editItem.id ? { ...i, ...payload, ...(updated||{}) } : i));
+        setItems(prev => prev.map(i => i.id === editItem.id
+          ? { ...i, ...payload, image_url: payload.image ?? i.image_url, is_vegetarian: payload.isVegetarian, prep_time_mins: payload.prepTimeMins, ...(updated || {}) }
+          : i));
         addNotification('Item updated!', 'success');
       }
       closeModal();

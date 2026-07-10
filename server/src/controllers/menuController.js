@@ -61,11 +61,13 @@ async function createItem(req, res) {
   const { rows } = await pool.query(
     `INSERT INTO menu_items
        (restaurant_id, category_id, name, description, price, image_url, is_vegetarian, prep_time_mins)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8) RETURNING id`,
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+     RETURNING *`,
     [req.params.restaurantId, catId, name, description || null,
      price, imgUrl, isVegetarian || false, prepTimeMins || 15]
   );
-  res.status(201).json({ id: rows[0].id });
+  // Attach category name so frontend can display it immediately
+  res.status(201).json({ ...rows[0], category_name: category || null });
 }
 
 async function updateItem(req, res) {
@@ -90,7 +92,7 @@ async function updateItem(req, res) {
     }
   }
 
-  await pool.query(
+  const { rows } = await pool.query(
     `UPDATE menu_items SET
        name           = COALESCE($1, name),
        description    = COALESCE($2, description),
@@ -100,12 +102,13 @@ async function updateItem(req, res) {
        is_vegetarian  = COALESCE($6, is_vegetarian),
        prep_time_mins = COALESCE($7, prep_time_mins),
        is_available   = COALESCE($8, is_available)
-     WHERE id = $9 AND restaurant_id = $10`,
+     WHERE id = $9 AND restaurant_id = $10
+     RETURNING *`,
     [name ?? null, description ?? null, price ?? null, imgUrl ?? null, catId,
      isVegetarian ?? null, prepTimeMins ?? null, isAvailable ?? null,
      req.params.itemId, req.params.restaurantId]
   );
-  res.json({ message: 'Updated' });
+  res.json({ ...rows[0], category_name: category || null });
 }
 
 async function deleteItem(req, res) {
