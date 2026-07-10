@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import { LayoutDashboard, Users, Store, Bike, AlertTriangle, Ticket, LogOut, Shield, Bell, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
@@ -14,13 +14,25 @@ const NAV = [
 ];
 
 export default function AdminLayout({ children }) {
-  const { admin, logout } = useAdmin();
+  const { admin, isLoading, logout } = useAdmin();
   const location = useLocation();
   const navigate  = useNavigate();
   const [collapsed, setCollapsed] = useState(false);
 
+  useEffect(() => {
+    if (!isLoading && !admin) navigate('/admin/login', { replace: true });
+  }, [admin, isLoading, navigate]);
+
   const isActive = (p) => location.pathname === p;
   const handleLogout = () => { logout(); navigate('/admin/login'); };
+
+  if (isLoading || !admin) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-2 border-forest-400/30 border-t-forest-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">
