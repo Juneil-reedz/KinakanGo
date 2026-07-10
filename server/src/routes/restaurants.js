@@ -4,14 +4,16 @@ const menu   = require('../controllers/menuController');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 // Public
-router.get('/',    ctrl.list);
-router.get('/:id', ctrl.getOne);
+router.get('/', ctrl.list);
 router.get('/:restaurantId/menu', menu.listItems);
 
-// Restaurant owner
+// /owner/me must be before /:id or Express matches id="owner"
+router.get('/owner/me', authenticate, ctrl.myRestaurant);
+
+// Public catch-all by id
+router.get('/:id', ctrl.getOne);
+
 router.use(authenticate);
-// /owner/me: any authenticated user — controller filters by owner_id so only the actual owner gets data
-router.get('/owner/me', ctrl.myRestaurant);
 router.post('/',        requireRole('restaurant_owner', 'admin'), ctrl.create);
 router.patch('/:id',    requireRole('restaurant_owner', 'admin'), ctrl.update);
 router.delete('/:id',   requireRole('admin'), ctrl.remove);
