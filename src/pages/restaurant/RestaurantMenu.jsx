@@ -3,7 +3,21 @@ import { createPortal } from 'react-dom';
 import { useNotification } from '../../context/NotificationContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { menuApi } from '../../services/api';
-import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check } from 'lucide-react';
+import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check, ImagePlus } from 'lucide-react';
+
+function pickImage(onPick) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => onPick(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
 
 const CATEGORIES = [
   { id:'pizza',     name:'Pizza'    },
@@ -226,15 +240,37 @@ export default function RestaurantMenu() {
                 { label:'Item Name',       key:'name',     type:'text',   placeholder:'e.g., Margherita Pizza' },
                 { label:'Price (₱)',       key:'price',    type:'number', placeholder:'0.00' },
                 { label:'Prep Time (min)', key:'prepTime', type:'number', placeholder:'20' },
-                { label:'Image URL',       key:'image',    type:'url',    placeholder:'https://…' },
               ].map(({ label, key, type, placeholder }) => (
                 <div key={key}>
                   <label className="block text-forest-200/60 text-xs font-medium mb-1">{label}</label>
                   <input type={type} value={form[key]} onChange={e => f(key, e.target.value)}
-                    placeholder={placeholder} required={key !== 'image'}
+                    placeholder={placeholder} required
                     className="w-full input-glass py-2.5 text-sm" />
                 </div>
               ))}
+
+              {/* Food photo upload */}
+              <div>
+                <label className="block text-forest-200/60 text-xs font-medium mb-1">Food Photo</label>
+                <button type="button" onClick={() => pickImage(b64 => f('image', b64))}
+                  className="w-full glass rounded-xl overflow-hidden transition-all hover:glass-orange"
+                  style={{ height: form.image ? '9rem' : '5rem' }}>
+                  {form.image ? (
+                    <img src={form.image} alt="preview" className="w-full h-full object-cover" />
+                  ) : (
+                    <div className="flex flex-col items-center justify-center h-full gap-1.5 text-forest-300/50">
+                      <ImagePlus className="w-6 h-6" />
+                      <span className="text-xs">Tap to upload photo</span>
+                    </div>
+                  )}
+                </button>
+                {form.image && (
+                  <button type="button" onClick={() => f('image', '')}
+                    className="mt-1 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+                    Remove photo
+                  </button>
+                )}
+              </div>
               <div>
                 <label className="block text-forest-200/60 text-xs font-medium mb-1">Category</label>
                 <select value={form.category} onChange={e => f('category', e.target.value)}
