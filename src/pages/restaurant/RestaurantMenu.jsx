@@ -212,8 +212,9 @@ export default function RestaurantMenu() {
 
       {/* Add / Edit Modal — portalled to body to escape CSS transform context */}
       {modal && createPortal(
-        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto">
-          <div className="glass rounded-3xl p-6 w-full max-w-md my-4" style={{ background:'rgba(10,26,16,0.97)', border:'1px solid rgba(255,255,255,.1)' }}>
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:9999, overflowY:'auto' }}>
+          <div style={{ minHeight:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
+          <div className="glass rounded-3xl p-6 w-full max-w-md" style={{ background:'rgba(8,22,12,0.98)', border:'1px solid rgba(255,255,255,.12)', maxWidth:'28rem', width:'100%' }}>
             <div className="flex items-center justify-between mb-5">
               <p className="text-white font-semibold text-lg">{modal === 'add' ? 'Add New Item' : 'Edit Item'}</p>
               <button onClick={closeModal} className="w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-200 hover:glass-orange transition-all">
@@ -264,6 +265,7 @@ export default function RestaurantMenu() {
                 </button>
               </div>
             </form>
+          </div>
           </div>
         </div>,
         document.body
