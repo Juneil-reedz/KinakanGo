@@ -11,7 +11,8 @@ const orderRoutes  = require('./routes/orders');
 const appRoutes    = require('./routes/applications');
 const issueRoutes  = require('./routes/issues');
 const promoRoutes  = require('./routes/promos');
-const menuRoutes   = require('./routes/menu');
+const menuRoutes    = require('./routes/menu');
+const upgradeRoutes = require('./routes/upgrades');
 
 const app = express();
 
@@ -33,6 +34,7 @@ app.use('/api/applications', appRoutes);
 app.use('/api/issues',       issueRoutes);
 app.use('/api/promos',       promoRoutes);
 app.use('/api/menu',         menuRoutes);
+app.use('/api/upgrades',     upgradeRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

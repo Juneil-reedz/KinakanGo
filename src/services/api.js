@@ -30,7 +30,7 @@ async function tryRefresh() {
   }
 }
 
-async function request(path, options = {}, retry = true) {
+export async function request(path, options = {}, retry = true) {
   const token = storage.getAccess();
   const res = await fetch(`${BASE}${path}`, {
     ...options,
