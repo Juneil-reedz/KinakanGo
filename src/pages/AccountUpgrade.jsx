@@ -3,10 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import {
   Check, Crown, Zap, ChevronRight, X, Upload, Smartphone, Banknote,
   Clock, CheckCircle, XCircle, Store, Bike, FileText, Phone, MapPin,
-  Camera, ShieldCheck, User
+  Camera, ShieldCheck, User, ArrowRight, RefreshCw
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
-import { request } from '../services/api';
+import { useAuth } from '../context/AuthContext';
+import { request, authApi } from '../services/api';
 
 const GCASH_NUMBER = '0927-064-6946';
 const GCASH_NAME   = 'KinakanGo Admin';
@@ -79,6 +80,7 @@ function ImageUpload({ label, value, onChange, required = false }) {
 export default function AccountUpgrade() {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
+  const { user, updateUser } = useAuth();
 
   // steps: plans → role → requirements → payment → done
   const [step, setStep]           = useState('plans');
@@ -108,7 +110,18 @@ export default function AccountUpgrade() {
   const [existing, setExisting]   = useState(undefined);
 
   useEffect(() => {
-    request('/upgrades/mine').then(setExisting).catch(() => setExisting(null));
+    request('/upgrades/mine')
+      .then(async (data) => {
+        setExisting(data);
+        // If approved, refresh user role from server so sidebar updates
+        if (data?.status === 'approved') {
+          try {
+            const fresh = await authApi.me();
+            if (fresh?.role && fresh.role !== user?.role) updateUser({ role: fresh.role });
+          } catch {}
+        }
+      })
+      .catch(() => setExisting(null));
   }, []);
 
   const plan = PLANS.find(p => p.id === selectedPlan);
@@ -163,44 +176,102 @@ export default function AccountUpgrade() {
 
   /* ── Existing request ── */
   if (existing && step !== 'done') {
+    let appliedRole = null;
+    try { appliedRole = existing.notes ? JSON.parse(existing.notes)?.role : null; } catch {}
+    if (!appliedRole) appliedRole = existing.plan?.toLowerCase().includes('rider') ? 'rider' : 'restaurant_owner';
+
+    const isRestaurant = appliedRole === 'restaurant_owner';
     const ui = STATUS_UI[existing.status] || STATUS_UI.pending;
     const Icon = ui.icon;
+
     return (
       <div className="space-y-4 animate-fade-up">
-        <h1 className="text-2xl font-heading font-bold text-white">Upgrade Account</h1>
-        <div className="glass card-3d rounded-3xl p-8 flex flex-col items-center gap-4 text-center">
-          <div className={`w-16 h-16 ${ui.bg} rounded-2xl flex items-center justify-center`}>
-            <Icon className={`w-8 h-8 ${ui.color}`} />
-          </div>
-          <div>
-            <p className="text-white font-heading font-bold text-xl mb-1">{ui.label}</p>
-            <p className="text-forest-200/60 text-sm">
-              {existing.status === 'pending'  && 'Your request is under review. This usually takes 1–24 hours.'}
-              {existing.status === 'approved' && 'Your account is upgraded! Access your dashboard below.'}
-              {existing.status === 'rejected' && 'Your request was rejected. Check the note below or resubmit.'}
-            </p>
-            {existing.admin_note && (
-              <p className="text-ember-300 text-sm mt-3 glass-orange rounded-xl px-4 py-2">Admin note: {existing.admin_note}</p>
-            )}
-          </div>
-          <div className="glass rounded-xl px-5 py-3 text-sm text-forest-200/70">
-            <span className="font-semibold text-white">{existing.plan}</span> · ₱{existing.amount} · {existing.payment_method === 'gcash' ? 'GCash' : 'Cash'} ·{' '}
-            {new Date(existing.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-          </div>
-          {existing.status === 'approved' && (
-            <div className="flex gap-3 flex-wrap justify-center">
-              <button onClick={() => navigate('/owner/login')} className="btn-glow-orange text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 text-sm">
-                <Store className="w-4 h-4" /> Restaurant Portal
+        <h1 className="text-2xl font-heading font-bold text-white">
+          {existing.status === 'approved'
+            ? (isRestaurant ? 'Restaurant Dashboard' : 'Rider Dashboard')
+            : 'Upgrade Account'}
+        </h1>
+
+        {/* Approved — full dashboard card */}
+        {existing.status === 'approved' && (
+          <div className={`card-3d rounded-3xl overflow-hidden ${isRestaurant ? 'glass-orange' : 'glass-teal'}`}>
+            <div className={`p-8 flex flex-col items-center gap-4 text-center`}>
+              <div className={`w-20 h-20 ${isRestaurant ? 'btn-glow-orange' : 'btn-glow-teal'} rounded-3xl flex items-center justify-center animate-breathe`}>
+                {isRestaurant
+                  ? <Store className="w-10 h-10 text-white" />
+                  : <Bike className="w-10 h-10 text-white" />}
+              </div>
+              <div>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <CheckCircle className="w-5 h-5 text-forest-300" />
+                  <p className="text-forest-300 text-sm font-semibold">Account Approved</p>
+                </div>
+                <p className="text-white font-heading font-bold text-2xl mb-2">
+                  {isRestaurant ? 'Your Restaurant is Ready!' : 'Your Rider Account is Ready!'}
+                </p>
+                <p className="text-white/70 text-sm max-w-sm mx-auto">
+                  {isRestaurant
+                    ? 'Log in to the Restaurant Portal to manage your menu, view orders, and track your earnings.'
+                    : 'Log in to the Rider Portal to accept deliveries, track earnings, and manage your availability.'}
+                </p>
+              </div>
+              {existing.admin_note && (
+                <p className="glass rounded-xl px-4 py-2 text-forest-200/70 text-sm">Admin note: {existing.admin_note}</p>
+              )}
+              <button
+                onClick={() => navigate(isRestaurant ? '/owner/login' : '/rider/login')}
+                className={`${isRestaurant ? 'btn-glow-orange' : 'btn-glow-teal'} text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3`}>
+                {isRestaurant ? <Store className="w-5 h-5" /> : <Bike className="w-5 h-5" />}
+                {isRestaurant ? 'Open Restaurant Dashboard' : 'Open Rider Dashboard'}
+                <ArrowRight className="w-5 h-5" />
               </button>
-              <button onClick={() => navigate('/rider/login')} className="btn-glow-teal text-white px-5 py-2.5 rounded-xl font-semibold flex items-center gap-2 text-sm">
-                <Bike className="w-4 h-4" /> Rider Portal
-              </button>
+              <p className="text-white/40 text-xs">Use your existing email & password to log in</p>
             </div>
-          )}
-          {existing.status === 'rejected' && (
-            <button onClick={() => setExisting(null)} className="btn-glow-orange text-white px-6 py-3 rounded-xl font-semibold">Resubmit</button>
-          )}
-        </div>
+            <div className="glass px-6 py-3 flex items-center justify-between text-xs text-forest-200/50">
+              <span>{existing.plan}</span>
+              <span>₱{existing.amount} · {existing.payment_method === 'gcash' ? 'GCash' : 'Cash'}</span>
+              <span>{new Date(existing.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
+            </div>
+          </div>
+        )}
+
+        {/* Pending */}
+        {existing.status === 'pending' && (
+          <div className="glass card-3d rounded-3xl p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 glass-orange rounded-2xl flex items-center justify-center animate-breathe">
+              <Clock className="w-8 h-8 text-ember-400" />
+            </div>
+            <div>
+              <p className="text-white font-heading font-bold text-xl mb-1">Pending Review</p>
+              <p className="text-forest-200/60 text-sm">Your {isRestaurant ? 'restaurant owner' : 'rider'} application is being reviewed. This usually takes 1–24 hours.</p>
+            </div>
+            <div className="glass rounded-xl px-5 py-3 text-sm text-forest-200/70 text-center">
+              <p className="font-semibold text-white">{existing.plan}</p>
+              <p className="mt-0.5">₱{existing.amount} · {existing.payment_method === 'gcash' ? 'GCash' : 'Cash'} · {new Date(existing.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+            </div>
+            <button onClick={() => request('/upgrades/mine').then(setExisting).catch(() => {})}
+              className="glass hover:glass-green transition-all text-forest-200/60 hover:text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2">
+              <RefreshCw className="w-3.5 h-3.5" /> Check status
+            </button>
+          </div>
+        )}
+
+        {/* Rejected */}
+        {existing.status === 'rejected' && (
+          <div className="glass card-3d rounded-3xl p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-16 h-16 bg-red-500/20 rounded-2xl flex items-center justify-center">
+              <XCircle className="w-8 h-8 text-red-400" />
+            </div>
+            <div>
+              <p className="text-white font-heading font-bold text-xl mb-1">Request Rejected</p>
+              <p className="text-forest-200/60 text-sm">Your request was not approved. See the admin note below and resubmit with the correct information.</p>
+              {existing.admin_note && (
+                <p className="text-ember-300 text-sm mt-3 glass-orange rounded-xl px-4 py-2">Admin note: {existing.admin_note}</p>
+              )}
+            </div>
+            <button onClick={() => setExisting(null)} className="btn-glow-orange text-white px-6 py-3 rounded-xl font-semibold">Resubmit Application</button>
+          </div>
+        )}
       </div>
     );
   }

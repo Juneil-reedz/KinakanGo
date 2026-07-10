@@ -7,7 +7,7 @@ import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
-  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2
+  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike
 } from 'lucide-react';
 
 const NAV = [
@@ -126,19 +126,43 @@ export default function CustomerLayout() {
           })}
         </nav>
 
-        {/* Upgrade card */}
+        {/* Upgrade / Dashboard card */}
         {!collapsed && (
           <div className="p-4">
-            <div className="glass-orange rounded-2xl p-4 relative overflow-hidden">
-              <div className="orb w-24 h-24 bg-ember-400/30 -top-4 -right-4" />
-              <Zap className="w-6 h-6 text-ember-300 mb-2" />
-              <p className="text-white font-bold text-sm mb-1">Upgrade Account</p>
-              <p className="text-ember-200/80 text-xs mb-3">Unlock all features & benefits</p>
-              <button onClick={() => navigate('/upgrade')}
-                className="w-full py-2 rounded-xl btn-glow-orange text-white text-xs font-bold">
-                Upgrade Now
-              </button>
-            </div>
+            {user?.role === 'restaurant_owner' ? (
+              <div className="glass-green rounded-2xl p-4 relative overflow-hidden">
+                <div className="orb w-24 h-24 bg-forest-400/20 -top-4 -right-4" />
+                <Store className="w-6 h-6 text-forest-300 mb-2" />
+                <p className="text-white font-bold text-sm mb-1">Restaurant Dashboard</p>
+                <p className="text-forest-200/70 text-xs mb-3">Manage your restaurant & orders</p>
+                <button onClick={() => navigate('/owner/login')}
+                  className="w-full py-2 rounded-xl btn-glow-green text-white text-xs font-bold">
+                  Open Dashboard
+                </button>
+              </div>
+            ) : user?.role === 'rider' ? (
+              <div className="glass-teal rounded-2xl p-4 relative overflow-hidden">
+                <div className="orb w-24 h-24 bg-tawi-teal/20 -top-4 -right-4" />
+                <Bike className="w-6 h-6 text-teal-300 mb-2" />
+                <p className="text-white font-bold text-sm mb-1">Rider Dashboard</p>
+                <p className="text-forest-200/70 text-xs mb-3">Accept deliveries & track earnings</p>
+                <button onClick={() => navigate('/rider/login')}
+                  className="w-full py-2 rounded-xl btn-glow-teal text-white text-xs font-bold">
+                  Open Dashboard
+                </button>
+              </div>
+            ) : (
+              <div className="glass-orange rounded-2xl p-4 relative overflow-hidden">
+                <div className="orb w-24 h-24 bg-ember-400/30 -top-4 -right-4" />
+                <Zap className="w-6 h-6 text-ember-300 mb-2" />
+                <p className="text-white font-bold text-sm mb-1">Upgrade Account</p>
+                <p className="text-ember-200/80 text-xs mb-3">Become a restaurant owner or rider</p>
+                <button onClick={() => navigate('/upgrade')}
+                  className="w-full py-2 rounded-xl btn-glow-orange text-white text-xs font-bold">
+                  Upgrade Now
+                </button>
+              </div>
+            )}
           </div>
         )}
       </aside>
