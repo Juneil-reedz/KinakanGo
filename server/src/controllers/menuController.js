@@ -64,7 +64,7 @@ async function createItem(req, res) {
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      RETURNING *`,
     [req.params.restaurantId, catId, name, description || null,
-     price, imgUrl, isVegetarian || false, prepTimeMins ?? null]
+     price, imgUrl, isVegetarian || false, prepTimeMins ?? 15]
   );
   // Attach category name so frontend can display it immediately
   res.status(201).json({ ...rows[0], category_name: category || null });
