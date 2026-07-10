@@ -100,14 +100,22 @@ export default function RestaurantMenu() {
   const openAdd  = () => { setForm(EMPTY_FORM); setEditItem(null); setModal('add'); };
   const openEdit = (item) => {
     setEditItem(item);
-    setForm({ name:item.name, category:item.category||'pizza', price:String(item.price), description:item.description||'', image:item.image||'', isVegetarian:item.isVegetarian||false, prepTime:String(item.prepTimeMins||item.prepTime||'') });
+    setForm({
+      name:         item.name,
+      category:     item.category_name || item.category || 'pizza',
+      price:        String(item.price),
+      description:  item.description || '',
+      image:        item.image_url || item.image || '',
+      isVegetarian: item.is_vegetarian || item.isVegetarian || false,
+      prepTime:     String(item.prep_time_mins || item.prepTimeMins || ''),
+    });
     setModal('edit');
   };
   const closeModal = () => { setModal(null); setEditItem(null); setForm(EMPTY_FORM); };
 
   const submit = async (e) => {
     e.preventDefault();
-    const payload = { name:form.name, category:form.category, price:parseFloat(form.price), description:form.description, image:form.image||undefined, isVegetarian:form.isVegetarian, prepTimeMins:parseInt(form.prepTime)||15 };
+    const payload = { name:form.name, category:form.category, price:parseFloat(form.price), description:form.description||null, image:form.image||null, isVegetarian:form.isVegetarian, prepTimeMins:parseInt(form.prepTime)||15 };
     try {
       if (modal === 'add') {
         const created = await menuApi.create(restaurantId, payload);
@@ -126,10 +134,11 @@ export default function RestaurantMenu() {
 
   const toggle = async (id) => {
     const item = items.find(i => i.id === id);
+    const current = item.is_available ?? item.isAvailable ?? true;
     try {
-      await menuApi.update(restaurantId, id, { isAvailable: !item.isAvailable });
-      setItems(prev => prev.map(i => i.id === id ? { ...i, isAvailable:!i.isAvailable } : i));
-      addNotification(`${item.name} ${item.isAvailable ? 'disabled' : 'enabled'}`, 'success');
+      await menuApi.update(restaurantId, id, { isAvailable: !current });
+      setItems(prev => prev.map(i => i.id === id ? { ...i, is_available: !current, isAvailable: !current } : i));
+      addNotification(`${item.name} ${current ? 'disabled' : 'enabled'}`, 'success');
     } catch {
       addNotification('Failed to update availability', 'error');
     }
@@ -201,8 +210,8 @@ export default function RestaurantMenu() {
             <div key={item.id} className="glass card-3d rounded-2xl overflow-hidden group">
               {/* Image */}
               <div className="relative h-44 overflow-hidden">
-                {item.image ? (
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
+                {(item.image_url || item.image) ? (
+                  <img src={item.image_url || item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300" />
                 ) : (
                   <div className="w-full h-full glass flex items-center justify-center">
                     <Package className="w-12 h-12 text-forest-300/30" />
@@ -212,8 +221,8 @@ export default function RestaurantMenu() {
                 {/* Availability toggle */}
                 <button onClick={() => toggle(item.id)}
                   className={`absolute top-3 right-3 relative inline-flex h-6 w-11 items-center rounded-full transition-colors shadow-lg
-                    ${item.isAvailable ? 'btn-glow-green' : 'glass'}`}>
-                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${item.isAvailable ? 'translate-x-6' : 'translate-x-1'}`} />
+                    ${(item.is_available ?? item.isAvailable) ? 'btn-glow-green' : 'glass'}`}>
+                  <span className={`inline-block h-4 w-4 rounded-full bg-white shadow transition-transform ${(item.is_available ?? item.isAvailable) ? 'translate-x-6' : 'translate-x-1'}`} />
                 </button>
                 {/* Price overlay */}
                 <div className="absolute bottom-3 left-3">
@@ -225,22 +234,22 @@ export default function RestaurantMenu() {
               <div className="p-4">
                 <div className="flex items-start justify-between gap-2 mb-2">
                   <p className="text-white font-semibold text-sm leading-tight">{item.name}</p>
-                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${item.isAvailable ? 'glass-green text-forest-200' : 'bg-red-500/20 text-red-300'}`}>
-                    {item.isAvailable ? 'Available' : 'Unavailable'}
+                  <span className={`text-xs px-2 py-0.5 rounded-full font-medium flex-shrink-0 ${(item.is_available ?? item.isAvailable) ? 'glass-green text-forest-200' : 'bg-red-500/20 text-red-300'}`}>
+                    {(item.is_available ?? item.isAvailable) ? 'Available' : 'Unavailable'}
                   </span>
                 </div>
 
                 <p className="text-forest-200/50 text-xs line-clamp-2 mb-3">{item.description}</p>
 
                 <div className="flex items-center gap-2 mb-3 flex-wrap">
-                  <span className="glass text-forest-200/70 text-xs px-2 py-1 rounded-lg capitalize">{item.category}</span>
-                  {item.isVegetarian && (
+                  <span className="glass text-forest-200/70 text-xs px-2 py-1 rounded-lg capitalize">{item.category_name || item.category}</span>
+                  {(item.is_vegetarian || item.isVegetarian) && (
                     <span className="glass-green text-forest-200 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
                       <Leaf className="w-2.5 h-2.5" /> Veg
                     </span>
                   )}
                   <span className="glass text-forest-200/70 text-xs px-2 py-1 rounded-lg flex items-center gap-1">
-                    <Clock className="w-2.5 h-2.5" /> {item.prepTimeMins || item.prepTime || "—"}m
+                    <Clock className="w-2.5 h-2.5" /> {item.prep_time_mins || item.prepTimeMins || "—"}m
                   </span>
                 </div>
 
