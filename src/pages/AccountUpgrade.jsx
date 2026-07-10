@@ -6,7 +6,7 @@ import { useAuth } from '../context/AuthContext';
 import { request } from '../services/api';
 
 // ── Update these with your real GCash number ──────────────────────
-const GCASH_NUMBER = '09XX-XXX-XXXX';
+const GCASH_NUMBER = '0927-064-6946';
 const GCASH_NAME   = 'KinakanGo Admin';
 // ─────────────────────────────────────────────────────────────────
 
