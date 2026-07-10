@@ -355,9 +355,9 @@ export default function RestaurantMenu() {
                 </select>
               </div>
               <div>
-                <label className="block text-forest-200/60 text-xs font-medium mb-1">Description</label>
+                <label className="block text-forest-200/60 text-xs font-medium mb-1">Description <span className="text-forest-200/30">(optional)</span></label>
                 <textarea value={form.description} onChange={e => f('description', e.target.value)}
-                  className="w-full input-glass py-2.5 text-sm h-20 resize-none" rows={3} required />
+                  className="w-full input-glass py-2.5 text-sm h-20 resize-none" rows={3} />
               </div>
               <label className="flex items-center gap-2 cursor-pointer select-none">
                 <div onClick={() => f('isVegetarian', !form.isVegetarian)}
