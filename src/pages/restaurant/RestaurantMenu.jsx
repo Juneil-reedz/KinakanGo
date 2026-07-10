@@ -120,13 +120,20 @@ export default function RestaurantMenu() {
     try {
       if (modal === 'add') {
         const created = await menuApi.create(restaurantId, payload);
-        // Backend returns full row; fall back to payload fields if needed
-        setItems(prev => [...prev, { ...payload, image_url: payload.image, is_vegetarian: payload.isVegetarian, prep_time_mins: payload.prepTimeMins, is_available: true, ...created }]);
+        // Merge: backend row first, then override with local values so photo shows immediately
+        setItems(prev => [...prev, {
+          is_available: true,
+          ...created,
+          image_url:     created?.image_url || payload.image || null,
+          category_name: form.category,
+          is_vegetarian: payload.isVegetarian,
+          prep_time_mins: payload.prepTimeMins,
+        }]);
         addNotification(`${form.name} added!`, 'success');
       } else {
         const updated = await menuApi.update(restaurantId, editItem.id, payload);
         setItems(prev => prev.map(i => i.id === editItem.id
-          ? { ...i, ...payload, image_url: payload.image ?? i.image_url, is_vegetarian: payload.isVegetarian, prep_time_mins: payload.prepTimeMins, ...(updated || {}) }
+          ? { ...i, ...(updated || {}), image_url: updated?.image_url || payload.image || i.image_url, category_name: form.category, is_vegetarian: payload.isVegetarian, prep_time_mins: payload.prepTimeMins }
           : i));
         addNotification('Item updated!', 'success');
       }
