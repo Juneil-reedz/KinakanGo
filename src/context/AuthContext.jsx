@@ -30,8 +30,8 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     const res = await authApi.login(email, password);
-    if (res.user.role !== 'customer') {
-      throw new Error('This account is not a customer account');
+    if (res.user.role === 'admin') {
+      throw new Error('Use the admin panel to log in as admin');
     }
     storage.setTokens(res.accessToken, res.refreshToken);
     persist(res.user);

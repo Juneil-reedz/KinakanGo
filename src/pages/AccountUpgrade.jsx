@@ -185,6 +185,63 @@ export default function AccountUpgrade() {
     }
   };
 
+  /* ── Already has a role — skip straight to dashboard ── */
+  if (user?.role === 'restaurant_owner') {
+    return (
+      <div className="space-y-4 animate-fade-up">
+        <h1 className="text-2xl font-heading font-bold text-white">Restaurant Dashboard</h1>
+        <div className="glass-green card-3d rounded-3xl overflow-hidden">
+          <div className="p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-20 h-20 btn-glow-orange rounded-3xl flex items-center justify-center animate-breathe">
+              <Store className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <CheckCircle className="w-5 h-5 text-forest-300" />
+                <p className="text-forest-300 text-sm font-semibold">Account Approved</p>
+              </div>
+              <p className="text-white font-heading font-bold text-2xl mb-2">Your Restaurant is Ready!</p>
+              <p className="text-white/70 text-sm max-w-sm mx-auto">Manage your menu, view orders, and track your earnings from the Restaurant Dashboard.</p>
+            </div>
+            <button onClick={goToRestaurantDashboard} disabled={dashLoading}
+              className="btn-glow-orange text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3 disabled:opacity-70">
+              {dashLoading ? <RefreshCw className="w-5 h-5 animate-spin" /> : <Store className="w-5 h-5" />}
+              {dashLoading ? 'Opening...' : 'Open Restaurant Dashboard'}
+              {!dashLoading && <ArrowRight className="w-5 h-5" />}
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (user?.role === 'rider') {
+    return (
+      <div className="space-y-4 animate-fade-up">
+        <h1 className="text-2xl font-heading font-bold text-white">Rider Dashboard</h1>
+        <div className="glass-teal card-3d rounded-3xl overflow-hidden">
+          <div className="p-8 flex flex-col items-center gap-4 text-center">
+            <div className="w-20 h-20 btn-glow-teal rounded-3xl flex items-center justify-center animate-breathe">
+              <Bike className="w-10 h-10 text-white" />
+            </div>
+            <div>
+              <div className="flex items-center justify-center gap-2 mb-1">
+                <CheckCircle className="w-5 h-5 text-forest-300" />
+                <p className="text-forest-300 text-sm font-semibold">Account Approved</p>
+              </div>
+              <p className="text-white font-heading font-bold text-2xl mb-2">Your Rider Account is Ready!</p>
+              <p className="text-white/70 text-sm max-w-sm mx-auto">Accept deliveries, track earnings, and manage your availability from the Rider Dashboard.</p>
+            </div>
+            <button onClick={() => navigate('/rider/dashboard')}
+              className="btn-glow-teal text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3">
+              <Bike className="w-5 h-5" /> Open Rider Dashboard <ArrowRight className="w-5 h-5" />
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
   /* ── Loading ── */
   if (existing === undefined) return <div className="glass rounded-3xl h-48 animate-pulse" />;
 
