@@ -75,7 +75,7 @@ export default function RestaurantLayout({ children }) {
                 <p className="text-forest-200/50 text-xs truncate">{restaurant.email}</p>
               </div>
             )}
-            <button onClick={() => navigate('/dashboard')} title={collapsed ? 'Customer Home' : ''}
+            <button onClick={() => navigate('/')} title={collapsed ? 'Customer Home' : ''}
               className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-forest-200/50 hover:text-white hover:glass-green text-sm transition-all ${collapsed ? 'justify-center' : ''}`}>
               <Home className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Customer Home'}
             </button>
