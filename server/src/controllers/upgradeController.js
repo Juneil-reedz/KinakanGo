@@ -1,14 +1,14 @@
 const pool = require('../config/db');
 
 async function submitRequest(req, res) {
-  const { plan, amount, payment_method, reference_number, proof_image } = req.body;
+  const { plan, amount, payment_method, reference_number, proof_image, notes } = req.body;
   const userId = req.user.id;
 
   if (!plan || !amount || !payment_method) {
     return res.status(400).json({ error: 'Plan, amount and payment method are required' });
   }
-  if (payment_method === 'gcash' && !proof_image) {
-    return res.status(400).json({ error: 'Proof of payment is required for GCash' });
+  if (!proof_image) {
+    return res.status(400).json({ error: 'Proof of payment is required' });
   }
 
   // Check for existing pending request
@@ -21,9 +21,9 @@ async function submitRequest(req, res) {
   }
 
   const { rows } = await pool.query(
-    `INSERT INTO upgrade_requests (user_id, plan, amount, payment_method, reference_number, proof_image)
-     VALUES ($1,$2,$3,$4,$5,$6) RETURNING id`,
-    [userId, plan, amount, payment_method, reference_number || null, proof_image || null]
+    `INSERT INTO upgrade_requests (user_id, plan, amount, payment_method, reference_number, proof_image, notes)
+     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
+    [userId, plan, amount, payment_method, reference_number || null, proof_image || null, notes || null]
   );
 
   res.status(201).json({ id: rows[0].id, message: 'Upgrade request submitted. Pending admin review.' });
@@ -31,7 +31,7 @@ async function submitRequest(req, res) {
 
 async function myRequest(req, res) {
   const { rows } = await pool.query(
-    `SELECT id, plan, amount, payment_method, reference_number, status, admin_note, created_at, reviewed_at
+    `SELECT id, plan, amount, payment_method, reference_number, status, admin_note, notes, created_at, reviewed_at
      FROM upgrade_requests WHERE user_id = $1 ORDER BY created_at DESC LIMIT 1`,
     [req.user.id]
   );
