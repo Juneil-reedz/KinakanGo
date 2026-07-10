@@ -116,7 +116,7 @@ export default function RestaurantMenu() {
 
   const submit = async (e) => {
     e.preventDefault();
-    const payload = { name:form.name, category:form.category, price:parseFloat(form.price), description:form.description||null, image:form.image||null, isVegetarian:form.isVegetarian, prepTimeMins:parseInt(form.prepTime)||15 };
+    const payload = { name:form.name, category:form.category, price:parseFloat(form.price), description:form.description||null, image:form.image||null, isVegetarian:form.isVegetarian, prepTimeMins:form.prepTime ? parseInt(form.prepTime) : null };
     try {
       if (modal === 'add') {
         const created = await menuApi.create(restaurantId, payload);
@@ -326,17 +326,23 @@ export default function RestaurantMenu() {
             </div>
             <form onSubmit={submit} className="space-y-3">
               {[
-                { label:'Item Name',       key:'name',     type:'text',   placeholder:'e.g., Margherita Pizza' },
-                { label:'Price (₱)',       key:'price',    type:'number', placeholder:'0.00' },
-                { label:'Prep Time (min)', key:'prepTime', type:'number', placeholder:'20' },
-              ].map(({ label, key, type, placeholder }) => (
+                { label:'Item Name', key:'name',  type:'text',   placeholder:'e.g., Margherita Pizza', required: true  },
+                { label:'Price (₱)', key:'price', type:'number', placeholder:'0.00',                   required: true  },
+              ].map(({ label, key, type, placeholder, required }) => (
                 <div key={key}>
                   <label className="block text-forest-200/60 text-xs font-medium mb-1">{label}</label>
                   <input type={type} value={form[key]} onChange={e => f(key, e.target.value)}
-                    placeholder={placeholder} required
+                    placeholder={placeholder} required={required}
                     className="w-full input-glass py-2.5 text-sm" />
                 </div>
               ))}
+              <div>
+                <label className="block text-forest-200/60 text-xs font-medium mb-1">
+                  Prep Time (min) <span className="text-forest-200/30">(optional)</span>
+                </label>
+                <input type="number" value={form.prepTime} onChange={e => f('prepTime', e.target.value)}
+                  placeholder="e.g., 20" className="w-full input-glass py-2.5 text-sm" />
+              </div>
 
               {/* Food photo upload */}
               <div>
