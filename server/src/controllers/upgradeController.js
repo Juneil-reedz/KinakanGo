@@ -57,40 +57,56 @@ async function approveRequest(req, res) {
     `SELECT * FROM upgrade_requests WHERE id = $1`, [id]
   );
   if (!reqRows.length) return res.status(404).json({ error: 'Request not found' });
-  const request = reqRows[0];
-  if (request.status !== 'pending') return res.status(400).json({ error: 'Request already reviewed' });
+  const upgradeReq = reqRows[0];
+  if (upgradeReq.status !== 'pending') return res.status(400).json({ error: 'Request already reviewed' });
+
+  // Determine role from notes JSON, fall back to plan text
+  let role = 'restaurant_owner';
+  let notes = null;
+  try { notes = upgradeReq.notes ? JSON.parse(upgradeReq.notes) : null; } catch {}
+  if (notes?.role === 'rider') role = 'rider';
+  else if (upgradeReq.plan?.toLowerCase().includes('rider')) role = 'rider';
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    // Update request status
     await client.query(
       `UPDATE upgrade_requests SET status='approved', admin_note=$1, reviewed_by=$2, reviewed_at=NOW() WHERE id=$3`,
       [admin_note || null, req.user.id, id]
     );
 
-    // Upgrade user role
-    await client.query(
-      `UPDATE users SET role='restaurant_owner' WHERE id=$1`,
-      [request.user_id]
-    );
+    await client.query(`UPDATE users SET role=$1 WHERE id=$2`, [role, upgradeReq.user_id]);
 
-    // Create a starter restaurant record if none exists
-    const { rows: existing } = await client.query(
-      `SELECT id FROM restaurants WHERE owner_id=$1`, [request.user_id]
-    );
-    if (!existing.length) {
-      const { rows: userRows } = await client.query(`SELECT name FROM users WHERE id=$1`, [request.user_id]);
+    // Create starter restaurant only for restaurant_owner applicants
+    if (role === 'restaurant_owner') {
+      const { rows: existing } = await client.query(
+        `SELECT id FROM restaurants WHERE owner_id=$1`, [upgradeReq.user_id]
+      );
+      if (!existing.length) {
+        const { rows: userRows } = await client.query(`SELECT name FROM users WHERE id=$1`, [upgradeReq.user_id]);
+        const restoName  = notes?.restaurantName || `${userRows[0]?.name || 'New'}'s Restaurant`;
+        const restoAddr  = notes?.address        || 'Tawi-Tawi';
+        const restoCuisine = notes?.category     || 'Filipino';
+        await client.query(
+          `INSERT INTO restaurants (owner_id, name, description, cuisine, address, delivery_fee, min_order, is_approved, is_open)
+           VALUES ($1,$2,'New restaurant on KinakanGo',$3,$4,50,100,true,false)`,
+          [upgradeReq.user_id, restoName, restoCuisine, restoAddr]
+        );
+      }
+    }
+
+    // Create rider profile for rider applicants
+    if (role === 'rider') {
       await client.query(
-        `INSERT INTO restaurants (owner_id, name, description, category, address, delivery_fee, min_order, is_approved, is_open)
-         VALUES ($1,$2,'New restaurant on KinakanGo','Filipino','Tawi-Tawi',50,100,true,false)`,
-        [request.user_id, `${userRows[0]?.name || 'New'}'s Restaurant`]
+        `INSERT INTO rider_profiles (user_id, vehicle_type, plate_number)
+         VALUES ($1,$2,$3) ON CONFLICT (user_id) DO NOTHING`,
+        [upgradeReq.user_id, notes?.vehicleType || null, notes?.plateNumber || null]
       );
     }
 
     await client.query('COMMIT');
-    res.json({ message: 'Request approved. User upgraded to restaurant owner.' });
+    res.json({ message: `Request approved. User upgraded to ${role}.` });
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
