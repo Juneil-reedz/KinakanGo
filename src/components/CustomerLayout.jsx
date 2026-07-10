@@ -7,8 +7,9 @@ import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
-  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike
+  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike, Loader2
 } from 'lucide-react';
+import { restaurantsApi } from '../services/api';
 
 const NAV = [
   { key: 'dashboard',    label: 'Dashboard',    icon: HomeIcon,        path: '/' },
@@ -25,11 +26,25 @@ export default function CustomerLayout() {
   const { user } = useAuth();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
   const { notifications, unreadCount, markAllRead, clearAll } = useNotification();
-  const [collapsed, setCollapsed]     = useState(false);
-  const [mobileOpen, setMobileOpen]   = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
-  const [bellOpen, setBellOpen]       = useState(false);
-  const bellRef                        = useRef(null);
+  const [collapsed, setCollapsed]       = useState(false);
+  const [mobileOpen, setMobileOpen]     = useState(false);
+  const [searchQuery, setSearchQuery]   = useState('');
+  const [bellOpen, setBellOpen]         = useState(false);
+  const [dashLoading, setDashLoading]   = useState(false);
+  const bellRef                          = useRef(null);
+
+  const goToRestaurantDashboard = async () => {
+    setDashLoading(true);
+    try {
+      const data = await restaurantsApi.myRestaurant();
+      localStorage.setItem('kkg_restaurant', JSON.stringify(data));
+      navigate('/owner/dashboard');
+    } catch {
+      navigate('/owner/login');
+    } finally {
+      setDashLoading(false);
+    }
+  };
 
   useEffect(() => {
     const handler = (e) => { if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false); };
@@ -135,9 +150,10 @@ export default function CustomerLayout() {
                 <Store className="w-6 h-6 text-forest-300 mb-2" />
                 <p className="text-white font-bold text-sm mb-1">Restaurant Dashboard</p>
                 <p className="text-forest-200/70 text-xs mb-3">Manage your restaurant & orders</p>
-                <button onClick={() => navigate('/owner/login')}
-                  className="w-full py-2 rounded-xl btn-glow-green text-white text-xs font-bold">
-                  Open Dashboard
+                <button onClick={goToRestaurantDashboard} disabled={dashLoading}
+                  className="w-full py-2 rounded-xl btn-glow-green text-white text-xs font-bold flex items-center justify-center gap-1.5">
+                  {dashLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : null}
+                  {dashLoading ? 'Opening...' : 'Open Dashboard'}
                 </button>
               </div>
             ) : user?.role === 'rider' ? (
@@ -146,7 +162,7 @@ export default function CustomerLayout() {
                 <Bike className="w-6 h-6 text-teal-300 mb-2" />
                 <p className="text-white font-bold text-sm mb-1">Rider Dashboard</p>
                 <p className="text-forest-200/70 text-xs mb-3">Accept deliveries & track earnings</p>
-                <button onClick={() => navigate('/rider/login')}
+                <button onClick={() => navigate('/rider/dashboard')}
                   className="w-full py-2 rounded-xl btn-glow-teal text-white text-xs font-bold">
                   Open Dashboard
                 </button>

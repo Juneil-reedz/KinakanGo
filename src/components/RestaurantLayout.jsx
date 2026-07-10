@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
@@ -14,13 +14,25 @@ const NAV = [
 export default function RestaurantLayout({ children }) {
   const location = useLocation();
   const navigate  = useNavigate();
-  const { restaurant, logout } = useRestaurant();
-  const { showSuccess } = useNotification();
+  const { restaurant, isLoading, logout } = useRestaurant();
+  const { addNotification } = useNotification();
   const [collapsed, setCollapsed] = useState(false);
+
+  useEffect(() => {
+    if (!isLoading && !restaurant) navigate('/owner/login', { replace: true });
+  }, [restaurant, isLoading, navigate]);
 
   const isActive = (p) => location.pathname === p;
 
-  const handleLogout = () => { logout(); showSuccess('Logged out'); navigate('/owner/login'); };
+  const handleLogout = () => { logout(); navigate('/owner/login'); };
+
+  if (isLoading || !restaurant) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-2 border-ember-400/30 border-t-ember-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex">

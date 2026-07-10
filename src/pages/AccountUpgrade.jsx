@@ -7,7 +7,7 @@ import {
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
-import { request, authApi } from '../services/api';
+import { request, authApi, restaurantsApi } from '../services/api';
 
 const GCASH_NUMBER = '0927-064-6946';
 const GCASH_NAME   = 'KinakanGo Admin';
@@ -106,8 +106,22 @@ export default function AccountUpgrade() {
   const [proofPreview, setProofPreview] = useState(null);
   const proofRef = useRef(null);
 
-  const [loading, setLoading]     = useState(false);
-  const [existing, setExisting]   = useState(undefined);
+  const [loading, setLoading]       = useState(false);
+  const [existing, setExisting]     = useState(undefined);
+  const [dashLoading, setDashLoading] = useState(false);
+
+  const goToRestaurantDashboard = async () => {
+    setDashLoading(true);
+    try {
+      const data = await restaurantsApi.myRestaurant();
+      localStorage.setItem('kkg_restaurant', JSON.stringify(data));
+      navigate('/owner/dashboard');
+    } catch {
+      navigate('/owner/login');
+    } finally {
+      setDashLoading(false);
+    }
+  };
 
   useEffect(() => {
     request('/upgrades/mine')
@@ -219,13 +233,15 @@ export default function AccountUpgrade() {
                 <p className="glass rounded-xl px-4 py-2 text-forest-200/70 text-sm">Admin note: {existing.admin_note}</p>
               )}
               <button
-                onClick={() => navigate(isRestaurant ? '/owner/login' : '/rider/login')}
-                className={`${isRestaurant ? 'btn-glow-orange' : 'btn-glow-teal'} text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3`}>
-                {isRestaurant ? <Store className="w-5 h-5" /> : <Bike className="w-5 h-5" />}
-                {isRestaurant ? 'Open Restaurant Dashboard' : 'Open Rider Dashboard'}
-                <ArrowRight className="w-5 h-5" />
+                onClick={isRestaurant ? goToRestaurantDashboard : () => navigate('/rider/dashboard')}
+                disabled={dashLoading}
+                className={`${isRestaurant ? 'btn-glow-orange' : 'btn-glow-teal'} text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3 disabled:opacity-70`}>
+                {dashLoading
+                  ? <RefreshCw className="w-5 h-5 animate-spin" />
+                  : isRestaurant ? <Store className="w-5 h-5" /> : <Bike className="w-5 h-5" />}
+                {dashLoading ? 'Opening...' : isRestaurant ? 'Open Restaurant Dashboard' : 'Open Rider Dashboard'}
+                {!dashLoading && <ArrowRight className="w-5 h-5" />}
               </button>
-              <p className="text-white/40 text-xs">Use your existing email & password to log in</p>
             </div>
             <div className="glass px-6 py-3 flex items-center justify-between text-xs text-forest-200/50">
               <span>{existing.plan}</span>
