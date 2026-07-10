@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useNotification } from '../../context/NotificationContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { menuApi } from '../../services/api';
@@ -209,22 +210,22 @@ export default function RestaurantMenu() {
         </div>
       )}
 
-      {/* Add / Edit Modal */}
-      {modal && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="glass rounded-3xl p-6 w-full max-w-md my-4">
+      {/* Add / Edit Modal — portalled to body to escape CSS transform context */}
+      {modal && createPortal(
+        <div className="fixed inset-0 bg-black/70 backdrop-blur-sm z-[9999] flex items-center justify-center p-4 overflow-y-auto">
+          <div className="glass rounded-3xl p-6 w-full max-w-md my-4" style={{ background:'rgba(10,26,16,0.97)', border:'1px solid rgba(255,255,255,.1)' }}>
             <div className="flex items-center justify-between mb-5">
-              <p className="text-white font-semibold">{modal === 'add' ? 'Add New Item' : 'Edit Item'}</p>
+              <p className="text-white font-semibold text-lg">{modal === 'add' ? 'Add New Item' : 'Edit Item'}</p>
               <button onClick={closeModal} className="w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-200 hover:glass-orange transition-all">
                 <X className="w-4 h-4" />
               </button>
             </div>
             <form onSubmit={submit} className="space-y-3">
               {[
-                { label:'Item Name', key:'name', type:'text', placeholder:'e.g., Margherita Pizza' },
-                { label:'Price (₱)',  key:'price', type:'number', placeholder:'0.00' },
+                { label:'Item Name',       key:'name',     type:'text',   placeholder:'e.g., Margherita Pizza' },
+                { label:'Price (₱)',       key:'price',    type:'number', placeholder:'0.00' },
                 { label:'Prep Time (min)', key:'prepTime', type:'number', placeholder:'20' },
-                { label:'Image URL', key:'image', type:'url', placeholder:'https://…' },
+                { label:'Image URL',       key:'image',    type:'url',    placeholder:'https://…' },
               ].map(({ label, key, type, placeholder }) => (
                 <div key={key}>
                   <label className="block text-forest-200/60 text-xs font-medium mb-1">{label}</label>
@@ -237,7 +238,7 @@ export default function RestaurantMenu() {
                 <label className="block text-forest-200/60 text-xs font-medium mb-1">Category</label>
                 <select value={form.category} onChange={e => f('category', e.target.value)}
                   className="w-full input-glass py-2.5 text-sm">
-                  {CATEGORIES.map(c => <option key={c.id} value={c.id} style={{ background:'#0d2b1a' }}>{c.name}</option>)}
+                  {CATEGORIES.map(c => <option key={c.id} value={c.id} style={{ background:'#0d1a10' }}>{c.name}</option>)}
                 </select>
               </div>
               <div>
@@ -245,9 +246,9 @@ export default function RestaurantMenu() {
                 <textarea value={form.description} onChange={e => f('description', e.target.value)}
                   className="w-full input-glass py-2.5 text-sm h-20 resize-none" rows={3} required />
               </div>
-              <label className="flex items-center gap-2 cursor-pointer">
+              <label className="flex items-center gap-2 cursor-pointer select-none">
                 <div onClick={() => f('isVegetarian', !form.isVegetarian)}
-                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors ${form.isVegetarian ? 'btn-glow-green' : 'glass'}`}>
+                  className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors cursor-pointer ${form.isVegetarian ? 'btn-glow-green' : 'glass'}`}>
                   <span className={`inline-block h-3 w-3 rounded-full bg-white transition-transform ${form.isVegetarian ? 'translate-x-5' : 'translate-x-1'}`} />
                 </div>
                 <span className="text-forest-100/70 text-sm">Vegetarian</span>
@@ -264,7 +265,8 @@ export default function RestaurantMenu() {
               </div>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
