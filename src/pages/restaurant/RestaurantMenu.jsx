@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNotification } from '../../context/NotificationContext';
 import { useRestaurant } from '../../context/RestaurantContext';
 import { menuApi } from '../../services/api';
-import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check, ImagePlus } from 'lucide-react';
+import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check, ImagePlus, Tag } from 'lucide-react';
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -19,7 +19,7 @@ function pickImage(onPick) {
   input.click();
 }
 
-const CATEGORIES = [
+const DEFAULT_CATEGORIES = [
   { id:'pizza',     name:'Pizza'    },
   { id:'pasta',     name:'Pasta'    },
   { id:'salads',    name:'Salads'   },
@@ -30,17 +30,49 @@ const CATEGORIES = [
 const EMPTY_FORM = { name:'', category:'pizza', price:'', description:'', image:'', isVegetarian:false, prepTime:'' };
 
 export default function RestaurantMenu() {
-  const { addNotification }     = useNotification();
-  const { restaurant }          = useRestaurant();
-  const [items, setItems]       = useState([]);
-  const [loading, setLoading]   = useState(true);
-  const [cat, setCat]           = useState('all');
-  const [search, setSearch]     = useState('');
-  const [modal, setModal]       = useState(null); // null | 'add' | 'edit'
-  const [editItem, setEditItem] = useState(null);
-  const [form, setForm]         = useState(EMPTY_FORM);
+  const { addNotification }         = useNotification();
+  const { restaurant }              = useRestaurant();
+  const [items, setItems]           = useState([]);
+  const [loading, setLoading]       = useState(true);
+  const [cat, setCat]               = useState('all');
+  const [search, setSearch]         = useState('');
+  const [modal, setModal]           = useState(null); // null | 'add' | 'edit'
+  const [editItem, setEditItem]     = useState(null);
+  const [form, setForm]             = useState(EMPTY_FORM);
+  const [catModal, setCatModal]     = useState(false);
+  const [newCatName, setNewCatName] = useState('');
+  const [customCats, setCustomCats] = useState([]);
 
   const restaurantId = restaurant?.id;
+
+  // Load custom categories from localStorage
+  useEffect(() => {
+    if (!restaurantId) return;
+    const saved = localStorage.getItem(`kkg_cats_${restaurantId}`);
+    if (saved) setCustomCats(JSON.parse(saved));
+  }, [restaurantId]);
+
+  const allCategories = [
+    ...DEFAULT_CATEGORIES,
+    ...customCats,
+  ];
+
+  const addCategory = () => {
+    const trimmed = newCatName.trim();
+    if (!trimmed) return;
+    const id = trimmed.toLowerCase().replace(/\s+/g, '_');
+    if (allCategories.find(c => c.id === id)) {
+      addNotification('Category already exists', 'error');
+      return;
+    }
+    const next = [...customCats, { id, name: trimmed }];
+    setCustomCats(next);
+    localStorage.setItem(`kkg_cats_${restaurantId}`, JSON.stringify(next));
+    setForm(p => ({ ...p, category: id }));
+    setNewCatName('');
+    setCatModal(false);
+    addNotification(`"${trimmed}" category added`, 'success');
+  };
 
   useEffect(() => {
     if (!restaurantId) return;
@@ -136,14 +168,18 @@ export default function RestaurantMenu() {
           <input value={search} onChange={e => setSearch(e.target.value)}
             placeholder="Search menu items…" className="w-full input-glass pl-9 py-2.5 text-sm" />
         </div>
-        <div className="flex flex-wrap gap-2">
-          {[{ id:'all', name:'All' }, ...CATEGORIES].map(c => (
+        <div className="flex flex-wrap gap-2 items-center">
+          {[{ id:'all', name:'All' }, ...allCategories].map(c => (
             <button key={c.id} onClick={() => setCat(c.id)}
               className={`px-3 py-1.5 rounded-xl text-sm font-medium transition-all
                 ${cat === c.id ? 'btn-glow-orange text-white' : 'glass text-forest-200/60 hover:text-forest-100'}`}>
               {c.name}
             </button>
           ))}
+          <button onClick={() => { setNewCatName(''); setCatModal(true); }}
+            className="px-3 py-1.5 rounded-xl text-sm font-medium glass-teal text-teal-200 hover:opacity-80 transition-all flex items-center gap-1.5">
+            <Tag className="w-3.5 h-3.5" /> Add Category
+          </button>
         </div>
       </div>
 
@@ -224,6 +260,46 @@ export default function RestaurantMenu() {
         </div>
       )}
 
+      {/* Add Category Modal */}
+      {catModal && createPortal(
+        <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:9999, overflowY:'auto' }}>
+          <div style={{ minHeight:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
+            <div className="glass rounded-3xl p-6 w-full" style={{ background:'rgba(8,22,12,0.98)', border:'1px solid rgba(255,255,255,.12)', maxWidth:'22rem' }}>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-white font-semibold text-lg">New Category</p>
+                <button onClick={() => setCatModal(false)} className="w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-200 hover:glass-orange transition-all">
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+              <div className="space-y-3">
+                <div>
+                  <label className="block text-forest-200/60 text-xs font-medium mb-1">Category Name</label>
+                  <input
+                    autoFocus
+                    value={newCatName}
+                    onChange={e => setNewCatName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && (e.preventDefault(), addCategory())}
+                    placeholder="e.g., Seafood"
+                    className="w-full input-glass py-2.5 text-sm"
+                  />
+                </div>
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setCatModal(false)}
+                    className="flex-1 glass hover:glass-green transition-all text-forest-200 text-sm font-medium py-2.5 rounded-xl">
+                    Cancel
+                  </button>
+                  <button type="button" onClick={addCategory}
+                    className="flex-1 btn-glow-teal text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
+                    <Check className="w-4 h-4" /> Add
+                  </button>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
+
       {/* Add / Edit Modal — portalled to body to escape CSS transform context */}
       {modal && createPortal(
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:9999, overflowY:'auto' }}>
@@ -275,7 +351,7 @@ export default function RestaurantMenu() {
                 <label className="block text-forest-200/60 text-xs font-medium mb-1">Category</label>
                 <select value={form.category} onChange={e => f('category', e.target.value)}
                   className="w-full input-glass py-2.5 text-sm">
-                  {CATEGORIES.map(c => <option key={c.id} value={c.id} style={{ background:'#0d1a10' }}>{c.name}</option>)}
+                  {allCategories.map(c => <option key={c.id} value={c.id} style={{ background:'#0d1a10' }}>{c.name}</option>)}
                 </select>
               </div>
               <div>
