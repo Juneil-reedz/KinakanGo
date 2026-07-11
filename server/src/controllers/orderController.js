@@ -1,8 +1,13 @@
 const pool = require('../config/db');
 
 async function placeOrder(req, res) {
-  const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage } = req.body;
+  const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage, contactInfo } = req.body;
   const customerId = req.user.id;
+
+  // Persist phone number to user profile so it shows on orders
+  if (contactInfo?.phone) {
+    await pool.query('UPDATE users SET phone = $1 WHERE id = $2', [contactInfo.phone, customerId]);
+  }
 
   const ids = items.map(i => i.menuItemId);
   const placeholders = ids.map((_, i) => `$${i + 1}`).join(',');
