@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { promosApi } from "../../services/api";
+import { adminApi } from "../../context/AdminContext";
 import { Ticket, Plus, Edit, Trash2, Check, X, Calendar, Users, TrendingUp } from "lucide-react";
 
 const EMPTY_FORM = { code:"", type:"percentage", value:"", minOrder:"", maxDiscount:"", usageLimit:"", startDate:"", endDate:"", targetUsers:"all", description:"" };
@@ -24,7 +24,7 @@ export default function AdminPromos() {
     (async () => {
       try {
         setLoading(true);
-        const res = await promosApi.list({});
+        const res = await adminApi.promos.list({});
         setPromos(res.data || res || []);
       } catch {
         addNotification("Failed to load promos", "error");
@@ -50,7 +50,7 @@ export default function AdminPromos() {
     e.preventDefault();
     try {
       const payload = { code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, startDate:form.startDate, endDate:form.endDate, status:"active", targetUsers:form.targetUsers, description:form.description };
-      const created = await promosApi.create(payload);
+      const created = await adminApi.promos.create(payload);
       setPromos(p => [created, ...p]);
       addNotification(`Promo "${payload.code}" created!`, "success");
       close();
@@ -63,7 +63,7 @@ export default function AdminPromos() {
     e.preventDefault();
     try {
       const payload = { code:form.code.toUpperCase(), type:form.type, value:parseFloat(form.value), minOrder:parseFloat(form.minOrder)||0, maxDiscount:form.maxDiscount?parseFloat(form.maxDiscount):null, usageLimit:parseInt(form.usageLimit)||null, startDate:form.startDate, endDate:form.endDate, targetUsers:form.targetUsers, description:form.description };
-      const updated = await promosApi.update(selectedPromo.id, payload);
+      const updated = await adminApi.promos.update(selectedPromo.id, payload);
       setPromos(prev => prev.map(p => p.id === selectedPromo.id ? { ...p, ...payload, ...(updated || {}) } : p));
       addNotification("Promo updated!", "success");
       close();
@@ -76,7 +76,7 @@ export default function AdminPromos() {
     const promo = promos.find(p => p.id === id);
     const newStatus = promo.status === "active" ? "inactive" : "active";
     try {
-      await promosApi.update(id, { status: newStatus });
+      await adminApi.promos.update(id, { status: newStatus });
       setPromos(prev => prev.map(p => p.id === id ? { ...p, status:newStatus } : p));
       addNotification("Promo status updated", "success");
     } catch {
@@ -86,7 +86,7 @@ export default function AdminPromos() {
 
   const deletePromo = async (id) => {
     try {
-      await promosApi.remove(id);
+      await adminApi.promos.remove(id);
       setPromos(prev => prev.filter(p => p.id !== id));
       addNotification("Promo deleted", "success");
     } catch {

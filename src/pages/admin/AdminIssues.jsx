@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { issuesApi } from "../../services/api";
+import { adminApi } from "../../context/AdminContext";
 import { AlertTriangle, DollarSign, Store, Bike, Package, Clock, CheckCircle, X, Check, CreditCard, UtensilsCrossed } from "lucide-react";
 
 const PRIORITY_CLS = {
@@ -32,7 +32,7 @@ export default function AdminIssues() {
     (async () => {
       try {
         setLoading(true);
-        const res = await issuesApi.list({});
+        const res = await adminApi.issues.list({});
         setIssues(res.data || res || []);
       } catch {
         addNotification("Failed to load issues", "error");
@@ -54,7 +54,7 @@ export default function AdminIssues() {
   const approveRefund = async () => {
     const amt = parseFloat(refundAmount);
     try {
-      await issuesApi.resolve(selected.id, { refundApproved: true, notes: refundNotes });
+      await adminApi.issues.resolve(selected.id, { refundApproved: true, notes: refundNotes });
       setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes } : i));
       addNotification(`Refund of ₱${amt.toFixed(2)} approved for ${selected.customerName}`, "success");
       close();
@@ -65,7 +65,7 @@ export default function AdminIssues() {
 
   const denyRefund = async () => {
     try {
-      await issuesApi.deny(selected.id, refundNotes);
+      await adminApi.issues.deny(selected.id, refundNotes);
       setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"denied", refundNotes } : i));
       addNotification("Refund request denied", "success");
       close();
@@ -76,7 +76,7 @@ export default function AdminIssues() {
 
   const resolve = async (id) => {
     try {
-      await issuesApi.resolve(id, { notes: "" });
+      await adminApi.issues.resolve(id, { notes: "" });
       setIssues(prev => prev.map(i => i.id === id ? { ...i, status:"resolved" } : i));
       addNotification("Issue marked as resolved", "success");
     } catch {

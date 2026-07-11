@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
 import { useAdmin } from "../../context/AdminContext";
-import { ordersApi, restaurantsApi, applicationsApi, issuesApi } from "../../services/api";
+import { adminRequest, adminApi } from "../../context/AdminContext";
 import {
   Users, Store, Bike, Package, DollarSign, Activity, AlertTriangle,
   TrendingUp, Clock, ArrowUpRight
@@ -20,10 +20,10 @@ export default function AdminDashboard() {
       try {
         setLoading(true);
         const [ordersRes, restaurantsRes, appsRes, issuesRes] = await Promise.allSettled([
-          ordersApi.list({ limit: 1 }),
-          restaurantsApi.list({ limit: 1 }),
-          applicationsApi.list({ status: "pending", limit: 1 }),
-          issuesApi.list({ status: "pending", limit: 5 }),
+          adminApi.orders.list({ limit: 1 }),
+          adminApi.restaurants.list({ limit: 1 }),
+          adminRequest('/upgrades?status=pending&limit=1'),
+          adminApi.issues.list({ status: "pending", limit: 5 }),
         ]);
 
         setStats({

@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { request } from "../../services/api";
+import { adminRequest as request } from "../../context/AdminContext";
 import { FileText, Store, Bike, Check, X, Eye, Filter, Clock } from "lucide-react";
 
 const STATUS_CLS = {

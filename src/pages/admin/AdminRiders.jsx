@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { usersApi, request } from "../../services/api";
+import { usersApi } from "../../services/api";
+import { adminRequest } from "../../context/AdminContext";
 import { Bike, Search, Star, MapPin, Phone, Edit, Trash2, Eye, DollarSign, TrendingUp, Package, CheckCircle, Clock, Calendar, Truck, X, Check, ToggleLeft, ToggleRight } from "lucide-react";
 
 const STATUS_CLS = {
@@ -29,7 +30,7 @@ export default function AdminRiders() {
     (async () => {
       try {
         setLoading(true);
-        const res = await request('/riders');
+        const res = await adminRequest('/riders');
         setList(res.data || res || []);
       } catch {
         addNotification("Failed to load riders", "error");

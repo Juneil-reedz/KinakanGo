@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { usersApi } from "../../services/api";
+import { adminApi } from "../../context/AdminContext";
 import { Users, Search, Shield, ShieldOff, Eye, Clock, Package, DollarSign, AlertTriangle, X, Check } from "lucide-react";
 
 const STATUS_CLS = {
@@ -23,7 +23,7 @@ export default function AdminUsers() {
     (async () => {
       try {
         setLoading(true);
-        const res = await usersApi.list({ role: "customer" });
+        const res = await adminApi.users.list({ role: "customer" });
         setUsers(res.data || res || []);
       } catch {
         addNotification("Failed to load users", "error");
@@ -47,7 +47,7 @@ export default function AdminUsers() {
   const handleBan = async () => {
     if (!banReason.trim()) { addNotification("Please provide a reason", "error"); return; }
     try {
-      await usersApi.ban(selectedUser.id, banReason);
+      await adminApi.users.ban(selectedUser.id, banReason);
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"banned", banReason } : u));
       addNotification(`${selectedUser.name} has been banned`, "success");
       close();
@@ -58,7 +58,7 @@ export default function AdminUsers() {
 
   const handleUnban = async () => {
     try {
-      await usersApi.unban(selectedUser.id);
+      await adminApi.users.unban(selectedUser.id);
       setUsers(prev => prev.map(u => u.id === selectedUser.id ? { ...u, status:"active", banReason:null } : u));
       addNotification(`${selectedUser.name} has been unbanned`, "success");
       close();

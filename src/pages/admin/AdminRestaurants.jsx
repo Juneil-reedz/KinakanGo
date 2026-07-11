@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { restaurantsApi } from "../../services/api";
+import { adminApi } from "../../context/AdminContext";
 import { Store, Search, Star, Clock, Package, Edit, Trash2, Eye, ChevronDown, ChevronUp, CheckCircle, X, Check } from "lucide-react";
 
 export default function AdminRestaurants() {
@@ -16,7 +16,7 @@ export default function AdminRestaurants() {
   const load = async () => {
     try {
       setLoading(true);
-      const res = await restaurantsApi.list({ limit: 50 });
+      const res = await adminApi.restaurants.list({ limit: 50 });
       setList(res.data || res || []);
     } catch {
       addNotification("Failed to load restaurants", "error");
@@ -44,7 +44,7 @@ export default function AdminRestaurants() {
 
   const confirmDelete = async () => {
     try {
-      await restaurantsApi.remove(selectedRestaurant.id);
+      await adminApi.restaurants.remove(selectedRestaurant.id);
       setList(prev => prev.filter(r => r.id !== selectedRestaurant.id));
       addNotification("Restaurant removed", "success");
       close();
@@ -55,7 +55,7 @@ export default function AdminRestaurants() {
 
   const approveRestaurant = async (id) => {
     try {
-      await restaurantsApi.approve(id);
+      await adminApi.restaurants.approve(id);
       setList(prev => prev.map(r => r.id === id ? { ...r, approved: true } : r));
       addNotification("Restaurant approved", "success");
     } catch {
@@ -270,7 +270,7 @@ export default function AdminRestaurants() {
               const name        = e.target.name.value;
               const description = e.target.description.value;
               try {
-                await restaurantsApi.update(selectedRestaurant.id, { name, description });
+                await adminApi.restaurants.update(selectedRestaurant.id, { name, description });
                 setList(prev => prev.map(r => r.id === selectedRestaurant.id ? { ...r, name, description } : r));
                 addNotification("Restaurant updated", "success");
                 close();
