@@ -16,7 +16,7 @@ router.get('/:id', ctrl.getOne);
 
 router.use(authenticate);
 router.post('/',        requireRole('restaurant_owner', 'admin'), ctrl.create);
-router.patch('/:id',    requireRole('restaurant_owner', 'admin'), ctrl.update);
+router.patch('/:id',    ctrl.update);   // owner check done inside controller
 router.delete('/:id',   requireRole('admin'), ctrl.remove);
 router.post('/:id/approve', requireRole('admin'), ctrl.approve);
 

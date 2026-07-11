@@ -50,6 +50,13 @@ async function create(req, res) {
 }
 
 async function update(req, res) {
+  // Allow the restaurant's own owner (any role) or an admin
+  if (req.user.role !== 'admin') {
+    const { rows: own } = await pool.query('SELECT owner_id FROM restaurants WHERE id = $1', [req.params.id]);
+    if (!own.length || own[0].owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Forbidden' });
+    }
+  }
   const { name, description, address, cuisine, imageUrl, coverUrl, deliveryFee, minOrder, isOpen, gcashNumber, gcashName } = req.body;
   const { rows } = await pool.query(
     `UPDATE restaurants SET
