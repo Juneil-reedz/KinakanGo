@@ -4,11 +4,8 @@ async function submitRequest(req, res) {
   const { plan, amount, payment_method, reference_number, proof_image, notes } = req.body;
   const userId = req.user.id;
 
-  if (!plan || !amount || !payment_method) {
-    return res.status(400).json({ error: 'Plan, amount and payment method are required' });
-  }
-  if (!proof_image) {
-    return res.status(400).json({ error: 'Proof of payment is required' });
+  if (!plan) {
+    return res.status(400).json({ error: 'Plan is required' });
   }
 
   // Check for existing pending request
