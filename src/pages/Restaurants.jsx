@@ -73,7 +73,7 @@ export default function Restaurants() {
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(i=>i!==id) : [...p, id]);
 
   const addItem = (item, qty = 1) => {
-    addToCart({ id:item.id, name:item.name, price:item.price, quantity:qty, image:item.image_url || item.image },
+    addToCart({ id:item.id, name:item.name, price:Number(item.price), quantity:qty, image:item.image_url || item.image },
               item.restaurant || { id: item.restaurant_id, name: item.restaurant_name || '' });
   };
 
@@ -144,7 +144,7 @@ export default function Restaurants() {
                     className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center">
                     <Heart className={`w-3.5 h-3.5 ${favorites.includes(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
                   </button>
-                  <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{item.price.toFixed(2)}</p>
+                  <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
                 </div>
                 <div className="p-2.5">
                   <p className="text-white font-semibold text-xs truncate">{item.name}</p>
@@ -230,7 +230,7 @@ export default function Restaurants() {
                 className="absolute top-3 right-3 w-8 h-8 glass rounded-full flex items-center justify-center text-white">
                 <X className="w-4 h-4" />
               </button>
-              <p className="absolute bottom-3 left-4 text-white font-bold text-xl text-glow-orange">₱{modalItem.price.toFixed(2)}</p>
+              <p className="absolute bottom-3 left-4 text-white font-bold text-xl text-glow-orange">₱{Number(modalItem.price).toFixed(2)}</p>
             </div>
             <div className="p-5">
               <p className="text-white font-heading font-bold text-lg mb-1">{modalItem.name}</p>

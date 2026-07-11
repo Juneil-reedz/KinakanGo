@@ -151,7 +151,7 @@ export default function OrderReceipt() {
                 <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,.06)' }}>
                   <td className="py-3 text-white text-sm print:text-black">{item.name}</td>
                   <td className="py-3 text-center text-forest-200/60 text-sm print:text-gray-700">{item.quantity}</td>
-                  <td className="py-3 text-right text-forest-200/60 text-sm print:text-gray-700">₱{item.price.toFixed(2)}</td>
+                  <td className="py-3 text-right text-forest-200/60 text-sm print:text-gray-700">₱{Number(item.price).toFixed(2)}</td>
                   <td className="py-3 text-right text-ember-400 font-semibold text-sm print:text-orange-600">
                     ₱{(item.price * item.quantity).toFixed(2)}
                   </td>

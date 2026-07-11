@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Search as SearchIcon, X, Star, Plus, Clock } from 'lucide-react';
@@ -58,7 +58,7 @@ export default function Search() {
       <div className="relative">
         <SearchIcon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
         <input value={query} onChange={e => setQuery(e.target.value)}
-          placeholder="Search food, restaurants…"
+          placeholder="Search food, restaurantsâ€¦"
           className="w-full input-glass pl-10 pr-10 py-3" />
         {query && (
           <button onClick={() => setQuery('')}
@@ -97,7 +97,7 @@ export default function Search() {
               <div className="relative aspect-square overflow-hidden">
                 <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{item.price.toFixed(2)}</p>
+                <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">â‚±{Number(item.price).toFixed(2)}</p>
               </div>
               <div className="p-2.5">
                 <p className="text-white font-semibold text-xs truncate">{item.name}</p>
@@ -106,7 +106,7 @@ export default function Search() {
                   <div className="flex items-center gap-1.5">
                     <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
                     <span className="text-ember-300 text-xs">{item.rating}</span>
-                    <span className="text-forest-200/40 text-xs">·</span>
+                    <span className="text-forest-200/40 text-xs">Â·</span>
                     <Clock className="w-3 h-3 text-forest-300/50" />
                     <span className="text-forest-200/50 text-xs">{item.deliveryTime}m</span>
                   </div>
@@ -123,7 +123,7 @@ export default function Search() {
         </div>
       ) : (
         <div className="glass rounded-3xl py-16 flex flex-col items-center gap-3">
-          <span className="text-5xl">🔍</span>
+          <span className="text-5xl">ðŸ”</span>
           <p className="text-white font-semibold">No results found</p>
           <p className="text-forest-200/50 text-sm">Try different keywords</p>
           <button onClick={() => { setQuery(''); setCat('all'); }}
