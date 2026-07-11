@@ -14,7 +14,6 @@ const EMPTY = {
   vehicleType: '', vehiclePlateNumber: '', vehicleModel: '',
   driverLicense: null, vehicleRegistration: null, nbiClearance: null, validId: null, proofOfAddress: null,
   profilePhoto: null, idType: '',
-  bankName: '', accountNumber: '', accountName: '',
 };
 
 function FileUpload({ label, hint, fieldName, file, onChange, inputId }) {
@@ -58,7 +57,7 @@ export default function RiderApplication() {
       2: () => !formData.emergencyContact || !formData.emergencyName,
       3: () => !formData.vehicleType || !formData.vehiclePlateNumber,
       4: () => !formData.driverLicense || !formData.vehicleRegistration || !formData.nbiClearance || !formData.validId || !formData.proofOfAddress,
-      5: () => !formData.profilePhoto || !formData.bankName || !formData.accountNumber || !formData.accountName,
+      5: () => !formData.profilePhoto,
     };
     if (errs[step]?.()) {
       showError(step === 4 || step === 5 ? 'Please complete all required fields / uploads' : 'Please fill in all required fields');
@@ -211,20 +210,7 @@ export default function RiderApplication() {
         {step === 5 && (
           <div className="space-y-5">
             <h2 className="text-white font-heading font-bold text-xl mb-5">Final Requirements</h2>
-            <FileUpload label="Profile Photo" hint="Clear photo of yourself for your rider profile" fieldName="profilePhoto" file={formData.profilePhoto} onChange={e => { setFormData(p => ({ ...p, profilePhoto: e.target.files[0] })); }} inputId="profile-photo-upload" />
-            <div className="glass rounded-xl p-5 space-y-4">
-              <p className="text-white font-semibold text-sm">Bank Account (for earnings payout)</p>
-              {[
-                { label: 'Bank Name',       name: 'bankName',      placeholder: 'e.g., BDO, BPI, Metrobank' },
-                { label: 'Account Number',  name: 'accountNumber', placeholder: 'Enter account number' },
-                { label: 'Account Name',    name: 'accountName',   placeholder: 'Name as shown on bank account' },
-              ].map(({ label, name, placeholder }) => (
-                <div key={name}>
-                  <label className="block text-forest-200/60 text-xs font-medium mb-1.5">{label} <span className="text-red-400">*</span></label>
-                  <input type="text" name={name} value={formData[name]} onChange={set} placeholder={placeholder} className={INPUT} />
-                </div>
-              ))}
-            </div>
+            <FileUpload label="Profile Photo" hint="Clear photo of yourself for your rider profile" fieldName="profilePhoto" file={formData.profilePhoto} onChange={e => setFormData(p => ({ ...p, profilePhoto: e.target.files[0] }))} inputId="profile-photo-upload" />
             <div className="glass-green rounded-xl p-4 flex items-start gap-3">
               <CheckCircle className="w-5 h-5 text-forest-400 flex-shrink-0 mt-0.5" />
               <p className="text-forest-100/80 text-sm">Please review all information before submitting. Our team will review your application within 2–5 business days.</p>
