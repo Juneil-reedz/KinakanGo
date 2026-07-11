@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
 import { request } from "../../services/api";
-import { FileText, Store, Bike, Check, X, Eye, Filter, Clock, CreditCard, Banknote, Phone, MapPin, Car } from "lucide-react";
+import { FileText, Store, Bike, Check, X, Eye, Filter, Clock } from "lucide-react";
 
 const STATUS_CLS = {
   pending:  "glass-orange text-ember-200",
@@ -178,7 +178,7 @@ export default function AdminApplications() {
                         </div>
                         <p className="text-white font-semibold text-sm">{app.user_name}</p>
                         <p className="text-forest-200/50 text-xs">{app.user_email}</p>
-                        <p className="text-forest-200/60 text-xs mt-0.5">{app.plan} · ₱{app.amount}</p>
+                        <p className="text-forest-200/60 text-xs mt-0.5">{app.plan}</p>
                         {notes?.restaurantName && <p className="text-ember-300/70 text-xs mt-0.5">{notes.restaurantName}</p>}
                         {notes?.fullName && <p className="text-forest-200/60 text-xs mt-0.5">{notes.fullName} · {notes.vehicleType}</p>}
                         {app.admin_note && app.status === 'rejected' && <p className="text-red-400/70 text-xs mt-1">Reason: {app.admin_note}</p>}
@@ -200,8 +200,6 @@ export default function AdminApplications() {
                     </div>
                     <p className="text-forest-200/40 text-xs mt-1.5 flex items-center gap-1">
                       <Clock className="w-3 h-3" /> {new Date(app.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}
-                      {' · '}{app.payment_method === 'gcash' ? 'GCash' : 'Cash'}
-                      {app.reference_number ? ` · Ref: ${app.reference_number}` : ''}
                     </p>
                   </div>
                 </div>
@@ -237,10 +235,7 @@ export default function AdminApplications() {
               <div className="grid grid-cols-2 gap-2">
                 <Field label="Name"     value={selected.user_name} />
                 <Field label="Email"    value={selected.user_email} />
-                <Field label="Plan"     value={selected.plan} />
-                <Field label="Amount"   value={`₱${selected.amount}`} />
-                <Field label="Payment"  value={selected.payment_method === 'gcash' ? 'GCash' : 'Cash'} />
-                <Field label="Ref #"    value={selected.reference_number} />
+                <Field label="Plan"      value={selected.plan} />
                 <Field label="Submitted" value={new Date(selected.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })} />
               </div>
             </div>
@@ -267,6 +262,7 @@ export default function AdminApplications() {
                     ) : (
                       <>
                         <Field label="Full Name"    value={notes.fullName} />
+                        <Field label="Address"      value={notes.address} />
                         <Field label="ID Type"      value={notes.idType} />
                         <Field label="Vehicle Type" value={notes.vehicleType} />
                         <Field label="Plate Number" value={notes.plateNumber} />

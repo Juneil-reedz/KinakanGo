@@ -7,25 +7,32 @@ async function list(req, res) {
   const params = [];
   let   idx    = 1;
 
-  if (role)   { where.push(`role = $${idx++}`);        params.push(role); }
-  if (status === 'active') { where.push('is_active = true'); }
-  if (status === 'banned') { where.push('is_active = false'); }
+  // Riders keep 'customer' role; identify them via rider_profiles join
+  const isRiderQuery = role === 'rider';
+
+  if (role && !isRiderQuery) { where.push(`u.role = $${idx++}`); params.push(role); }
+  if (isRiderQuery)          { where.push(`rp.user_id IS NOT NULL`); }
+  if (status === 'active')   { where.push('u.is_active = true'); }
+  if (status === 'banned')   { where.push('u.is_active = false'); }
   if (search) {
-    where.push(`(name ILIKE $${idx++} OR email ILIKE $${idx++})`);
+    where.push(`(u.name ILIKE $${idx++} OR u.email ILIKE $${idx++})`);
     params.push(`%${search}%`, `%${search}%`);
   }
 
   const cond = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const { rows } = await pool.query(
-    `SELECT id, name, email, phone, role, avatar_url, is_active, created_at
-     FROM users ${cond}
-     ORDER BY created_at DESC
+    `SELECT u.id, u.name, u.email, u.phone, u.role, u.avatar_url, u.is_active, u.created_at,
+            rp.vehicle_type, rp.plate_number
+     FROM users u
+     LEFT JOIN rider_profiles rp ON rp.user_id = u.id
+     ${cond}
+     ORDER BY u.created_at DESC
      LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, parseInt(limit), offset]
   );
   const { rows: countRows } = await pool.query(
-    `SELECT COUNT(*) AS total FROM users ${cond}`, params
+    `SELECT COUNT(*) AS total FROM users u LEFT JOIN rider_profiles rp ON rp.user_id = u.id ${cond}`, params
   );
   res.json({ data: rows, total: parseInt(countRows[0].total), page: parseInt(page), limit: parseInt(limit) });
 }
