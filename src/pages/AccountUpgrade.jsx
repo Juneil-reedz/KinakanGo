@@ -1,16 +1,13 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, Crown, Zap, ChevronRight, X, Upload, Smartphone, Banknote,
-  Clock, CheckCircle, XCircle, Store, Bike, FileText, Phone, MapPin,
-  Camera, ShieldCheck, User, ArrowRight, RefreshCw
+  Check, Crown, Zap, ChevronRight, X, Upload,
+  Clock, CheckCircle, XCircle, Store, Bike, FileText,
+  ShieldCheck, ArrowRight, RefreshCw
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import { request, authApi, restaurantsApi } from '../services/api';
-
-const GCASH_NUMBER = '0927-064-6946';
-const GCASH_NAME   = 'KinakanGo Admin';
 
 const PLANS = [
   {
@@ -82,7 +79,7 @@ export default function AccountUpgrade() {
   const { addNotification } = useNotification();
   const { user, updateUser } = useAuth();
 
-  // steps: plans → role → requirements → payment → done
+  // steps: plans → role → requirements → done
   const [step, setStep]           = useState('plans');
   const [selectedPlan, setPlan]   = useState(null);
   const [selectedRole, setRole]   = useState(null);
@@ -95,16 +92,9 @@ export default function AccountUpgrade() {
 
   // Rider requirements
   const [rider, setRider] = useState({
-    fullName: '', idType: "Driver's License", idPhoto: null,
+    fullName: '', address: '', idType: "Driver's License", idPhoto: null,
     selfie: null, vehicleType: 'Motorcycle', plateNumber: '',
   });
-
-  // Payment
-  const [payMethod, setPayMethod] = useState(null);
-  const [refNum, setRefNum]       = useState('');
-  const [proof, setProof]         = useState(null);
-  const [proofPreview, setProofPreview] = useState(null);
-  const proofRef = useRef(null);
 
   const [loading, setLoading]       = useState(false);
   const [existing, setExisting]     = useState(undefined);
@@ -149,6 +139,7 @@ export default function AccountUpgrade() {
       if (!resto.logo) { addNotification('Restaurant photo/logo is required', 'error'); return false; }
     } else {
       if (!rider.fullName.trim()) { addNotification('Full name is required', 'error'); return false; }
+      if (!rider.address.trim()) { addNotification('Address is required', 'error'); return false; }
       if (!rider.idPhoto) { addNotification('Government ID photo is required', 'error'); return false; }
       if (!rider.selfie) { addNotification('Selfie with ID is required', 'error'); return false; }
     }
@@ -157,22 +148,21 @@ export default function AccountUpgrade() {
 
   /* ── Submit ── */
   const handleSubmit = async () => {
-    if (payMethod === 'gcash' && !refNum.trim()) { addNotification('Enter the GCash reference number', 'error'); return; }
-    if (!proof) { addNotification('Upload proof of payment', 'error'); return; }
+    if (!validateRequirements()) return;
     setLoading(true);
     try {
       const requirements = selectedRole === 'restaurant_owner'
         ? { role: 'restaurant_owner', restaurantName: resto.name, category: resto.category, address: resto.address, city: resto.city, phone: resto.phone, logo: resto.logo, permit: resto.permit }
-        : { role: 'rider', fullName: rider.fullName, idType: rider.idType, idPhoto: rider.idPhoto, selfie: rider.selfie, vehicleType: rider.vehicleType, plateNumber: rider.plateNumber };
+        : { role: 'rider', fullName: rider.fullName, address: rider.address, idType: rider.idType, idPhoto: rider.idPhoto, selfie: rider.selfie, vehicleType: rider.vehicleType, plateNumber: rider.plateNumber };
 
       await request('/upgrades', {
         method: 'POST',
         body: JSON.stringify({
           plan: `${plan.name} — ${selectedRole === 'restaurant_owner' ? 'Restaurant Owner' : 'Rider'}`,
-          amount: plan.price,
-          payment_method: payMethod,
-          reference_number: refNum || null,
-          proof_image: proof,
+          amount: 0,
+          payment_method: null,
+          reference_number: null,
+          proof_image: null,
           notes: JSON.stringify(requirements),
         }),
       });
@@ -302,7 +292,6 @@ export default function AccountUpgrade() {
             </div>
             <div className="glass px-6 py-3 flex items-center justify-between text-xs text-forest-200/50">
               <span>{existing.plan}</span>
-              <span>₱{existing.amount} · {existing.payment_method === 'gcash' ? 'GCash' : 'Cash'}</span>
               <span>{new Date(existing.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</span>
             </div>
           </div>
@@ -320,7 +309,7 @@ export default function AccountUpgrade() {
             </div>
             <div className="glass rounded-xl px-5 py-3 text-sm text-forest-200/70 text-center">
               <p className="font-semibold text-white">{existing.plan}</p>
-              <p className="mt-0.5">₱{existing.amount} · {existing.payment_method === 'gcash' ? 'GCash' : 'Cash'} · {new Date(existing.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
+              <p className="mt-0.5">{new Date(existing.created_at).toLocaleDateString('en-PH', { month: 'short', day: 'numeric', year: 'numeric' })}</p>
             </div>
             <button onClick={() => request('/upgrades/mine').then(setExisting).catch(() => {})}
               className="glass hover:glass-green transition-all text-forest-200/60 hover:text-white text-sm px-4 py-2 rounded-xl flex items-center gap-2">
@@ -358,11 +347,11 @@ export default function AccountUpgrade() {
         </div>
         <h2 className="text-2xl font-heading font-bold text-white text-center">Request Submitted!</h2>
         <p className="text-forest-200/60 text-sm text-center max-w-sm">
-          Our team will verify your documents and payment. Your {selectedRole === 'restaurant_owner' ? 'Restaurant' : 'Rider'} account will be activated within 1–24 hours.
+          Our team will verify your documents. Your {selectedRole === 'restaurant_owner' ? 'Restaurant' : 'Rider'} account will be activated within 1–24 hours.
         </p>
         <div className="glass rounded-2xl px-6 py-4 text-center">
           <p className="text-white font-semibold">{plan?.name} — {selectedRole === 'restaurant_owner' ? 'Restaurant Owner' : 'Rider'}</p>
-          <p className="text-ember-400 font-bold">₱{plan?.price}/mo</p>
+          <p className="text-forest-200/50 text-sm">Application submitted for review</p>
         </div>
         <button onClick={() => navigate('/')} className="btn-glow-orange text-white px-6 py-3 rounded-xl font-semibold">Back to Home</button>
       </div>
@@ -387,14 +376,14 @@ export default function AccountUpgrade() {
 
         {/* Step indicator */}
         <div className="flex items-center gap-2 text-xs text-forest-200/50 mb-2">
-          {['Plan','Role','Details','Payment'].map((s, i) => (
+          {['Plan','Role','Details'].map((s, i) => (
             <div key={s} className="flex items-center gap-2">
               <span className={`w-5 h-5 rounded-full flex items-center justify-center text-[10px] font-bold
-                ${i < 2 ? 'btn-glow-green text-white' : i === 2 ? 'btn-glow-orange text-white' : 'glass text-forest-200/40'}`}>
+                ${i < 2 ? 'btn-glow-green text-white' : 'btn-glow-orange text-white'}`}>
                 {i < 2 ? <Check className="w-3 h-3" /> : i + 1}
               </span>
               <span className={i === 2 ? 'text-white' : ''}>{s}</span>
-              {i < 3 && <ChevronRight className="w-3 h-3" />}
+              {i < 2 && <ChevronRight className="w-3 h-3" />}
             </div>
           ))}
         </div>
@@ -464,6 +453,13 @@ export default function AccountUpgrade() {
             </div>
 
             <div>
+              <p className="text-forest-200/70 text-xs font-medium mb-1.5">Complete Address <span className="text-red-400">*</span></p>
+              <textarea value={rider.address} onChange={e => setRider(r => ({...r, address: e.target.value}))}
+                placeholder="Street, Barangay, City / Municipality" rows={2}
+                className="w-full input-glass px-3 py-2.5 text-sm resize-none" />
+            </div>
+
+            <div>
               <p className="text-forest-200/70 text-xs font-medium mb-1.5">Government ID Type <span className="text-red-400">*</span></p>
               <select value={rider.idType} onChange={e => setRider(r => ({...r, idType: e.target.value}))}
                 className="w-full input-glass px-3 py-2.5 text-sm">
@@ -507,9 +503,12 @@ export default function AccountUpgrade() {
           </div>
         )}
 
-        <button onClick={() => { if (validateRequirements()) setStep('payment'); }}
-          className="w-full py-4 btn-glow-green text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2">
-          Continue to Payment <ChevronRight className="w-5 h-5" />
+        <button onClick={handleSubmit} disabled={loading}
+          className={`w-full py-4 rounded-2xl font-heading font-bold flex items-center justify-center gap-2 transition-all
+            ${loading ? 'glass text-forest-200/40 cursor-not-allowed' : 'btn-glow-green text-white'}`}>
+          {loading
+            ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Submitting…</>
+            : <><Check className="w-4 h-4" /> Submit Application</>}
         </button>
       </div>
     );
@@ -598,125 +597,6 @@ export default function AccountUpgrade() {
     );
   }
 
-  /* ── Payment step ── */
-  if (step === 'payment') {
-    const handleProofFile = (e) => {
-      const file = e.target.files?.[0];
-      if (!file) return;
-      if (file.size > 5 * 1024 * 1024) { addNotification('Image must be under 5 MB', 'error'); return; }
-      const reader = new FileReader();
-      reader.onload = (ev) => { setProof(ev.target.result); setProofPreview(ev.target.result); };
-      reader.readAsDataURL(file);
-    };
-    return (
-      <div className="space-y-4 max-w-lg mx-auto animate-fade-up">
-        <div className="flex items-center gap-3 mb-2">
-          <button onClick={() => setStep('requirements')} className="w-8 h-8 glass rounded-lg flex items-center justify-center">
-            <ChevronRight className="w-4 h-4 text-forest-200 rotate-180" />
-          </button>
-          <h1 className="text-xl font-heading font-bold text-white">Complete Payment</h1>
-        </div>
-
-        <div className="glass rounded-2xl p-4 flex items-center gap-4">
-          <div className={`w-10 h-10 ${plan?.iconClass} rounded-xl flex items-center justify-center flex-shrink-0`}>
-            {plan && <plan.icon className="w-5 h-5 text-white" />}
-          </div>
-          <div className="flex-1">
-            <p className="text-white font-semibold text-sm">{plan?.name}</p>
-            <p className="text-forest-200/50 text-xs">{selectedRole === 'restaurant_owner' ? 'Restaurant Owner' : 'Delivery Rider'}</p>
-          </div>
-          <p className="text-ember-400 font-heading font-bold">₱{plan?.price}<span className="text-forest-200/40 text-xs font-normal">/mo</span></p>
-        </div>
-
-        <div>
-          <p className="text-forest-200/70 text-sm font-medium mb-2">Payment method</p>
-          <div className="grid grid-cols-2 gap-3">
-            {[
-              { id: 'gcash', label: 'GCash', icon: Smartphone, desc: 'Send via GCash' },
-              { id: 'cash',  label: 'Cash',  icon: Banknote,   desc: 'Pay in person' },
-            ].map(m => (
-              <button key={m.id} onClick={() => setPayMethod(m.id)}
-                className={`glass card-3d rounded-2xl p-4 flex flex-col items-center gap-2 transition-all
-                  ${payMethod === m.id ? 'ring-2 ring-forest-400 glass-green' : 'hover:glass-green'}`}>
-                <m.icon className={`w-6 h-6 ${payMethod === m.id ? 'text-forest-300' : 'text-forest-200/50'}`} />
-                <p className={`font-semibold text-sm ${payMethod === m.id ? 'text-white' : 'text-forest-200/70'}`}>{m.label}</p>
-                <p className="text-forest-200/40 text-xs">{m.desc}</p>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {payMethod === 'gcash' && (
-          <div className="glass rounded-2xl p-5 space-y-4 animate-fade-up">
-            <p className="text-white font-semibold">Send via GCash</p>
-            <div className="glass-green rounded-xl p-4">
-              <p className="text-forest-200/60 text-xs mb-1">Send ₱{plan?.price} to:</p>
-              <p className="text-white font-heading font-bold text-lg">{GCASH_NUMBER}</p>
-              <p className="text-forest-200/70 text-sm">{GCASH_NAME}</p>
-            </div>
-            <ol className="text-forest-200/60 text-xs space-y-1.5 list-decimal list-inside">
-              <li>Open GCash → Send Money → enter the number above</li>
-              <li>Enter ₱{plan?.price} and complete the transfer</li>
-              <li>Screenshot the success screen</li>
-              <li>Upload the screenshot + reference number below</li>
-            </ol>
-            <div>
-              <p className="text-forest-200/70 text-xs font-medium mb-1.5">GCash Reference Number <span className="text-red-400">*</span></p>
-              <input value={refNum} onChange={e => setRefNum(e.target.value)} placeholder="e.g. 1234567890"
-                className="w-full input-glass px-3 py-2.5 text-sm" />
-            </div>
-          </div>
-        )}
-
-        {payMethod === 'cash' && (
-          <div className="glass rounded-2xl p-5 space-y-3 animate-fade-up">
-            <p className="text-white font-semibold">Cash Payment</p>
-            <div className="glass-orange rounded-xl p-4">
-              <p className="text-forest-200/60 text-xs mb-1">Amount:</p>
-              <p className="text-white font-heading font-bold text-lg">₱{plan?.price}</p>
-            </div>
-            <p className="text-forest-200/60 text-xs">Pay at our office or to an authorized collector. Upload a photo of your receipt below.</p>
-          </div>
-        )}
-
-        {payMethod && (
-          <div className="animate-fade-up">
-            <p className="text-forest-200/70 text-xs font-medium mb-1.5">
-              {payMethod === 'gcash' ? 'GCash Payment Screenshot' : 'Cash Receipt Photo'} <span className="text-red-400">*</span>
-            </p>
-            <input ref={proofRef} type="file" accept="image/*" className="hidden" onChange={handleProofFile} />
-            {proofPreview ? (
-              <div className="relative rounded-2xl overflow-hidden">
-                <img src={proofPreview} alt="proof" className="w-full max-h-56 object-contain glass rounded-2xl" />
-                <button onClick={() => { setProof(null); setProofPreview(null); }}
-                  className="absolute top-2 right-2 w-7 h-7 btn-glow-orange rounded-full flex items-center justify-center">
-                  <X className="w-3.5 h-3.5 text-white" />
-                </button>
-              </div>
-            ) : (
-              <button onClick={() => proofRef.current?.click()}
-                className="w-full glass rounded-2xl py-10 flex flex-col items-center gap-3 hover:glass-green transition-all border-2 border-dashed border-white/10 hover:border-forest-400/30">
-                <Upload className="w-8 h-8 text-forest-300/40" />
-                <p className="text-forest-200/50 text-sm">Tap to upload screenshot</p>
-                <p className="text-forest-200/30 text-xs">JPG, PNG · max 5 MB</p>
-              </button>
-            )}
-          </div>
-        )}
-
-        {payMethod && (
-          <button onClick={handleSubmit} disabled={loading || !proof}
-            className={`w-full py-4 rounded-2xl font-heading font-bold text-sm flex items-center justify-center gap-2 transition-all
-              ${loading || !proof ? 'glass text-forest-200/40 cursor-not-allowed' : 'btn-glow-green text-white'}`}>
-            {loading
-              ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Submitting…</>
-              : <><Check className="w-4 h-4" /> Submit Upgrade Request</>}
-          </button>
-        )}
-      </div>
-    );
-  }
-
   /* ── Plans step ── */
   return (
     <div className="space-y-6 pb-20 lg:pb-0 animate-fade-up">
@@ -784,12 +664,11 @@ export default function AccountUpgrade() {
         <p className="text-white font-semibold mb-4">How it works</p>
         <div className="space-y-3">
           {[
-            { n:'1', t:'Choose a plan',           d:'Premium (₱299/mo) or Business Pro (₱999/mo)' },
+            { n:'1', t:'Choose a plan',           d:'Premium or Business Pro' },
             { n:'2', t:'Pick your role',           d:'Restaurant Owner or Delivery Rider' },
             { n:'3', t:'Submit requirements',      d:'Fill in details and upload required documents' },
-            { n:'4', t:'Pay via GCash or Cash',   d:'Upload screenshot or receipt as proof' },
-            { n:'5', t:'Admin reviews (1–24 hrs)', d:'We verify documents and payment' },
-            { n:'6', t:'Access unlocked',          d:'Login to your Restaurant or Rider dashboard' },
+            { n:'4', t:'Admin reviews (1–24 hrs)', d:'We verify your documents and information' },
+            { n:'5', t:'Access unlocked',          d:'Login to your Restaurant or Rider dashboard' },
           ].map(s => (
             <div key={s.n} className="flex items-start gap-3">
               <div className="w-7 h-7 btn-glow-green rounded-full flex items-center justify-center flex-shrink-0 text-xs font-bold text-white">{s.n}</div>
