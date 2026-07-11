@@ -84,7 +84,7 @@ export const usersApi = {
 // ── Restaurants ───────────────────────────────────────────────────────────────
 
 export const restaurantsApi = {
-  list:      (params = {}) => request(`/restaurants?${new URLSearchParams(params)}`),
+  list:      (params = {}) => request(`/restaurants?${new URLSearchParams(cleanParams(params))}`),
   getOne:    (id)          => request(`/restaurants/${id}`),
   myRestaurant: ()         => request('/restaurants/owner/me'),
   create:    (data)        => request('/restaurants',         { method: 'POST',   body: JSON.stringify(data) }),
@@ -148,7 +148,8 @@ export const getRestaurants        = (f = {}) => restaurantsApi.list(f);
 export const getFeaturedRestaurants= (limit = 6) => restaurantsApi.list({ limit });
 export const getRestaurantById     = (id)     => restaurantsApi.getOne(id);
 export const getMenuByRestaurantId = (id)     => menuApi.list(id);
-export const getAllMenuItems        = (f = {}) => request(`/menu?${new URLSearchParams(f)}`);
+const cleanParams = (f = {}) => Object.fromEntries(Object.entries(f).filter(([, v]) => v != null && v !== '' && v !== 'undefined'));
+export const getAllMenuItems        = (f = {}) => request(`/menu?${new URLSearchParams(cleanParams(f))}`);
 export const getUserOrders         = ()       => ordersApi.list();
 export const getOrderById          = (id)     => ordersApi.getOne(id);
 export const createOrder           = (data)   => ordersApi.place(data);

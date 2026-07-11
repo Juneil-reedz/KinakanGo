@@ -1,7 +1,7 @@
 const pool = require('../config/db');
 
 async function placeOrder(req, res) {
-  const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode } = req.body;
+  const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage } = req.body;
   const customerId = req.user.id;
 
   const ids = items.map(i => i.menuItemId);
@@ -46,10 +46,10 @@ async function placeOrder(req, res) {
     const { rows: orderRows } = await client.query(
       `INSERT INTO orders
          (customer_id, restaurant_id, status, delivery_address, special_instructions,
-          subtotal, delivery_fee, tax, total, payment_method)
-       VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+          subtotal, delivery_fee, tax, total, payment_method, proof_image)
+       VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
       [customerId, restaurantId, deliveryAddress, specialInstructions || null,
-       subtotal, deliveryFee, tax, total, paymentMethod || 'cash']
+       subtotal, deliveryFee, tax, total, paymentMethod || 'cash', proofImage || null]
     );
     const orderId = orderRows[0].id;
 

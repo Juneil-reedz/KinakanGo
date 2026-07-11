@@ -1,21 +1,47 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { createOrder } from '../services/api';
-import { User, Mail, Phone, MapPin, CreditCard, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck } from 'lucide-react';
+import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone } from 'lucide-react';
+
+const GCASH_NUMBER = '09XX XXX XXXX'; // Replace with real GCash number
+const GCASH_NAME   = 'KinakanGo';     // Replace with real account name
+
+function pickImage(onPick) {
+  const input = document.createElement('input');
+  input.type = 'file';
+  input.accept = 'image/*';
+  input.onchange = (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => onPick(ev.target.result);
+    reader.readAsDataURL(file);
+  };
+  input.click();
+}
 
 export default function Checkout() {
   const navigate = useNavigate();
-  const { cartItems, getCartTotal, clearCart } = useCart();
+  const { cartItems, restaurantId, getCartTotal, clearCart } = useCart();
+  const { user } = useAuth();
   const { addNotification } = useNotification();
 
   const [form, setForm] = useState({
-    fullName:'Juan dela Cruz', email:'juan@example.com', phone:'+63 912 345 6789',
-    address:'123 Main St', city:'Bongao', zipCode:'7500',
-    apartmentUnit:'', deliveryInstructions:'', paymentMethod:'cash',
+    fullName: user?.name || '',
+    email: user?.email || '',
+    phone: '',
+    address: '',
+    city: 'Bongao',
+    zipCode: '7500',
+    apartmentUnit: '',
+    deliveryInstructions: '',
+    paymentMethod: 'cash',
+    proofImage: '',
   });
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]     = useState({});
   const [submitting, setSubmitting] = useState(false);
 
   const subtotal    = getCartTotal();
@@ -30,11 +56,12 @@ export default function Checkout() {
 
   const validate = () => {
     const e = {};
-    if (!form.fullName.trim()) e.fullName = 'Required';
+    if (!form.fullName.trim())  e.fullName = 'Required';
     if (!form.email.trim() || !/\S+@\S+\.\S+/.test(form.email)) e.email = 'Valid email required';
-    if (!form.phone.trim()) e.phone = 'Required';
-    if (!form.address.trim()) e.address = 'Required';
-    if (!form.city.trim()) e.city = 'Required';
+    if (!form.phone.trim())     e.phone = 'Required';
+    if (!form.address.trim())   e.address = 'Required';
+    if (!form.city.trim())      e.city = 'Required';
+    if (form.paymentMethod === 'gcash' && !form.proofImage) e.proofImage = 'Please upload your GCash payment proof';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -44,19 +71,18 @@ export default function Checkout() {
     addNotification('Processing your order…', 'info');
     try {
       const orderData = {
-        userId:1,
-        restaurantId: cartItems[0]?.restaurantId,
-        restaurant: cartItems[0]?.restaurant,
-        items: cartItems, subtotal, deliveryFee, tax, total,
-        deliveryAddress: `${form.address}${form.apartmentUnit ? ', '+form.apartmentUnit : ''}, ${form.city} ${form.zipCode}`,
-        contactInfo: { name:form.fullName, email:form.email, phone:form.phone },
-        deliveryInstructions: form.deliveryInstructions,
+        restaurantId,
+        items: cartItems.map(i => ({ menuItemId: i.id, quantity: i.quantity })),
+        deliveryAddress: `${form.address}${form.apartmentUnit ? ', ' + form.apartmentUnit : ''}, ${form.city} ${form.zipCode}`,
+        specialInstructions: form.deliveryInstructions || null,
         paymentMethod: form.paymentMethod,
+        proofImage: form.proofImage || null,
+        contactInfo: { name: form.fullName, email: form.email, phone: form.phone },
       };
       const order = await createOrder(orderData);
       addNotification('Order placed successfully!', 'success');
       clearCart();
-      setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state:{ orderData } }), 1200);
+      setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state: { orderData } }), 1200);
     } catch {
       addNotification('Failed to place order. Please try again.', 'error');
       setSubmitting(false);
@@ -87,18 +113,19 @@ export default function Checkout() {
 
       {/* Header */}
       <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3 mb-4"
-        style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
         <Link to="/cart" className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
           <ArrowLeft className="w-4 h-4" />
         </Link>
         <h1 className="text-white font-heading font-bold text-lg flex-1">Checkout</h1>
-        <span className="text-forest-200/50 text-xs">{cartItems.length} item{cartItems.length>1?'s':''}</span>
+        <span className="text-forest-200/50 text-xs">{cartItems.length} item{cartItems.length > 1 ? 's' : ''}</span>
       </div>
 
       <form onSubmit={handleSubmit}>
         <div className="max-w-4xl mx-auto px-4 grid grid-cols-1 lg:grid-cols-3 gap-4">
           {/* Left: form */}
           <div className="lg:col-span-2 space-y-4">
+
             {/* Contact */}
             <div className="glass rounded-2xl p-5">
               <p className="text-white font-semibold mb-4">Contact Info</p>
@@ -173,23 +200,23 @@ export default function Checkout() {
               <p className="text-white font-semibold mb-4">Payment Method</p>
               <div className="space-y-2">
                 {[
-                  { id:'cash', label:'Cash on Delivery', icon:Banknote, desc:'Pay when your order arrives' },
-                  { id:'card', label:'Card on Delivery', icon:CreditCard, desc:'Pay by card when delivered' },
-                ].map(({id, label, icon:Icon, desc}) => (
+                  { id: 'cash',  label: 'Cash on Delivery', icon: Banknote,    desc: 'Pay cash when your order arrives' },
+                  { id: 'gcash', label: 'GCash',            icon: Smartphone,  desc: 'Pay via GCash and upload proof' },
+                ].map(({ id, label, icon: Icon, desc }) => (
                   <label key={id}
                     className={`flex items-center gap-3 p-4 rounded-xl cursor-pointer transition-all border
-                      ${form.paymentMethod===id ? 'glass-green border-forest-500/40' : 'glass border-transparent hover:glass-green'}`}>
-                    <input type="radio" name="paymentMethod" value={id} checked={form.paymentMethod===id}
+                      ${form.paymentMethod === id ? 'glass-green border-forest-500/40' : 'glass border-transparent hover:glass-green'}`}>
+                    <input type="radio" name="paymentMethod" value={id} checked={form.paymentMethod === id}
                       onChange={set('paymentMethod')} className="hidden" />
                     <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0
-                      ${form.paymentMethod===id ? 'btn-glow-green' : 'glass'}`}>
-                      <Icon className={`w-5 h-5 ${form.paymentMethod===id ? 'text-white' : 'text-forest-300'}`} />
+                      ${form.paymentMethod === id ? 'btn-glow-green' : 'glass'}`}>
+                      <Icon className={`w-5 h-5 ${form.paymentMethod === id ? 'text-white' : 'text-forest-300'}`} />
                     </div>
                     <div>
                       <p className="text-white font-medium text-sm">{label}</p>
                       <p className="text-forest-200/50 text-xs">{desc}</p>
                     </div>
-                    {form.paymentMethod===id && (
+                    {form.paymentMethod === id && (
                       <div className="ml-auto w-5 h-5 btn-glow-green rounded-full flex items-center justify-center flex-shrink-0">
                         <div className="w-2 h-2 bg-white rounded-full" />
                       </div>
@@ -197,6 +224,42 @@ export default function Checkout() {
                   </label>
                 ))}
               </div>
+
+              {/* GCash proof upload */}
+              {form.paymentMethod === 'gcash' && (
+                <div className="mt-4 space-y-3">
+                  <div className="glass-green rounded-xl p-4">
+                    <p className="text-white font-semibold text-sm mb-1">Send payment to:</p>
+                    <p className="text-forest-200/70 text-xs">GCash number: <span className="text-white font-bold">{GCASH_NUMBER}</span></p>
+                    <p className="text-forest-200/70 text-xs">Account name: <span className="text-white font-bold">{GCASH_NAME}</span></p>
+                    <p className="text-ember-300 text-xs mt-2 font-medium">Amount: ₱{total.toFixed(2)}</p>
+                  </div>
+                  <div>
+                    <label className="block text-forest-200/60 text-xs font-medium mb-1">
+                      Upload Payment Screenshot *
+                    </label>
+                    <button type="button" onClick={() => pickImage(b64 => setForm(f => ({ ...f, proofImage: b64 })))}
+                      className="w-full glass rounded-xl overflow-hidden transition-all hover:glass-orange"
+                      style={{ height: form.proofImage ? '10rem' : '5rem' }}>
+                      {form.proofImage ? (
+                        <img src={form.proofImage} alt="proof" className="w-full h-full object-contain" />
+                      ) : (
+                        <div className="flex flex-col items-center justify-center h-full gap-1.5 text-forest-300/50">
+                          <ImagePlus className="w-6 h-6" />
+                          <span className="text-xs">Tap to upload screenshot</span>
+                        </div>
+                      )}
+                    </button>
+                    {form.proofImage && (
+                      <button type="button" onClick={() => setForm(f => ({ ...f, proofImage: '' }))}
+                        className="mt-1 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+                        Remove
+                      </button>
+                    )}
+                    {errors.proofImage && <p className="text-red-400 text-xs mt-1">{errors.proofImage}</p>}
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -208,16 +271,16 @@ export default function Checkout() {
                 {cartItems.map(item => (
                   <div key={item.id} className="flex justify-between text-xs">
                     <span className="text-forest-200/70 truncate flex-1">{item.quantity}× {item.name}</span>
-                    <span className="text-forest-100 ml-2">₱{(item.price*item.quantity).toFixed(2)}</span>
+                    <span className="text-forest-100 ml-2">₱{(item.price * item.quantity).toFixed(2)}</span>
                   </div>
                 ))}
               </div>
               <div className="border-t border-white/8 pt-3 space-y-2">
                 {[
-                  { label:'Subtotal', val:`₱${subtotal.toFixed(2)}` },
-                  { label:'Delivery', val:`₱${deliveryFee.toFixed(2)}`, icon:Truck },
-                  { label:'Tax (12%)', val:`₱${tax.toFixed(2)}` },
-                ].map(({label,val,icon:Icon}) => (
+                  { label: 'Subtotal',  val: `₱${subtotal.toFixed(2)}` },
+                  { label: 'Delivery',  val: `₱${deliveryFee.toFixed(2)}`, icon: Truck },
+                  { label: 'Tax (12%)', val: `₱${tax.toFixed(2)}` },
+                ].map(({ label, val, icon: Icon }) => (
                   <div key={label} className="flex justify-between text-sm">
                     <span className="text-forest-200/60 flex items-center gap-1.5">{Icon && <Icon className="w-3.5 h-3.5" />}{label}</span>
                     <span className="text-forest-100">{val}</span>
