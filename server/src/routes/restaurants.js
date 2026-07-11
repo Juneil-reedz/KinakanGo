@@ -5,10 +5,11 @@ const { authenticate, requireRole } = require('../middleware/auth');
 
 // Public
 router.get('/', ctrl.list);
-router.get('/:restaurantId/menu', menu.listItems);
 
-// /owner/me must be before /:id or Express matches id="owner"
+// Static paths must come before param routes
 router.get('/owner/me', authenticate, ctrl.myRestaurant);
+
+router.get('/:restaurantId/menu', menu.listItems);
 
 // Public catch-all by id
 router.get('/:id', ctrl.getOne);

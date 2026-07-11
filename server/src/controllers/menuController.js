@@ -25,13 +25,15 @@ async function listAll(req, res) {
 }
 
 async function listItems(req, res) {
+  const restaurantId = parseInt(req.params.restaurantId);
+  if (isNaN(restaurantId)) return res.status(400).json({ error: 'Invalid restaurant id' });
   const { rows } = await pool.query(
     `SELECT m.*, c.name AS category_name
      FROM menu_items m
      LEFT JOIN menu_categories c ON m.category_id = c.id
      WHERE m.restaurant_id = $1
      ORDER BY c.sort_order, m.name`,
-    [req.params.restaurantId]
+    [restaurantId]
   );
   res.json(rows);
 }
