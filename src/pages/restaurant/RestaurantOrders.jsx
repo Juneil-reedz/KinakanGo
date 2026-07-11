@@ -52,9 +52,10 @@ export default function RestaurantOrders() {
     setDetailLoading(true);
     try {
       const full = await ordersApi.getOne(order.id);
-      setDetail(full);
-    } catch {
-      addNotification('Could not load order details', 'error');
+      // Merge so list-level fields (customer_name etc) fill in if getOne misses them
+      setDetail(prev => ({ ...prev, ...full, items: full.items || [] }));
+    } catch (err) {
+      addNotification(`Could not load full order details: ${err?.message || 'unknown error'}`, 'error');
     } finally {
       setDetailLoading(false);
     }
@@ -236,24 +237,20 @@ export default function RestaurantOrders() {
 
                 {/* Customer card */}
                 <div className="glass rounded-2xl p-4">
-                  <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3">Customer Info</p>
-                  <div className="space-y-2">
+                  <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3">Customer &amp; Delivery</p>
+                  <div className="space-y-2.5">
                     <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-forest-400" />
+                      <User className="w-4 h-4 text-forest-400 flex-shrink-0" />
                       <p className="text-white text-sm font-medium">{detail.customer_name || 'Customer'}</p>
                     </div>
-                    {detail.customer_phone && (
-                      <div className="flex items-center gap-2">
-                        <Phone className="w-4 h-4 text-forest-400" />
-                        <p className="text-forest-100/70 text-sm">{detail.customer_phone}</p>
-                      </div>
-                    )}
-                    {detail.delivery_address && (
-                      <div className="flex items-start gap-2">
-                        <MapPin className="w-4 h-4 text-forest-400 flex-shrink-0 mt-0.5" />
-                        <p className="text-forest-100/70 text-sm">{detail.delivery_address}</p>
-                      </div>
-                    )}
+                    <div className="flex items-center gap-2">
+                      <Phone className="w-4 h-4 text-forest-400 flex-shrink-0" />
+                      <p className="text-forest-100/70 text-sm">{detail.customer_phone || '—'}</p>
+                    </div>
+                    <div className="flex items-start gap-2">
+                      <MapPin className="w-4 h-4 text-forest-400 flex-shrink-0 mt-0.5" />
+                      <p className="text-forest-100/70 text-sm">{detail.delivery_address || '—'}</p>
+                    </div>
                     {detail.special_instructions && (
                       <div className="flex items-start gap-2 glass-orange rounded-xl p-2.5 mt-1">
                         <AlertTriangle className="w-4 h-4 text-ember-400 flex-shrink-0 mt-0.5" />
@@ -309,11 +306,21 @@ export default function RestaurantOrders() {
                     </p>
                   </div>
 
-                  {detail.payment_method === 'gcash' && detail.proof_image && (
-                    <div className="mb-3">
-                      <p className="text-forest-200/50 text-xs mb-1.5">Payment Screenshot</p>
-                      <img src={detail.proof_image} alt="Payment proof"
-                        className="w-full rounded-xl object-contain max-h-48 glass" />
+                  {detail.payment_method === 'gcash' && (
+                    <div className="mb-3 space-y-1.5">
+                      <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide">Payment Screenshot</p>
+                      {detailLoading ? (
+                        <div className="h-16 glass rounded-xl flex items-center justify-center">
+                          <div className="w-4 h-4 rounded-full border-2 border-white/20 border-t-white animate-spin" />
+                        </div>
+                      ) : detail.proof_image ? (
+                        <img src={detail.proof_image} alt="Payment proof"
+                          className="w-full rounded-xl object-contain max-h-56 glass" />
+                      ) : (
+                        <div className="h-16 glass rounded-xl flex items-center justify-center">
+                          <p className="text-forest-200/40 text-xs">No screenshot uploaded</p>
+                        </div>
+                      )}
                     </div>
                   )}
 

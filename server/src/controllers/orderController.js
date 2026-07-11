@@ -109,7 +109,8 @@ async function listOrders(req, res) {
 
 async function getOrder(req, res) {
   const { rows } = await pool.query(
-    `SELECT o.*, r.name AS restaurant_name, r.image_url AS restaurant_image,
+    `SELECT o.*,
+            r.name AS restaurant_name, r.image_url AS restaurant_image,
             r.address AS restaurant_address,
             u.name AS customer_name, u.phone AS customer_phone
      FROM orders o
@@ -121,7 +122,11 @@ async function getOrder(req, res) {
   if (!rows.length) return res.status(404).json({ error: 'Order not found' });
 
   const { rows: items } = await pool.query(
-    'SELECT * FROM order_items WHERE order_id = $1', [req.params.id]
+    `SELECT oi.*, mi.image_url
+     FROM order_items oi
+     LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+     WHERE oi.order_id = $1`,
+    [req.params.id]
   );
   res.json({ ...rows[0], items });
 }
