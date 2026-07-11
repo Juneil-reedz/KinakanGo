@@ -1,11 +1,9 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
-const isGHPages = process.env.GITHUB_PAGES === 'true';
-
 export default defineConfig({
   plugins: [react()],
-  base: isGHPages ? '/KinakanGo/' : '/',
+  base: '/KinakanGo/',
   server: {
     proxy: {
       '/api': {
