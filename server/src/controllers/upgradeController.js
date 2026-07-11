@@ -20,7 +20,7 @@ async function submitRequest(req, res) {
   const { rows } = await pool.query(
     `INSERT INTO upgrade_requests (user_id, plan, amount, payment_method, reference_number, proof_image, notes)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-    [userId, plan, amount, payment_method, reference_number || null, proof_image || null, notes || null]
+    [userId, plan, amount || 0, payment_method || 'none', reference_number || null, proof_image || null, notes || null]
   );
 
   res.status(201).json({ id: rows[0].id, message: 'Upgrade request submitted. Pending admin review.' });
