@@ -50,24 +50,27 @@ async function create(req, res) {
 }
 
 async function update(req, res) {
-  const { name, description, address, cuisine, imageUrl, coverUrl, deliveryFee, minOrder, isOpen } = req.body;
-  await pool.query(
+  const { name, description, address, cuisine, imageUrl, coverUrl, deliveryFee, minOrder, isOpen, gcashNumber, gcashName } = req.body;
+  const { rows } = await pool.query(
     `UPDATE restaurants SET
-       name         = COALESCE($1, name),
-       description  = COALESCE($2, description),
-       address      = COALESCE($3, address),
-       cuisine      = COALESCE($4, cuisine),
-       image_url    = COALESCE($5, image_url),
-       cover_url    = COALESCE($6, cover_url),
-       delivery_fee = COALESCE($7, delivery_fee),
-       min_order    = COALESCE($8, min_order),
-       is_open      = COALESCE($9, is_open)
-     WHERE id = $10`,
+       name         = COALESCE($1,  name),
+       description  = COALESCE($2,  description),
+       address      = COALESCE($3,  address),
+       cuisine      = COALESCE($4,  cuisine),
+       image_url    = COALESCE($5,  image_url),
+       cover_url    = COALESCE($6,  cover_url),
+       delivery_fee = COALESCE($7,  delivery_fee),
+       min_order    = COALESCE($8,  min_order),
+       is_open      = COALESCE($9,  is_open),
+       gcash_number = COALESCE($10, gcash_number),
+       gcash_name   = COALESCE($11, gcash_name)
+     WHERE id = $12 RETURNING *`,
     [name ?? null, description ?? null, address ?? null, cuisine ?? null,
      imageUrl ?? null, coverUrl ?? null, deliveryFee ?? null, minOrder ?? null, isOpen ?? null,
+     gcashNumber ?? null, gcashName ?? null,
      req.params.id]
   );
-  res.json({ message: 'Updated' });
+  res.json(rows[0] || { message: 'Updated' });
 }
 
 async function remove(req, res) {

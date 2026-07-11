@@ -61,7 +61,7 @@ async function placeOrder(req, res) {
       );
     }
     await client.query('COMMIT');
-    res.status(201).json({ orderId, total });
+    res.status(201).json({ id: orderId, orderId, total });
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -71,7 +71,7 @@ async function placeOrder(req, res) {
 }
 
 async function listOrders(req, res) {
-  const { status, page = 1, limit = 20 } = req.query;
+  const { status, page = 1, limit = 20, restaurant_id } = req.query;
   const offset = (page - 1) * limit;
   const { id, role } = req.user;
 
@@ -79,9 +79,14 @@ async function listOrders(req, res) {
   const params = [];
   let   idx    = 1;
 
-  if (role === 'customer')         { where.push(`o.customer_id = $${idx++}`);    params.push(id); }
-  if (role === 'rider')            { where.push(`o.rider_id = $${idx++}`);       params.push(id); }
-  if (role === 'restaurant_owner') {
+  if (restaurant_id) {
+    // Restaurant owner viewing their orders (role stays 'customer' in dual-role system)
+    where.push(`o.restaurant_id = $${idx++}`); params.push(parseInt(restaurant_id));
+  } else if (role === 'customer') {
+    where.push(`o.customer_id = $${idx++}`);    params.push(id);
+  } else if (role === 'rider') {
+    where.push(`o.rider_id = $${idx++}`);       params.push(id);
+  } else if (role === 'restaurant_owner') {
     where.push(`o.restaurant_id IN (SELECT id FROM restaurants WHERE owner_id = $${idx++})`);
     params.push(id);
   }

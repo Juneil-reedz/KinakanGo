@@ -1,13 +1,10 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { createOrder } from '../services/api';
+import { createOrder, restaurantsApi } from '../services/api';
 import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone } from 'lucide-react';
-
-const GCASH_NUMBER = '09XX XXX XXXX'; // Replace with real GCash number
-const GCASH_NAME   = 'KinakanGo';     // Replace with real account name
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -28,6 +25,17 @@ export default function Checkout() {
   const { cartItems, restaurantId, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const { addNotification } = useNotification();
+  const [restaurantInfo, setRestaurantInfo] = useState(null);
+
+  useEffect(() => {
+    if (!restaurantId) return;
+    restaurantsApi.getOne(restaurantId)
+      .then(r => setRestaurantInfo(r))
+      .catch(() => {});
+  }, [restaurantId]);
+
+  const gcashNumber = restaurantInfo?.gcash_number || '—';
+  const gcashName   = restaurantInfo?.gcash_name   || '—';
 
   const [form, setForm] = useState({
     fullName: user?.name || '',
@@ -230,8 +238,8 @@ export default function Checkout() {
                 <div className="mt-4 space-y-3">
                   <div className="glass-green rounded-xl p-4">
                     <p className="text-white font-semibold text-sm mb-1">Send payment to:</p>
-                    <p className="text-forest-200/70 text-xs">GCash number: <span className="text-white font-bold">{GCASH_NUMBER}</span></p>
-                    <p className="text-forest-200/70 text-xs">Account name: <span className="text-white font-bold">{GCASH_NAME}</span></p>
+                    <p className="text-forest-200/70 text-xs">GCash number: <span className="text-white font-bold">{gcashNumber}</span></p>
+                    <p className="text-forest-200/70 text-xs">Account name: <span className="text-white font-bold">{gcashName}</span></p>
                     <p className="text-ember-300 text-xs mt-2 font-medium">Amount: ₱{total.toFixed(2)}</p>
                   </div>
                   <div>

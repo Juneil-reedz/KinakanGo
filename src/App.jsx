@@ -41,6 +41,7 @@ import RestaurantDashboard from './pages/restaurant/RestaurantDashboard';
 import RestaurantOrders from './pages/restaurant/RestaurantOrders';
 import RestaurantMenu from './pages/restaurant/RestaurantMenu';
 import RestaurantReports from './pages/restaurant/RestaurantReports';
+import RestaurantSettings from './pages/restaurant/RestaurantSettings';
 import RiderLogin from './pages/rider/RiderLogin';
 import RiderDashboard from './pages/rider/RiderDashboard';
 import RiderDelivery from './pages/rider/RiderDelivery';
@@ -113,6 +114,7 @@ function App() {
                           <Route path="orders" element={<RestaurantOrders />} />
                           <Route path="menu" element={<RestaurantMenu />} />
                           <Route path="reports" element={<RestaurantReports />} />
+                          <Route path="settings" element={<RestaurantSettings />} />
                         </Routes>
                       </RestaurantLayout>
                     }

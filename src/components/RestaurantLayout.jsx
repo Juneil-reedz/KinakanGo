@@ -2,13 +2,14 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
-import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, LogOut, ChevronLeft, ChevronRight, Store, Home } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, LogOut, ChevronLeft, ChevronRight, Store, Home } from 'lucide-react';
 
 const NAV = [
   { path:'/owner/dashboard', label:'Dashboard', icon:LayoutDashboard },
   { path:'/owner/orders',    label:'Orders',    icon:ShoppingBag },
   { path:'/owner/menu',      label:'Menu',      icon:UtensilsCrossed },
   { path:'/owner/reports',   label:'Reports',   icon:BarChart3 },
+  { path:'/owner/settings',  label:'Settings',  icon:Settings },
 ];
 
 export default function RestaurantLayout({ children }) {
@@ -99,7 +100,7 @@ export default function RestaurantLayout({ children }) {
         <header className="glass-dark px-6 py-4 flex items-center justify-between flex-shrink-0"
           style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
           <div>
-            <h2 className="text-white font-heading font-bold">{NAV.find(n => isActive(n.path))?.label || 'Dashboard'}</h2>
+            <h2 className="text-white font-heading font-bold">{NAV.find(n => location.pathname.startsWith(n.path))?.label || 'Dashboard'}</h2>
             <p className="text-forest-200/50 text-xs">Your recent activity</p>
           </div>
           <div className="flex items-center gap-2">

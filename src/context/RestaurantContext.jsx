@@ -48,11 +48,11 @@ export function RestaurantProvider({ children }) {
   }, []);
 
   const updateRestaurant = async (updates) => {
-    if (restaurant?.id) {
-      await restaurantsApi.update(restaurant.id, updates);
-    }
-    const updated = { ...restaurant, ...updates };
-    persist(updated);
+    if (!restaurant?.id) return;
+    const result = await restaurantsApi.update(restaurant.id, updates);
+    // Backend returns full updated row; fall back to merging if it only returns a message
+    const fresh = result?.id ? result : { ...restaurant, ...updates };
+    persist(fresh);
   };
 
   return (

@@ -1,11 +1,29 @@
-import { useParams, useNavigate } from 'react-router-dom';
+import { useEffect, useState } from 'react';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Package, Clock, ShoppingBag, MapPin } from 'lucide-react';
+import { ordersApi } from '../services/api';
 
 export default function OrderConfirmation() {
   const { orderId } = useParams();
   const navigate    = useNavigate();
+  const location    = useLocation();
+  const [order, setOrder] = useState(null);
 
-  const order = { id: orderId, estimatedTime:'30-40', restaurant:'Pizza Palace', total:45.99 };
+  useEffect(() => {
+    ordersApi.getOne(orderId)
+      .then(data => setOrder(data))
+      .catch(() => {
+        // fallback to state passed from checkout
+        const s = location.state?.orderData;
+        if (s) setOrder({ id: orderId, restaurant_name: s.restaurant?.name || 'Restaurant', total: s.total });
+      });
+  }, [orderId]);
+
+  if (!order) return (
+    <div className="min-h-screen flex items-center justify-center">
+      <div className="w-10 h-10 rounded-full border-2 border-ember-400/30 border-t-ember-400 animate-spin" />
+    </div>
+  );
 
   return (
     <div className="min-h-screen flex items-center justify-center px-4 py-10 relative">
@@ -29,10 +47,10 @@ export default function OrderConfirmation() {
         <div className="glass rounded-2xl p-5 space-y-3">
           <p className="text-white font-semibold mb-1">Order Details</p>
           {[
-            { label:'Order ID',    val:`#${order.id}`,           icon:Package },
-            { label:'Restaurant',  val:order.restaurant,          icon:ShoppingBag },
-            { label:'ETA',         val:`${order.estimatedTime} min`, icon:Clock },
-            { label:'Total',       val:`₱${order.total.toFixed(2)}`, icon:null },
+            { label:'Order ID',   val:`#${order.id}`,                        icon:Package  },
+            { label:'Restaurant', val:order.restaurant_name || '—',           icon:ShoppingBag },
+            { label:'ETA',        val:'30-40 min',                            icon:Clock    },
+            { label:'Total',      val:`₱${Number(order.total).toFixed(2)}`,   icon:null     },
           ].map(({ label, val, icon:Icon }) => (
             <div key={label} className="flex items-center justify-between py-1.5"
               style={{ borderBottom:'1px solid rgba(255,255,255,.05)' }}>
@@ -49,9 +67,9 @@ export default function OrderConfirmation() {
           <p className="text-white font-semibold mb-3">What's Next?</p>
           <div className="space-y-3">
             {[
-              { n:'1', text:'Restaurant is preparing your order', color:'btn-glow-green' },
+              { n:'1', text:'Restaurant is preparing your order', color:'btn-glow-green'  },
               { n:'2', text:'A rider will pick up your food',     color:'btn-glow-orange' },
-              { n:'3', text:'Delivered to your door!',            color:'btn-glow-green' },
+              { n:'3', text:'Delivered to your door!',            color:'btn-glow-green'  },
             ].map(({ n, text, color }) => (
               <div key={n} className="flex items-center gap-3">
                 <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>{n}</div>
