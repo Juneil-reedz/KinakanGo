@@ -38,9 +38,18 @@ export default function Restaurants() {
     setLoading(true);
     const start = Date.now();
     try {
-      const filters = { category: selectedCat, search: searchQuery, sortBy: sortBy !== 'recommended' ? sortBy : undefined };
-      if (viewMode === 'food') setFoodItems(await getAllMenuItems(filters));
-      else setRestaurants(await getRestaurants(filters));
+      const filters = {
+        ...(selectedCat && selectedCat !== 'all' ? { category: selectedCat } : {}),
+        ...(searchQuery ? { search: searchQuery } : {}),
+        ...(sortBy !== 'recommended' ? { sortBy } : {}),
+      };
+      if (viewMode === 'food') {
+        const res = await getAllMenuItems(filters);
+        setFoodItems(Array.isArray(res) ? res : res?.data || []);
+      } else {
+        const res = await getRestaurants(filters);
+        setRestaurants(Array.isArray(res) ? res : res?.data || []);
+      }
     } catch { /* use empty state */ } finally {
       const wait = Math.max(0, 800 - (Date.now() - start));
       setTimeout(() => setLoading(false), wait);
@@ -64,8 +73,8 @@ export default function Restaurants() {
   const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(i=>i!==id) : [...p, id]);
 
   const addItem = (item, qty = 1) => {
-    addToCart({ id:item.id, name:item.name, price:item.price, quantity:qty, image:item.image },
-              item.restaurant || { id: item.restaurant_id, name: '' });
+    addToCart({ id:item.id, name:item.name, price:item.price, quantity:qty, image:item.image_url || item.image },
+              item.restaurant || { id: item.restaurant_id, name: item.restaurant_name || '' });
   };
 
   return (
@@ -129,7 +138,7 @@ export default function Restaurants() {
                 className="restaurant-card card-3d glass cursor-pointer group animate-fade-up"
                 style={{ animationDelay:`${idx*40}ms` }}>
                 <div className="relative aspect-square overflow-hidden">
-                  <img src={item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={item.image_url || item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
                   <button onClick={e => { e.stopPropagation(); toggleFav(item.id); }}
                     className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center">
@@ -139,7 +148,7 @@ export default function Restaurants() {
                 </div>
                 <div className="p-2.5">
                   <p className="text-white font-semibold text-xs truncate">{item.name}</p>
-                  <p className="text-forest-200/50 text-xs truncate mb-2">{item.restaurant?.name}</p>
+                  <p className="text-forest-200/50 text-xs truncate mb-2">{item.restaurant_name || item.restaurant?.name}</p>
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
@@ -174,9 +183,9 @@ export default function Restaurants() {
                 className="restaurant-card card-3d glass text-left group animate-fade-up"
                 style={{ animationDelay:`${idx*40}ms` }}>
                 <div className="relative h-36 overflow-hidden">
-                  <img src={r.image} alt={r.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
+                  <img src={r.image_url || r.image} alt={r.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                  {!r.isOpen && (
+                  {!(r.is_open ?? r.isOpen) && (
                     <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                       <span className="glass text-white/70 text-xs px-3 py-1 rounded-full">Closed</span>
                     </div>
