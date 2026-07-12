@@ -153,7 +153,7 @@ async function getOrder(req, res) {
   const { rows } = await pool.query(
     `SELECT o.*,
             r.name  AS restaurant_name, r.image_url AS restaurant_image,
-            r.address AS restaurant_address,
+            r.address AS restaurant_address, r.phone AS restaurant_phone,
             u.name  AS customer_name, u.phone AS customer_phone,
             ru.name  AS rider_name,   ru.phone AS rider_phone
      FROM orders o

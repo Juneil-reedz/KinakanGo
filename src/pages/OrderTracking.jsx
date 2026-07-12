@@ -1,11 +1,59 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ordersApi, storage } from '../services/api';
+import { ordersApi, storage, request } from '../services/api';
+import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import L from 'leaflet';
+import 'leaflet/dist/leaflet.css';
 import {
   Clock, Package, ChevronRight,
   ClipboardList, ChefHat, PackageCheck, Bike, Navigation, CheckCircle2,
-  ArrowRight, Store, RefreshCw, UtensilsCrossed, Phone,
+  ArrowRight, Store, RefreshCw, UtensilsCrossed, Phone, MapPin,
 } from 'lucide-react';
+
+// Leaflet icon setup
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl:       'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
+
+const makeIcon = (emoji, bg) => L.divIcon({
+  html: `<div style="width:40px;height:40px;border-radius:50%;background:${bg};border:3px solid #fff;
+    box-shadow:0 4px 10px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:20px;">${emoji}</div>`,
+  className: '', iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -22],
+});
+const riderMapIcon   = L.divIcon({
+  html: `<div style="position:relative;width:52px;height:52px;">
+    <div style="position:absolute;inset:0;border-radius:50%;background:rgba(245,158,11,.35);animation:rPulse 1.6s infinite;"></div>
+    <div style="position:absolute;inset:6px;border-radius:50%;background:#f59e0b;border:3px solid #fff;
+      box-shadow:0 0 18px rgba(245,158,11,.8);display:flex;align-items:center;justify-content:center;font-size:22px;z-index:2;">🏍️</div>
+    <style>@keyframes rPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.8);opacity:.2}}</style>
+  </div>`,
+  className: '', iconSize: [52, 52], iconAnchor: [26, 26], popupAnchor: [0, -28],
+});
+const homeIcon = makeIcon('🏠', '#10b981');
+
+function FitBounds({ points }) {
+  const map = useMap();
+  useEffect(() => {
+    if (points.length > 1) {
+      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [50, 50] });
+    } else if (points.length === 1) {
+      map.setView([points[0].lat, points[0].lng], 14);
+    }
+  }, [points, map]);
+  return null;
+}
+
+async function geocode(address) {
+  try {
+    const res  = await fetch(`https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(address)}&format=json&limit=1`, { headers: { 'Accept-Language': 'en' } });
+    const data = await res.json();
+    if (data.length) return { lat: parseFloat(data[0].lat), lng: parseFloat(data[0].lon) };
+  } catch { /* ignore */ }
+  return null;
+}
 
 const STATUSES = [
   { id:'pending',    label:'Placed',    icon:ClipboardList, desc:'Order received by restaurant' },
@@ -18,9 +66,12 @@ const STATUSES = [
 
 export default function OrderTracking() {
   const navigate = useNavigate();
-  const [orders, setOrders]         = useState([]);
-  const [loading, setLoading]       = useState(true);
+  const [orders,     setOrders]     = useState([]);
+  const [loading,    setLoading]    = useState(true);
   const [refreshing, setRefreshing] = useState(false);
+  const [riderLocs,  setRiderLocs]  = useState({}); // { [orderId]: {lat,lng,rider_name} }
+  const [custLocs,   setCustLocs]   = useState({}); // { [orderId]: {lat,lng} }
+  const pollLocRef = useRef(null);
 
   const fetchOrders = async (silent = false) => {
     if (!storage.getAccess()) { setLoading(false); return; }
@@ -32,13 +83,25 @@ export default function OrderTracking() {
       const active = list.filter(o => !['delivered','cancelled','refunded'].includes(o.status));
       const base   = active.length ? active : list.slice(0, 5);
 
-      // Fetch full details (items + images) for each order in parallel
       const detailed = await Promise.allSettled(base.map(o => ordersApi.getOne(o.id)));
       const merged = base.map((o, i) => {
         const full = detailed[i].status === 'fulfilled' ? detailed[i].value : {};
         return { ...o, ...full, items: full.items ?? [] };
       });
       setOrders(merged);
+
+      // Geocode delivery addresses for orders with rider in transit
+      merged.forEach(o => {
+        if (o.rider_id && o.delivery_address) {
+          setCustLocs(prev => {
+            if (prev[o.id]) return prev;
+            geocode(o.delivery_address).then(loc => {
+              if (loc) setCustLocs(p => ({ ...p, [o.id]: loc }));
+            });
+            return prev;
+          });
+        }
+      });
     } catch {
       setOrders([]);
     } finally {
@@ -47,11 +110,30 @@ export default function OrderTracking() {
     }
   };
 
+  const fetchRiderLocations = async () => {
+    const inTransit = orders.filter(o => o.rider_id && o.status === 'picked_up');
+    for (const o of inTransit) {
+      try {
+        const loc = await request(`/orders/${o.id}/rider-location`);
+        setRiderLocs(prev => ({ ...prev, [o.id]: loc }));
+      } catch { /* location not available yet */ }
+    }
+  };
+
   useEffect(() => {
     fetchOrders();
     const t = setInterval(() => fetchOrders(true), 30000);
     return () => clearInterval(t);
   }, []);
+
+  useEffect(() => {
+    clearInterval(pollLocRef.current);
+    if (orders.some(o => o.rider_id && o.status === 'picked_up')) {
+      fetchRiderLocations();
+      pollLocRef.current = setInterval(fetchRiderLocations, 5000);
+    }
+    return () => clearInterval(pollLocRef.current);
+  }, [orders]);
 
   const getStatusIdx = (s) => STATUSES.findIndex(st => st.id === s);
 
@@ -159,9 +241,10 @@ export default function OrderTracking() {
               </div>
             )}
 
-            {/* Rider info */}
+            {/* Rider info + live map */}
             {order.rider_id && !isDone && (
-              <div className="px-5 pb-4">
+              <div className="px-5 pb-4 space-y-3">
+                {/* Rider chip */}
                 <div className="glass rounded-xl px-4 py-3 flex items-center justify-between">
                   <div className="flex items-center gap-3">
                     <div className="w-10 h-10 btn-glow-green rounded-xl flex items-center justify-center flex-shrink-0">
@@ -171,15 +254,65 @@ export default function OrderTracking() {
                       <p className="text-white font-semibold text-sm">
                         {order.rider_name || 'Rider assigned'}
                       </p>
-                      <p className="text-forest-200/50 text-xs">
+                      <p className="text-forest-200/50 text-xs flex items-center gap-1">
                         {order.rider_phone
-                          ? <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{order.rider_phone}</span>
-                          : 'On the way'}
+                          ? <><Phone className="w-3 h-3" />{order.rider_phone}</>
+                          : riderLocs[order.id] ? '📡 Live location active' : 'On the way'}
                       </p>
                     </div>
                   </div>
-                  <Navigation className="w-5 h-5 text-ember-400" />
+                  <Navigation className={`w-5 h-5 ${riderLocs[order.id] ? 'text-forest-400 animate-pulse' : 'text-ember-400'}`} />
                 </div>
+
+                {/* Live map — shown when rider is in transit (picked_up) */}
+                {order.status === 'picked_up' && (
+                  <div className="glass rounded-2xl overflow-hidden">
+                    <div className="px-4 py-2.5 flex items-center gap-2"
+                      style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+                      <MapPin className="w-3.5 h-3.5 text-forest-400" />
+                      <p className="text-white text-xs font-semibold">Live Rider Location</p>
+                      {riderLocs[order.id]
+                        ? <span className="ml-auto flex items-center gap-1 text-forest-400 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-forest-400 animate-pulse" />Live</span>
+                        : <span className="ml-auto text-forest-200/40 text-xs">Waiting for GPS…</span>}
+                    </div>
+                    <div style={{ height: 280 }}>
+                      {(() => {
+                        const rLoc = riderLocs[order.id];
+                        const cLoc = custLocs[order.id];
+                        const pts  = [rLoc, cLoc].filter(Boolean);
+                        const center = rLoc || cLoc || { lat: 5.0293, lng: 119.7731 };
+                        return (
+                          <MapContainer
+                            key={`map-${order.id}`}
+                            center={[center.lat, center.lng]}
+                            zoom={14}
+                            style={{ height: '100%', width: '100%' }}
+                            scrollWheelZoom={false}>
+                            <TileLayer
+                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                              attribution='&copy; OpenStreetMap contributors'
+                            />
+                            <FitBounds points={pts} />
+                            {rLoc && (
+                              <Marker position={[rLoc.lat, rLoc.lng]} icon={riderMapIcon}>
+                                <Popup><b>Rider</b><br />{order.rider_name || 'Your rider'}<br />On the way!</Popup>
+                              </Marker>
+                            )}
+                            {cLoc && (
+                              <Marker position={[cLoc.lat, cLoc.lng]} icon={homeIcon}>
+                                <Popup><b>Your delivery address</b><br />{order.delivery_address}</Popup>
+                              </Marker>
+                            )}
+                          </MapContainer>
+                        );
+                      })()}
+                    </div>
+                    <div className="px-4 py-2 flex gap-4 text-xs text-forest-200/50"
+                      style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+                      <span>🏍️ Rider</span><span>🏠 Your home</span>
+                    </div>
+                  </div>
+                )}
               </div>
             )}
 

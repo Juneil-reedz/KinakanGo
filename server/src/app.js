@@ -6,6 +6,14 @@ const morgan       = require('morgan');
 const pool         = require('./config/db');
 
 // Ensure rider_profiles table exists (safe to run on every startup)
+// Add GPS location columns to rider_profiles if they don't exist yet
+pool.query(`
+  ALTER TABLE rider_profiles
+    ADD COLUMN IF NOT EXISTS current_lat          DECIMAL(10,7) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS current_lng          DECIMAL(10,7) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS location_updated_at  TIMESTAMPTZ   DEFAULT NULL
+`).catch(err => console.warn('rider_profiles location columns warning:', err.message));
+
 pool.query(`
   CREATE TABLE IF NOT EXISTS rider_profiles (
     user_id          INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,

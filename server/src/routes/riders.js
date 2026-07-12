@@ -87,4 +87,22 @@ router.patch('/availability', async (req, res) => {
   }
 });
 
+// Update rider's live GPS coordinates (called every ~10 s from the rider app)
+router.patch('/location', async (req, res) => {
+  const { lat, lng } = req.body;
+  if (lat == null || lng == null) return res.status(400).json({ error: 'lat and lng required' });
+  try {
+    await pool.query(
+      `UPDATE rider_profiles
+       SET current_lat = $1, current_lng = $2, location_updated_at = NOW()
+       WHERE user_id = $3`,
+      [lat, lng, req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('location update error:', err);
+    res.status(500).json({ error: 'Failed to update location' });
+  }
+});
+
 module.exports = router;
