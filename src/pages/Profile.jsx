@@ -83,11 +83,39 @@ export default function Profile() {
     navigate('/welcome');
   };
 
-  const handleReorder = (order) => {
+  const handleReorder = async (order) => {
     if (!window.confirm(`Reorder from ${order.restaurant_name}?`)) return;
-    clearCart();
-    addNotification('Visit the restaurant to add items to your cart', 'info');
-    navigate(`/restaurant/${order.restaurant_id}`);
+    const restaurantId = order.restaurant_id;
+    if (!restaurantId) {
+      addNotification('Restaurant details are missing for this order', 'error');
+      return;
+    }
+
+    try {
+      const fullOrder = await ordersApi.getOne(order.id);
+      const items = fullOrder.items || [];
+      if (!items.length) {
+        addNotification('No items found for this order', 'error');
+        return;
+      }
+
+      clearCart();
+      const restaurant = { id: restaurantId, name: order.restaurant_name };
+      items.forEach(item => {
+        addToCart({
+          id: item.menu_item_id || item.item_id || item.id,
+          name: item.name,
+          price: Number(item.price),
+          quantity: item.quantity,
+          image_url: item.image_url,
+          notes: item.notes,
+        }, restaurant);
+      });
+      addNotification('Previous order added to cart', 'success');
+      navigate('/cart');
+    } catch {
+      addNotification('Failed to reorder. Please try again.', 'error');
+    }
   };
 
   const statusBadge = (s) => ({
@@ -251,10 +279,13 @@ export default function Profile() {
                     className="flex items-center gap-1.5 glass hover:glass-orange text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
                     <RotateCcw className="w-3.5 h-3.5" /> Reorder
                   </button>
-                  <Link to={`/restaurant/${order.restaurant_id}`}
+                  <button type="button" onClick={() => {
+                    if (order.restaurant_id) navigate(`/restaurant/${order.restaurant_id}`);
+                    else addNotification('Restaurant details are missing for this order', 'error');
+                  }}
                     className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
                     <Store className="w-3.5 h-3.5" /> Restaurant
-                  </Link>
+                  </button>
                   <Link to={`/orders`}
                     className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
                     <Receipt className="w-3.5 h-3.5" /> Track

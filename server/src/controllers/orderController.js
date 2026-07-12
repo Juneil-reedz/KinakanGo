@@ -132,7 +132,7 @@ async function listOrders(req, res) {
   const cond = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const { rows } = await pool.query(
-    `SELECT o.id, o.status, o.total, o.subtotal, o.delivery_fee, o.tax,
+    `SELECT o.id, o.restaurant_id, o.status, o.total, o.subtotal, o.delivery_fee, o.tax,
             o.payment_method, o.payment_status,
             o.created_at, o.delivery_address, o.rider_id,
             r.name AS restaurant_name, r.image_url AS restaurant_image, r.address AS restaurant_address,
