@@ -35,7 +35,8 @@ router.get('/', requireRole('admin'), async (req, res) => {
   }
 });
 
-// Toggle rider's own availability status
+// Toggle rider's own availability status.
+// When coming online, immediately try to claim one unassigned 'ready' order.
 router.patch('/availability', async (req, res) => {
   const { is_available } = req.body;
   if (typeof is_available !== 'boolean') {
@@ -48,7 +49,24 @@ router.patch('/availability', async (req, res) => {
        ON CONFLICT (user_id) DO UPDATE SET is_available = $2`,
       [req.user.id, is_available]
     );
-    res.json({ is_available });
+
+    let assignedOrderId = null;
+    if (is_available) {
+      // Find an unassigned ready order and assign it to this rider
+      const { rows } = await pool.query(
+        `SELECT id FROM orders
+         WHERE status = 'ready' AND rider_id IS NULL
+         ORDER BY created_at ASC
+         LIMIT 1`
+      );
+      if (rows.length) {
+        assignedOrderId = rows[0].id;
+        await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [req.user.id, assignedOrderId]);
+        console.log(`availability: assigned queued order ${assignedOrderId} to rider ${req.user.id}`);
+      }
+    }
+
+    res.json({ is_available, assignedOrderId });
   } catch (err) {
     console.error('availability update error:', err);
     res.status(500).json({ error: 'Failed to update availability' });
