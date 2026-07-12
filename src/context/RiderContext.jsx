@@ -29,7 +29,8 @@ export function RiderProvider({ children }) {
 
   const login = async (email, password) => {
     const res = await authApi.login(email, password);
-    if (res.user.role !== 'rider') {
+    // Riders are stored with 'customer' role + has_rider_profile flag in the DB
+    if (res.user.role !== 'rider' && !res.user.has_rider_profile) {
       throw new Error('Not a rider account');
     }
     storage.setTokens(res.accessToken, res.refreshToken);
