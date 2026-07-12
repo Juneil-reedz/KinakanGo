@@ -19,6 +19,8 @@ L.Icon.Default.mergeOptions({
 
 const ROUTE_COLOR = '#e11d48';
 const TRACKABLE_STATUSES = ['ready', 'picked_up'];
+const ORDER_LIVE_MS = 5000;
+const RIDER_LIVE_MS = 2000;
 
 const mapIcon = (label, emoji, color = ROUTE_COLOR, pulse = false) => L.divIcon({
   html: `<div style="display:flex;align-items:center;gap:8px;">
@@ -95,7 +97,9 @@ export default function OrderTracking() {
   const [riderLocs,  setRiderLocs]  = useState({}); // { [orderId]: {lat,lng,rider_name} }
   const [custLocs,   setCustLocs]   = useState({}); // { [orderId]: {lat,lng} }
   const [restLocs,   setRestLocs]   = useState({}); // { [orderId]: {lat,lng} }
+  const [lastLiveAt, setLastLiveAt] = useState(null);
   const pollLocRef = useRef(null);
+  const ordersRef = useRef([]);
 
   const fetchOrders = async (silent = false) => {
     if (!storage.getAccess()) { setLoading(false); return; }
@@ -112,7 +116,9 @@ export default function OrderTracking() {
         const full = detailed[i].status === 'fulfilled' ? detailed[i].value : {};
         return { ...o, ...full, items: full.items ?? [] };
       });
+      ordersRef.current = merged;
       setOrders(merged);
+      setLastLiveAt(new Date());
 
       // Geocode delivery addresses for orders with rider in transit
       merged.forEach(o => {
@@ -148,7 +154,7 @@ export default function OrderTracking() {
   );
 
   const fetchRiderLocations = async () => {
-    const trackable = orders.filter(canTrackRider);
+    const trackable = ordersRef.current.filter(canTrackRider);
     for (const o of trackable) {
       try {
         const loc = await request(`/orders/${o.id}/rider-location`);
@@ -159,15 +165,29 @@ export default function OrderTracking() {
 
   useEffect(() => {
     fetchOrders();
-    const t = setInterval(() => fetchOrders(true), 30000);
-    return () => clearInterval(t);
+    const t = setInterval(() => {
+      if (document.visibilityState === 'visible') fetchOrders(true);
+    }, ORDER_LIVE_MS);
+    const onFocus = () => fetchOrders(true);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') fetchOrders(true);
+    };
+    window.addEventListener('focus', onFocus);
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => {
+      clearInterval(t);
+      window.removeEventListener('focus', onFocus);
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, []);
 
   useEffect(() => {
     clearInterval(pollLocRef.current);
     if (orders.some(canTrackRider)) {
       fetchRiderLocations();
-      pollLocRef.current = setInterval(fetchRiderLocations, 5000);
+      pollLocRef.current = setInterval(() => {
+        if (document.visibilityState === 'visible') fetchRiderLocations();
+      }, RIDER_LIVE_MS);
     }
     return () => clearInterval(pollLocRef.current);
   }, [orders]);
@@ -204,11 +224,17 @@ export default function OrderTracking() {
     <div className="space-y-5 pb-20 lg:pb-0 animate-fade-up">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-white">Track Orders</h1>
-        <button onClick={() => fetchOrders(true)} disabled={refreshing}
-          className="glass hover:glass-green transition-all px-3 py-2 rounded-xl text-forest-200 text-sm flex items-center gap-1.5">
-          <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
-          Refresh
-        </button>
+        <div className="flex items-center gap-2">
+          <div className="hidden sm:flex items-center gap-1.5 glass-green text-forest-200 text-xs px-3 py-2 rounded-xl">
+            <span className="w-1.5 h-1.5 rounded-full bg-forest-400 animate-pulse" />
+            Live{lastLiveAt ? ` · ${lastLiveAt.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}` : ''}
+          </div>
+          <button onClick={() => fetchOrders(true)} disabled={refreshing}
+            className="glass hover:glass-green transition-all px-3 py-2 rounded-xl text-forest-200 text-sm flex items-center gap-1.5">
+            <RefreshCw className={`w-4 h-4 ${refreshing ? 'animate-spin' : ''}`} />
+            Refresh
+          </button>
+        </div>
       </div>
 
       {orders.map((order) => {
