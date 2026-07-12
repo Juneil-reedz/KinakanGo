@@ -180,14 +180,16 @@ async function updateStatus(req, res) {
   const allowed = ['accepted','preparing','ready','picked_up','delivered','cancelled'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
 
-  await pool.query(
+  const { rows: updatedRows } = await pool.query(
     `UPDATE orders SET
        status           = $1,
        cancelled_reason = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_reason END,
        delivered_at     = CASE WHEN $4 = 'delivered'  THEN NOW() ELSE delivered_at END
-     WHERE id = $5`,
+     WHERE id = $5
+     RETURNING id, status`,
     [status, status, cancelledReason || null, status, req.params.id]
   );
+  if (!updatedRows.length) return res.status(404).json({ error: 'Order not found' });
 
   // When order is ready for pickup, auto-assign an available rider
   if (status === 'ready') {
@@ -206,7 +208,7 @@ async function updateStatus(req, res) {
     }
   }
 
-  res.json({ message: 'Status updated' });
+  res.json({ message: 'Status updated', order: updatedRows[0] });
 }
 
 // Rider accepts or rejects an assigned order
