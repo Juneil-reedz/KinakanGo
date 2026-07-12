@@ -19,24 +19,23 @@ L.Icon.Default.mergeOptions({
 
 const ROUTE_COLOR = '#e11d48';
 
-// Clean dot marker with a pill label — matches the reference design
-const dotIcon = (label, pulse = false) => L.divIcon({
+const mapIcon = (label, emoji, color = ROUTE_COLOR, pulse = false) => L.divIcon({
   html: `<div style="display:flex;align-items:center;gap:8px;">
-    <div style="position:relative;width:18px;height:18px;flex-shrink:0;">
-      ${pulse ? `<div style="position:absolute;inset:-5px;border-radius:50%;background:${ROUTE_COLOR}33;animation:dp 1.6s infinite;"></div>` : ''}
-      <div style="width:18px;height:18px;border-radius:50%;background:${ROUTE_COLOR};border:3px solid #fff;box-shadow:0 2px 10px rgba(225,29,72,.5);"></div>
+    <div style="position:relative;width:36px;height:36px;flex-shrink:0;">
+      ${pulse ? `<div style="position:absolute;inset:-8px;border-radius:50%;background:${color}33;animation:dp 1.6s infinite;"></div>` : ''}
+      <div style="position:relative;width:36px;height:36px;border-radius:50%;background:${color};border:3px solid #fff;box-shadow:0 2px 12px ${color}77;display:flex;align-items:center;justify-content:center;font-size:19px;z-index:1;">${emoji}</div>
       <style>@keyframes dp{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(2.2);opacity:.1}}</style>
     </div>
     <div style="background:white;border-radius:20px;padding:5px 12px;white-space:nowrap;font-size:12px;font-weight:700;color:#111827;box-shadow:0 2px 10px rgba(0,0,0,.18);">${label}</div>
   </div>`,
-  className: '', iconSize: [0, 0], iconAnchor: [9, 9],
+  className: '', iconSize: [0, 0], iconAnchor: [18, 18],
 });
 
 function FitBounds({ points }) {
   const map = useMap();
   useEffect(() => {
     if (points.length > 1) {
-      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [55, 55] });
+      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [55, 55], maxZoom: 17 });
     } else if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 15);
     }
@@ -44,21 +43,55 @@ function FitBounds({ points }) {
   return null;
 }
 
-// Fetches a real road route from OSRM, falls back to straight line
-function RoutePolyline({ from, to }) {
+function AnimatedRiderRoute({ from, to, label = 'You' }) {
   const [pts, setPts] = useState([[from.lat, from.lng], [to.lat, to.lng]]);
+  const [markerPos, setMarkerPos] = useState([from.lat, from.lng]);
+
   useEffect(() => {
     if (!from || !to) return;
+    setMarkerPos([from.lat, from.lng]);
     fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`)
       .then(r => r.json())
       .then(d => {
         if (d.routes?.[0]) {
           setPts(d.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]));
+        } else {
+          setPts([[from.lat, from.lng], [to.lat, to.lng]]);
         }
       })
-      .catch(() => {});
+      .catch(() => setPts([[from.lat, from.lng], [to.lat, to.lng]]));
   }, [from?.lat, from?.lng, to?.lat, to?.lng]);
-  return <Polyline positions={pts} pathOptions={{ color: ROUTE_COLOR, weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }} />;
+
+  useEffect(() => {
+    if (pts.length < 2) return;
+    let frameId;
+    const startedAt = performance.now();
+    const duration = 22000;
+
+    const tick = (now) => {
+      const progress = Math.min((now - startedAt) / duration, 1);
+      const scaled = progress * (pts.length - 1);
+      const idx = Math.min(Math.floor(scaled), pts.length - 2);
+      const local = scaled - idx;
+      const a = pts[idx];
+      const b = pts[idx + 1];
+      setMarkerPos([
+        a[0] + (b[0] - a[0]) * local,
+        a[1] + (b[1] - a[1]) * local,
+      ]);
+      if (progress < 1) frameId = requestAnimationFrame(tick);
+    };
+
+    frameId = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(frameId);
+  }, [pts]);
+
+  return (
+    <>
+      <Polyline positions={pts} pathOptions={{ color: ROUTE_COLOR, weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }} />
+      <Marker position={markerPos} icon={mapIcon(label, '🏍️', '#f59e0b', true)} />
+    </>
+  );
 }
 
 // Geocode a text address → {lat, lng} using free OpenStreetMap Nominatim
@@ -152,6 +185,18 @@ export default function RiderDelivery() {
     }
   };
 
+  const markPickedUp = async () => {
+    try {
+      await riderRequest(`/orders/${orderId}/status`, {
+        method: 'PATCH', body: JSON.stringify({ status: 'picked_up', statusText: 'On the Way' }),
+      });
+      setStep('heading_to_customer');
+      addNotification('Pickup confirmed. Customer can now track you on the way.', 'success');
+    } catch {
+      addNotification('Failed to update pickup status', 'error');
+    }
+  };
+
   const openMaps = () => {
     const dest = step === 'heading_to_restaurant'
       ? (order?.restaurant_address || order?.restaurant_name)
@@ -165,7 +210,8 @@ export default function RiderDelivery() {
   const atRest     = step === 'heading_to_restaurant';
 
   // Map markers to show
-  const activeMarkers = [riderPos, restaurantPos, customerPos].filter(Boolean);
+  const destinationPos = atRest ? restaurantPos : customerPos;
+  const activeMarkers = [riderPos, destinationPos].filter(Boolean);
   const mapCenter     = riderPos || restaurantPos || customerPos
     ? (riderPos || restaurantPos || customerPos)
     : { lat: DEFAULT_CENTER[0], lng: DEFAULT_CENTER[1] };
@@ -282,34 +328,34 @@ export default function RiderDelivery() {
         <div style={{ height: 360 }}>
           <MapContainer
             center={[mapCenter.lat, mapCenter.lng]}
-            zoom={14}
+            zoom={15}
+            maxZoom={20}
             style={{ height: '100%', width: '100%' }}
-            scrollWheelZoom={false}
-            zoomControl={false}>
+            scrollWheelZoom
+            zoomControl>
             <TileLayer
               url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              maxZoom={20}
+              maxNativeZoom={20}
               attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
             <FitBounds points={activeMarkers} />
 
             {/* Route line */}
-            {atRest && riderPos && restaurantPos && (
-              <RoutePolyline from={riderPos} to={restaurantPos} />
-            )}
-            {!atRest && restaurantPos && customerPos && (
-              <RoutePolyline from={restaurantPos} to={customerPos} />
+            {riderPos && destinationPos && (
+              <AnimatedRiderRoute from={riderPos} to={destinationPos} label="You" />
             )}
 
             {/* Markers */}
-            {riderPos && (
-              <Marker position={[riderPos.lat, riderPos.lng]} icon={dotIcon('You', true)} />
+            {riderPos && !destinationPos && (
+              <Marker position={[riderPos.lat, riderPos.lng]} icon={mapIcon('You', '🏍️', '#f59e0b', true)} />
             )}
-            {restaurantPos && (
+            {atRest && restaurantPos && (
               <Marker position={[restaurantPos.lat, restaurantPos.lng]}
-                icon={dotIcon(order?.restaurant_name ? order.restaurant_name.split(' ').slice(0,2).join(' ') : 'Restaurant')} />
+                icon={mapIcon(order?.restaurant_name ? order.restaurant_name.split(' ').slice(0,2).join(' ') : 'Restaurant', '🍽️', '#ef4444')} />
             )}
-            {customerPos && (
-              <Marker position={[customerPos.lat, customerPos.lng]} icon={dotIcon('Home')} />
+            {!atRest && customerPos && (
+              <Marker position={[customerPos.lat, customerPos.lng]} icon={mapIcon('Customer Home', '🏠', '#10b981')} />
             )}
           </MapContainer>
         </div>
@@ -381,7 +427,7 @@ export default function RiderDelivery() {
       {/* CTA */}
       {!isDone && (
         atRest ? (
-          <button onClick={() => setStep('heading_to_customer')}
+          <button onClick={markPickedUp}
             className="w-full btn-glow-green text-white font-heading font-bold py-4 rounded-2xl flex items-center justify-center gap-2 text-base">
             Picked Up — Head to Customer <ChevronRight className="w-5 h-5" />
           </button>
