@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
 import { adminRequest as request } from "../../context/AdminContext";
-import { FileText, Store, Bike, Check, X, Eye, Filter, Clock } from "lucide-react";
+import { FileText, Store, Bike, Check, X, Eye, Filter, Clock, ZoomIn, ChevronLeft, ChevronRight } from "lucide-react";
 
 const STATUS_CLS = {
   pending:  "glass-orange text-ember-200",
@@ -33,6 +33,7 @@ export default function AdminApplications() {
   const [rejectReason, setReason] = useState("");
   const [rejecting, setRejecting] = useState(false);
   const [adminNote, setAdminNote] = useState("");
+  const [imgViewer, setImgViewer] = useState(null); // { images: [], index: 0, label: '' }
 
   const load = async () => {
     try {
@@ -271,32 +272,28 @@ export default function AdminApplications() {
                   </div>
 
                   {/* Uploaded photos */}
-                  <div className="mt-3 grid grid-cols-2 gap-2">
-                    {isResto && notes.logo && (
-                      <div>
-                        <p className="text-forest-200/40 text-xs mb-1">Restaurant Photo</p>
-                        <img src={notes.logo} alt="restaurant" className="w-full h-24 object-cover rounded-xl" />
+                  {(() => {
+                    const imgs = isResto
+                      ? [notes.logo && { src: notes.logo, label: 'Restaurant Photo' }, notes.permit && { src: notes.permit, label: 'Business Permit' }].filter(Boolean)
+                      : [notes.idPhoto && { src: notes.idPhoto, label: 'ID Photo' }, notes.selfie && { src: notes.selfie, label: 'Selfie with ID' }].filter(Boolean);
+                    if (!imgs.length) return null;
+                    return (
+                      <div className="mt-3 grid grid-cols-2 gap-2">
+                        {imgs.map((img, i) => (
+                          <div key={img.label}>
+                            <p className="text-forest-200/40 text-xs mb-1">{img.label}</p>
+                            <button onClick={() => setImgViewer({ images: imgs, index: i })}
+                              className="relative w-full group rounded-xl overflow-hidden">
+                              <img src={img.src} alt={img.label} className="w-full h-24 object-cover rounded-xl" />
+                              <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
+                                <ZoomIn className="w-6 h-6 text-white" />
+                              </div>
+                            </button>
+                          </div>
+                        ))}
                       </div>
-                    )}
-                    {isResto && notes.permit && (
-                      <div>
-                        <p className="text-forest-200/40 text-xs mb-1">Business Permit</p>
-                        <img src={notes.permit} alt="permit" className="w-full h-24 object-cover rounded-xl" />
-                      </div>
-                    )}
-                    {!isResto && notes.idPhoto && (
-                      <div>
-                        <p className="text-forest-200/40 text-xs mb-1">ID Photo</p>
-                        <img src={notes.idPhoto} alt="id" className="w-full h-24 object-cover rounded-xl" />
-                      </div>
-                    )}
-                    {!isResto && notes.selfie && (
-                      <div>
-                        <p className="text-forest-200/40 text-xs mb-1">Selfie with ID</p>
-                        <img src={notes.selfie} alt="selfie" className="w-full h-24 object-cover rounded-xl" />
-                      </div>
-                    )}
-                  </div>
+                    );
+                  })()}
                 </div>
               );
             })()}
@@ -359,6 +356,49 @@ export default function AdminApplications() {
                     </div>
                   </>
                 )}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Image lightbox */}
+      {imgViewer && (
+        <div className="fixed inset-0 bg-black/90 z-[60] flex items-center justify-center p-4"
+          onClick={() => setImgViewer(null)}>
+          <button onClick={() => setImgViewer(null)}
+            className="absolute top-4 right-4 w-10 h-10 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all z-10">
+            <X className="w-5 h-5 text-white" />
+          </button>
+
+          {imgViewer.images.length > 1 && (
+            <>
+              <button onClick={e => { e.stopPropagation(); setImgViewer(v => ({ ...v, index: (v.index - 1 + v.images.length) % v.images.length })); }}
+                className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 glass rounded-xl flex items-center justify-center hover:glass-green transition-all z-10">
+                <ChevronLeft className="w-5 h-5 text-white" />
+              </button>
+              <button onClick={e => { e.stopPropagation(); setImgViewer(v => ({ ...v, index: (v.index + 1) % v.images.length })); }}
+                className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 glass rounded-xl flex items-center justify-center hover:glass-green transition-all z-10">
+                <ChevronRight className="w-5 h-5 text-white" />
+              </button>
+            </>
+          )}
+
+          <div className="flex flex-col items-center gap-3 max-w-2xl w-full" onClick={e => e.stopPropagation()}>
+            <img src={imgViewer.images[imgViewer.index].src} alt={imgViewer.images[imgViewer.index].label}
+              className="max-h-[75vh] max-w-full object-contain rounded-2xl shadow-2xl" />
+            <div className="flex items-center gap-3">
+              <p className="text-white/80 text-sm font-medium">{imgViewer.images[imgViewer.index].label}</p>
+              {imgViewer.images.length > 1 && (
+                <p className="text-white/40 text-xs">{imgViewer.index + 1} / {imgViewer.images.length}</p>
+              )}
+            </div>
+            {imgViewer.images.length > 1 && (
+              <div className="flex gap-2">
+                {imgViewer.images.map((img, i) => (
+                  <button key={i} onClick={() => setImgViewer(v => ({ ...v, index: i }))}
+                    className={`w-2 h-2 rounded-full transition-all ${i === imgViewer.index ? 'bg-white' : 'bg-white/30'}`} />
+                ))}
               </div>
             )}
           </div>
