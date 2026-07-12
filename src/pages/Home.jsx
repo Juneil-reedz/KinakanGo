@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getFeaturedRestaurants, getAllMenuItems } from '../services/api';
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, Clock, Truck, Tag, ChevronRight, Flame, Zap, UtensilsCrossed } from 'lucide-react';
 
 const CATEGORIES = [
@@ -46,9 +47,9 @@ const PROMOS = [
 export default function Home() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
   const [cat, setCat]               = useState('All');
   const [promo, setPromo]           = useState(0);
-  const [favorites, setFavorites]   = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [popularItems, setPopularItems] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -82,8 +83,6 @@ export default function Home() {
   const filteredFood = cat === 'All'
     ? popularItems
     : popularItems.filter(f => f.category_name?.toLowerCase() === cat.toLowerCase());
-
-  const toggleFav = id => setFavorites(p => p.includes(id) ? p.filter(i => i !== id) : [...p, id]);
 
   const handleAddToCart = item => {
     addToCart(
@@ -233,9 +232,9 @@ export default function Home() {
                   }
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
-                  <button onClick={() => toggleFav(item.id)}
+                  <button onClick={() => toggleFavorite(item)}
                     className="absolute top-3 right-3 w-7 h-7 glass rounded-full flex items-center justify-center hover:glass-orange transition-all">
-                    <Heart className={`w-3.5 h-3.5 ${favorites.includes(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
+                    <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
                   </button>
 
                   <div className="absolute bottom-3 left-3">

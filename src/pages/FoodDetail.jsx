@@ -1,6 +1,7 @@
 ﻿import { useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { ArrowLeft, Heart, Star, Clock, MapPin, Plus, Minus, ShoppingCart, Check } from 'lucide-react';
 
 const ADD_ONS = [
@@ -14,10 +15,10 @@ export default function FoodDetail() {
   const navigate   = useNavigate();
   const location   = useLocation();
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [quantity, setQuantity]         = useState(1);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
-  const [fav, setFav]                   = useState(false);
 
   const foodItem = location.state?.foodItem || {
     id: parseInt(id), name:'Delicious Food',
@@ -32,9 +33,12 @@ export default function FoodDetail() {
 
   const handleAdd = () => {
     const restaurantInfo = typeof foodItem.restaurant === 'string'
-      ? { id: foodItem.restaurant, name: foodItem.restaurant }
-      : { id: foodItem.restaurant?.id || 0, name: foodItem.restaurant?.name || 'Restaurant' };
-    addToCart({ id:foodItem.id, name:foodItem.name, price:total/quantity, quantity, addOns:selectedAddOns, image:foodItem.image }, restaurantInfo);
+      ? { id: foodItem.restaurant_id || foodItem.restaurant, name: foodItem.restaurant }
+      : {
+          id: foodItem.restaurant?.id || foodItem.restaurant_id || 0,
+          name: foodItem.restaurant?.name || foodItem.restaurant_name || 'Restaurant',
+        };
+    addToCart({ id:foodItem.id, name:foodItem.name, price:total/quantity, quantity, addOns:selectedAddOns, image:foodItem.image || foodItem.image_url }, restaurantInfo);
     navigate('/cart');
   };
 
@@ -44,16 +48,16 @@ export default function FoodDetail() {
 
       {/* Hero image */}
       <div className="relative h-72 sm:h-80 overflow-hidden">
-        <img src={foodItem.image} alt={foodItem.name} className="w-full h-full object-cover" />
+        <img src={foodItem.image || foodItem.image_url} alt={foodItem.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         {/* Nav buttons */}
         <button onClick={() => navigate(-1)}
           className="absolute top-4 left-4 w-10 h-10 glass rounded-xl flex items-center justify-center text-white hover:glass-green transition-all">
           <ArrowLeft className="w-5 h-5" />
         </button>
-        <button onClick={() => setFav(f=>!f)}
+        <button onClick={() => toggleFavorite(foodItem)}
           className="absolute top-4 right-4 w-10 h-10 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
-          <Heart className={`w-5 h-5 ${fav ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
+          <Heart className={`w-5 h-5 ${isFavorite(foodItem.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
         </button>
       </div>
 
@@ -64,7 +68,7 @@ export default function FoodDetail() {
           <div>
             <div className="flex items-start justify-between gap-3">
               <h1 className="text-xl font-heading font-bold text-white">{foodItem.name}</h1>
-              <p className="text-ember-400 font-heading font-bold text-xl flex-shrink-0">â‚±{Number(foodItem.price).toFixed(2)}</p>
+              <p className="text-ember-400 font-heading font-bold text-xl flex-shrink-0">₱{Number(foodItem.price).toFixed(2)}</p>
             </div>
             <p className="text-forest-200/60 text-sm capitalize mt-0.5">{foodItem.category || 'Food'}</p>
           </div>
@@ -110,7 +114,7 @@ export default function FoodDetail() {
                     )}
                     <div className="absolute bottom-1 left-0 right-0 text-center">
                       <p className="text-white text-xs font-medium leading-tight">{a.name}</p>
-                      <p className="text-ember-300 text-xs">+â‚±{a.price}</p>
+                      <p className="text-ember-300 text-xs">+₱{a.price}</p>
                     </div>
                   </button>
                 );
@@ -143,7 +147,7 @@ export default function FoodDetail() {
           <button onClick={handleAdd}
             className="w-full py-4 btn-glow-orange text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2">
             <ShoppingCart className="w-5 h-5" />
-            Add to Cart â€” â‚±{total.toFixed(2)}
+            Add to Cart - ₱{total.toFixed(2)}
           </button>
         </div>
       </div>

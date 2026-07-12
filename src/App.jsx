@@ -5,6 +5,7 @@ import { NotificationProvider } from './context/NotificationContext';
 import { RestaurantProvider } from './context/RestaurantContext';
 import { RiderProvider } from './context/RiderContext';
 import { AdminProvider } from './context/AdminContext';
+import { FavoritesProvider } from './context/FavoritesContext';
 import Header from './components/Header';
 import Footer from './components/Footer';
 import BottomNav from './components/BottomNav';
@@ -60,6 +61,7 @@ function App() {
     <NotificationProvider>
       <AuthProvider>
         <CartProvider>
+          <FavoritesProvider>
           <RestaurantProvider>
             <RiderProvider>
               <AdminProvider>
@@ -158,6 +160,7 @@ function App() {
               </AdminProvider>
             </RiderProvider>
           </RestaurantProvider>
+          </FavoritesProvider>
         </CartProvider>
       </AuthProvider>
     </NotificationProvider>

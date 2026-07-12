@@ -2,12 +2,14 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { restaurantsApi, menuApi } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, Minus, X, ArrowLeft, Clock, Truck, ChevronRight, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 
 export default function Restaurant() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems]   = useState([]);
@@ -15,7 +17,6 @@ export default function Restaurant() {
   const [selectedItem, setSelectedItem] = useState(null);
   const [selectedCat, setSelectedCat]   = useState('All');
   const [quantity, setQuantity]         = useState(1);
-  const [favorites, setFavorites]       = useState([]);
 
   useEffect(() => {
     if (!id || id === 'undefined') { setLoading(false); return; }
@@ -28,8 +29,6 @@ export default function Restaurant() {
       setMenuItems(Array.isArray(mData) ? mData : []);
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
-
-  const toggleFav = (itemId) => setFavorites(p => p.includes(itemId) ? p.filter(i => i !== itemId) : [...p, itemId]);
 
   const handleAddToCart = () => {
     if (!selectedItem) return;
@@ -130,9 +129,9 @@ export default function Restaurant() {
                   : <div className="w-full h-full glass-dark flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-forest-300/30" /></div>
                 }
                 <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <button onClick={e => { e.stopPropagation(); toggleFav(item.id); }}
+                <button onClick={e => { e.stopPropagation(); toggleFavorite(item, restaurant); }}
                   className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center">
-                  <Heart className={`w-3.5 h-3.5 ${favorites.includes(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
+                  <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
                 </button>
                 <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
               </div>

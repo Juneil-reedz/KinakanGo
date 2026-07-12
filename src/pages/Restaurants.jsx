@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getRestaurants, getAllMenuItems } from '../services/api';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 import Loader from '../components/Loader';
 import { Utensils, Store, Plus, Minus, X, Heart, Star, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
 
@@ -20,6 +21,7 @@ export default function Restaurants() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
+  const { isFavorite, toggleFavorite } = useFavorites();
 
   const [restaurants, setRestaurants]     = useState([]);
   const [foodItems, setFoodItems]         = useState([]);
@@ -28,7 +30,6 @@ export default function Restaurants() {
   const [selectedCat, setSelectedCat]     = useState(searchParams.get('category') || 'all');
   const [sortBy, setSortBy]               = useState('recommended');
   const [viewMode, setViewMode]           = useState('food');
-  const [favorites, setFavorites]         = useState([]);
   const [modalItem, setModalItem]         = useState(null);
   const [modalQty, setModalQty]           = useState(1);
 
@@ -69,8 +70,6 @@ export default function Restaurants() {
     searchQuery.trim() ? sp.set('search', searchQuery) : sp.delete('search');
     setSearchParams(sp);
   };
-
-  const toggleFav = (id) => setFavorites(p => p.includes(id) ? p.filter(i=>i!==id) : [...p, id]);
 
   const addItem = (item, qty = 1) => {
     addToCart({ id:item.id, name:item.name, price:Number(item.price), quantity:qty, image:item.image_url || item.image },
@@ -140,9 +139,9 @@ export default function Restaurants() {
                 <div className="relative aspect-square overflow-hidden">
                   <img src={item.image_url || item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
                   <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <button onClick={e => { e.stopPropagation(); toggleFav(item.id); }}
+                  <button onClick={e => { e.stopPropagation(); toggleFavorite(item); }}
                     className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center">
-                    <Heart className={`w-3.5 h-3.5 ${favorites.includes(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
+                    <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
                   </button>
                   <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
                 </div>

@@ -1,18 +1,18 @@
-﻿import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Heart, Star, Plus, Trash2, ShoppingCart } from 'lucide-react';
+﻿import { useNavigate } from 'react-router-dom';
+import { Heart, Star, Plus, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
+import { useFavorites } from '../context/FavoritesContext';
 
 export default function Favorites() {
   const navigate      = useNavigate();
   const { addToCart } = useCart();
-  const [favorites, setFavorites] = useState([]);
+  const { favorites, removeFavorite } = useFavorites();
 
-  const remove = (id) => setFavorites(f => f.filter(i => i.id !== id));
+  const remove = (id) => removeFavorite(id);
 
   const addItem = (item) => {
     addToCart({ id:item.id, name:item.name, price:item.price, quantity:1, image:item.image },
-              { id:item.restaurant, name:item.restaurant });
+              { id:item.restaurantId || item.restaurant, name:item.restaurant });
     navigate('/cart');
   };
 
@@ -48,7 +48,7 @@ export default function Favorites() {
                   className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center hover:glass-orange transition-all">
                   <Trash2 className="w-3.5 h-3.5 text-red-400" />
                 </button>
-                <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">â‚±{Number(item.price).toFixed(2)}</p>
+                <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
               </div>
               <div className="p-3">
                 <p className="text-white font-semibold text-sm truncate">{item.name}</p>
