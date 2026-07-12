@@ -18,6 +18,24 @@ const QUICK_ACTIONS = [
   { label:'Logout',        icon:LogOut,    color:'from-red-600 to-red-700',       logout:true },
 ];
 
+const resizeImage = (file, maxSize = 420, quality = 0.82) => new Promise((resolve, reject) => {
+  const img = new Image();
+  const reader = new FileReader();
+  reader.onload = ev => { img.src = ev.target.result; };
+  reader.onerror = reject;
+  img.onload = () => {
+    const scale = Math.min(1, maxSize / Math.max(img.width, img.height));
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.round(img.width * scale);
+    canvas.height = Math.round(img.height * scale);
+    const ctx = canvas.getContext('2d');
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    resolve(canvas.toDataURL('image/jpeg', quality));
+  };
+  img.onerror = reject;
+  reader.readAsDataURL(file);
+});
+
 export default function Profile() {
   const navigate = useNavigate();
   const location = useLocation();
@@ -37,23 +55,20 @@ export default function Profile() {
   const [saving, setSaving]       = useState(false);
   const avatarInputRef            = useRef(null);
 
-  const handleAvatarChange = (e) => {
+  const handleAvatarChange = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
     if (file.size > 2 * 1024 * 1024) {
       addNotification('Image must be under 2 MB', 'error');
       return;
     }
-    const reader = new FileReader();
-    reader.onload = async (ev) => {
-      try {
-        await updateUser({ avatar: ev.target.result });
-        addNotification('Profile photo updated!', 'success');
-      } catch {
-        addNotification('Failed to save profile photo', 'error');
-      }
-    };
-    reader.readAsDataURL(file);
+    try {
+      const avatar = await resizeImage(file);
+      await updateUser({ avatar });
+      addNotification('Profile photo updated!', 'success');
+    } catch {
+      addNotification('Failed to save profile photo', 'error');
+    }
   };
 
   useEffect(() => {

@@ -5,6 +5,11 @@ const helmet       = require('helmet');
 const morgan       = require('morgan');
 const pool         = require('./config/db');
 
+pool.query(`
+  ALTER TABLE users
+    ALTER COLUMN avatar_url TYPE TEXT
+`).catch(err => console.warn('users avatar_url column warning:', err.message));
+
 // Ensure rider_profiles table exists (safe to run on every startup)
 // Add GPS location columns to rider_profiles if they don't exist yet
 pool.query(`

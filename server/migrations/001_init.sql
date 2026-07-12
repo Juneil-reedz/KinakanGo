@@ -17,7 +17,7 @@ CREATE TABLE users (
   phone         VARCHAR(30)   DEFAULT NULL,
   role          VARCHAR(20)   NOT NULL DEFAULT 'customer'
                 CHECK (role IN ('customer','rider','restaurant_owner','admin')),
-  avatar_url    VARCHAR(500)  DEFAULT NULL,
+  avatar_url    TEXT          DEFAULT NULL,
   is_active     BOOLEAN       NOT NULL DEFAULT TRUE,
   ban_reason    TEXT          DEFAULT NULL,
   created_at    TIMESTAMPTZ   NOT NULL DEFAULT NOW(),
