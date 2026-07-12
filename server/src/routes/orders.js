@@ -4,10 +4,11 @@ const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate);
 
-router.post('/',                 requireRole('customer'), ctrl.placeOrder);
-router.get('/',                  ctrl.listOrders);
-router.get('/:id',               ctrl.getOrder);
-router.patch('/:id/status',      ctrl.updateStatus);
-router.patch('/:id/assign-rider', requireRole('admin'), ctrl.assignRider);
+router.post('/',                     requireRole('customer'), ctrl.placeOrder);
+router.get('/',                      ctrl.listOrders);
+router.get('/:id',                   ctrl.getOrder);
+router.patch('/:id/status',          ctrl.updateStatus);
+router.patch('/:id/assign-rider',    requireRole('admin'), ctrl.assignRider);
+router.patch('/:id/rider-response',  ctrl.riderResponse);
 
 module.exports = router;

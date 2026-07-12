@@ -1,80 +1,119 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRider } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
-import { ordersApi } from '../../services/api';
+import { ordersApi, riderApi } from '../../services/api';
 import {
   Banknote, Package, Bike, Clock, MapPin,
-  ChevronRight, Store, Check, X, TrendingUp
+  ChevronRight, Store, Check, X, TrendingUp, Wifi, WifiOff
 } from 'lucide-react';
 
 const STATS_DEF = [
-  { label:"Today's Earnings", key:'todayEarnings',   icon:Banknote,    fmt: v => `₱${Number(v).toFixed(2)}`, color:'btn-glow-green' },
-  { label:'Deliveries Today', key:'todayDeliveries', icon:Package,     fmt: v => v,                          color:'btn-glow-orange' },
-  { label:'Active',           key:'activeDeliveries',icon:Bike,        fmt: v => v,                          color:'glass-green' },
-  { label:'Available Pickups',key:'pendingOffers',   icon:Clock,       fmt: v => v,                          color:'glass-orange' },
+  { label:"Today's Earnings", key:'todayEarnings',    icon:Banknote, fmt: v => `₱${Number(v).toFixed(2)}`, color:'btn-glow-green' },
+  { label:'Deliveries Today', key:'todayDeliveries',  icon:Package,  fmt: v => v,                          color:'btn-glow-orange' },
+  { label:'Active',           key:'activeDeliveries', icon:Bike,     fmt: v => v,                          color:'glass-green' },
+  { label:'Pending Pickups',  key:'pendingOffers',    icon:Clock,    fmt: v => v,                          color:'glass-orange' },
 ];
 
+const POLL_MS = 15000;
+
 export default function RiderDashboard() {
-  const { rider }              = useRider();
-  const { addNotification }    = useNotification();
-  const navigate               = useNavigate();
+  const { rider }           = useRider();
+  const { addNotification } = useNotification();
+  const navigate            = useNavigate();
 
-  const [availableOrders, setAvailable] = useState([]);
-  const [activeOrders, setActive]       = useState([]);
-  const [loading, setLoading]           = useState(true);
-  const [filter, setFilter]             = useState('all');
-  const [available, setAvail]           = useState(true);
+  const [pendingOrders, setPending] = useState([]);
+  const [activeOrders,  setActive]  = useState([]);
+  const [loading,  setLoading]      = useState(true);
+  const [filter,   setFilter]       = useState('all');
+  const [available, setAvail]       = useState(true);
+  const [togglingAvail, setToggling] = useState(false);
+  const pollRef = useRef(null);
 
-  useEffect(() => {
-    (async () => {
-      try {
-        setLoading(true);
-        const [readyRes, activeRes] = await Promise.allSettled([
-          ordersApi.list({ status: 'ready', limit: 20 }),
-          ordersApi.list({ status: 'picked_up', limit: 10 }),
-        ]);
-        if (readyRes.status  === 'fulfilled') setAvailable(readyRes.value.data  || readyRes.value  || []);
-        if (activeRes.status === 'fulfilled') setActive(activeRes.value.data    || activeRes.value || []);
-      } catch {
-        addNotification('Failed to load orders', 'error');
-      } finally {
-        setLoading(false);
-      }
-    })();
-  }, []);
-
-  const orders = [
-    ...availableOrders.map(o => ({ ...o, status:'assigned' })),
-    ...activeOrders.map(o => ({ ...o, status:'in_progress' })),
-  ];
-
-  const stats = {
-    todayEarnings:   0,
-    todayDeliveries: 0,
-    activeDeliveries:activeOrders.length,
-    pendingOffers:   availableOrders.length,
-  };
-
-  const filtered = filter === 'all' ? orders : orders.filter(o => o.status === filter);
-
-  const accept = async (id) => {
+  const fetchOrders = async (silent = false) => {
     try {
-      await ordersApi.updateStatus(id, 'picked_up');
-      const order = availableOrders.find(o => o.id === id);
-      setAvailable(prev => prev.filter(o => o.id !== id));
-      if (order) setActive(prev => [...prev, order]);
-      addNotification('Order accepted! Head to the restaurant.', 'success');
-      setTimeout(() => navigate(`/rider/delivery/${id}`), 800);
+      if (!silent) setLoading(true);
+      const [pendingRes, activeRes] = await Promise.allSettled([
+        ordersApi.list({ rider_orders: 'true', status: 'ready',     limit: 20 }),
+        ordersApi.list({ rider_orders: 'true', status: 'picked_up', limit: 10 }),
+      ]);
+      if (pendingRes.status === 'fulfilled') {
+        const orders = pendingRes.value.data || pendingRes.value || [];
+        setPending(prev => {
+          if (silent && orders.length > prev.length) {
+            addNotification('New delivery assignment!', 'success');
+          }
+          return orders;
+        });
+      }
+      if (activeRes.status === 'fulfilled') {
+        setActive(activeRes.value.data || activeRes.value || []);
+      }
     } catch {
-      addNotification('Failed to accept order', 'error');
+      if (!silent) addNotification('Failed to load orders', 'error');
+    } finally {
+      if (!silent) setLoading(false);
     }
   };
 
-  const decline = (id) => {
-    setAvailable(prev => prev.filter(o => o.id !== id));
-    addNotification('Order declined.', 'success');
+  useEffect(() => {
+    fetchOrders();
+    if (available) {
+      pollRef.current = setInterval(() => fetchOrders(true), POLL_MS);
+    }
+    return () => clearInterval(pollRef.current);
+  }, [available]);
+
+  const toggleAvailability = async () => {
+    if (togglingAvail) return;
+    setToggling(true);
+    const next = !available;
+    try {
+      await riderApi.setAvailability(next);
+      setAvail(next);
+      addNotification(next ? 'You are now available for deliveries' : 'You are now offline', 'success');
+      if (!next) clearInterval(pollRef.current);
+    } catch {
+      addNotification('Failed to update availability', 'error');
+    } finally {
+      setToggling(false);
+    }
   };
+
+  const accept = async (id) => {
+    try {
+      await ordersApi.riderResponse(id, true);
+      const order = pendingOrders.find(o => o.id === id);
+      setPending(prev => prev.filter(o => o.id !== id));
+      if (order) setActive(prev => [...prev, { ...order, status: 'picked_up' }]);
+      addNotification('Order accepted! Head to the restaurant.', 'success');
+      setTimeout(() => navigate(`/rider/delivery/${id}`), 800);
+    } catch (err) {
+      addNotification(err?.data?.error || 'Failed to accept order', 'error');
+    }
+  };
+
+  const decline = async (id) => {
+    try {
+      await ordersApi.riderResponse(id, false);
+    } catch {}
+    setPending(prev => prev.filter(o => o.id !== id));
+    addNotification('Order declined. Another rider will be assigned.', 'success');
+  };
+
+  const orders = [
+    ...pendingOrders.map(o => ({ ...o, _view: 'assigned' })),
+    ...activeOrders.map(o => ({ ...o,  _view: 'in_progress' })),
+  ];
+
+  const stats = {
+    todayEarnings:    0,
+    todayDeliveries:  0,
+    activeDeliveries: activeOrders.length,
+    pendingOffers:    pendingOrders.length,
+  };
+
+  const filtered = filter === 'all' ? orders : orders.filter(o => o._view === filter);
 
   const filters = [
     { key:'all',         label:'All' },
@@ -91,11 +130,14 @@ export default function RiderDashboard() {
           <p className="text-forest-200/50 text-sm">Welcome back</p>
           <h1 className="text-2xl font-heading font-bold text-white">{rider?.name || 'Rider'}</h1>
         </div>
-        <button onClick={() => setAvail(a => !a)}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all
+        <button
+          onClick={toggleAvailability}
+          disabled={togglingAvail}
+          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition-all disabled:opacity-60
             ${available ? 'btn-glow-green text-white' : 'glass text-forest-200/60'}`}>
-          <span className={`w-2 h-2 rounded-full ${available ? 'bg-white animate-pulse' : 'bg-forest-200/40'}`} />
-          {available ? 'Available' : 'Offline'}
+          {available
+            ? <><Wifi className="w-3.5 h-3.5" /><span className="w-2 h-2 rounded-full bg-white animate-pulse" /> Online</>
+            : <><WifiOff className="w-3.5 h-3.5" /> Offline</>}
         </button>
       </div>
 
@@ -123,9 +165,16 @@ export default function RiderDashboard() {
         </button>
       </div>
 
-      {/* Orders */}
+      {/* Offline notice */}
+      {!available && (
+        <div className="glass rounded-2xl p-4 flex items-center gap-3">
+          <WifiOff className="w-5 h-5 text-forest-300/50 flex-shrink-0" />
+          <p className="text-forest-200/60 text-sm">You are offline. Go online to receive delivery assignments.</p>
+        </div>
+      )}
+
+      {/* Orders list */}
       <div className="glass rounded-3xl overflow-hidden">
-        {/* Filter tabs */}
         <div className="flex" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
           {filters.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
@@ -134,7 +183,7 @@ export default function RiderDashboard() {
               {f.label}
               {f.key !== 'all' && (
                 <span className="ml-1.5 text-xs opacity-70">
-                  ({orders.filter(o => o.status === f.key).length})
+                  ({orders.filter(o => o._view === f.key).length})
                 </span>
               )}
             </button>
@@ -151,30 +200,31 @@ export default function RiderDashboard() {
               <div className="w-14 h-14 glass rounded-2xl flex items-center justify-center">
                 <Package className="w-7 h-7 text-forest-300/40" />
               </div>
-              <p className="text-forest-200/50 text-sm">No orders here</p>
+              <p className="text-forest-200/50 text-sm">
+                {available ? 'No orders assigned yet' : 'Go online to receive orders'}
+              </p>
             </div>
           ) : filtered.map(order => {
-            const items = order.items || order.orderItems || [];
-            const restaurantName = order.restaurant?.name || order.restaurantName || 'Restaurant';
-            const restaurantAddress = order.restaurant?.address || order.restaurantAddress || '';
-            const customerName = order.customer?.name || order.customerName || 'Customer';
-            const customerAddress = order.customer?.address || order.deliveryAddress || '';
-            const deliveryFee = order.deliveryFee || 0;
-            const distance = order.distance || '—';
-            const estimatedTime = order.estimatedTime || '—';
+            const items          = order.items || order.orderItems || [];
+            const restaurantName = order.restaurant_name    || order.restaurantName    || 'Restaurant';
+            const restaurantAddr = order.restaurant_address || order.restaurantAddress || '';
+            const customerName   = order.customer_name      || order.customerName      || 'Customer';
+            const customerAddr   = order.delivery_address   || order.deliveryAddress   || '';
+            const deliveryFee    = order.delivery_fee       || order.deliveryFee       || 0;
             return (
               <div key={order.id} className="p-4 hover:glass transition-all">
-                {/* Order top row */}
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <div className="flex items-center gap-2 mb-0.5">
                       <p className="text-white font-semibold text-sm">Order #{order.id}</p>
                       <span className={`text-xs px-2 py-0.5 rounded-full font-medium
-                        ${order.status === 'assigned' ? 'glass-orange text-ember-200' : 'glass-green text-forest-200'}`}>
-                        {order.status === 'assigned' ? 'New' : 'Active'}
+                        ${order._view === 'assigned' ? 'glass-orange text-ember-200' : 'glass-green text-forest-200'}`}>
+                        {order._view === 'assigned' ? 'New' : 'Active'}
                       </span>
                     </div>
-                    {order.createdAt && <p className="text-forest-200/40 text-xs">{new Date(order.createdAt).toLocaleTimeString()}</p>}
+                    {order.created_at && (
+                      <p className="text-forest-200/40 text-xs">{new Date(order.created_at).toLocaleTimeString()}</p>
+                    )}
                   </div>
                   <div className="text-right">
                     <p className="text-forest-300 font-heading font-bold text-lg">₱{Number(deliveryFee).toFixed(2)}</p>
@@ -182,7 +232,6 @@ export default function RiderDashboard() {
                   </div>
                 </div>
 
-                {/* Pickup / Deliver */}
                 <div className="grid grid-cols-2 gap-2 mb-3">
                   <div className="glass rounded-xl p-3">
                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -190,7 +239,7 @@ export default function RiderDashboard() {
                       <p className="text-ember-300/80 text-xs font-semibold uppercase tracking-wide">Pickup</p>
                     </div>
                     <p className="text-white text-xs font-semibold">{restaurantName}</p>
-                    {restaurantAddress && <p className="text-forest-200/50 text-xs mt-0.5 leading-tight">{restaurantAddress}</p>}
+                    {restaurantAddr && <p className="text-forest-200/50 text-xs mt-0.5 leading-tight">{restaurantAddr}</p>}
                   </div>
                   <div className="glass rounded-xl p-3">
                     <div className="flex items-center gap-1.5 mb-1.5">
@@ -198,19 +247,19 @@ export default function RiderDashboard() {
                       <p className="text-forest-300/80 text-xs font-semibold uppercase tracking-wide">Deliver</p>
                     </div>
                     <p className="text-white text-xs font-semibold">{customerName}</p>
-                    {customerAddress && <p className="text-forest-200/50 text-xs mt-0.5 leading-tight">{customerAddress}</p>}
+                    {customerAddr && <p className="text-forest-200/50 text-xs mt-0.5 leading-tight">{customerAddr}</p>}
                   </div>
                 </div>
 
-                {/* Meta row */}
                 <div className="flex items-center gap-3 mb-3 text-xs text-forest-200/50">
-                  {distance !== '—' && <span className="flex items-center gap-1"><Bike className="w-3 h-3" />{distance}</span>}
-                  {estimatedTime !== '—' && <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{estimatedTime}</span>}
-                  <span className="flex items-center gap-1"><Package className="w-3 h-3" />{items.length} items</span>
+                  <span className="flex items-center gap-1"><Package className="w-3 h-3" />{items.length || '?'} items</span>
+                  <span className="flex items-center gap-1">
+                    <Bike className="w-3 h-3" />
+                    {order._view === 'assigned' ? 'Awaiting your response' : 'In progress'}
+                  </span>
                 </div>
 
-                {/* Actions */}
-                {order.status === 'assigned' && (
+                {order._view === 'assigned' && (
                   <div className="flex gap-2">
                     <button onClick={() => accept(order.id)}
                       className="flex-1 btn-glow-green text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
@@ -222,7 +271,7 @@ export default function RiderDashboard() {
                     </button>
                   </div>
                 )}
-                {order.status === 'in_progress' && (
+                {order._view === 'in_progress' && (
                   <button onClick={() => navigate(`/rider/delivery/${order.id}`)}
                     className="w-full btn-glow-orange text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-1.5">
                     Continue Delivery <ChevronRight className="w-4 h-4" />

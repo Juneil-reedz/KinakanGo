@@ -1,5 +1,31 @@
 const pool = require('../config/db');
 
+// Finds a random available rider not currently on an active delivery, assigns them to the order.
+// Returns the rider's user_id, or null if none available.
+async function autoAssignRider(orderId) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT rp.user_id
+       FROM rider_profiles rp
+       WHERE rp.is_available = true
+         AND rp.user_id NOT IN (
+           SELECT rider_id FROM orders
+           WHERE status IN ('ready', 'picked_up')
+             AND rider_id IS NOT NULL
+         )
+       ORDER BY RANDOM()
+       LIMIT 1`
+    );
+    if (!rows.length) return null;
+    const riderId = rows[0].user_id;
+    await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, orderId]);
+    return riderId;
+  } catch (err) {
+    console.error('autoAssignRider error:', err);
+    return null;
+  }
+}
+
 async function placeOrder(req, res) {
   const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage, contactInfo } = req.body;
   const customerId = req.user.id;
@@ -76,7 +102,7 @@ async function placeOrder(req, res) {
 }
 
 async function listOrders(req, res) {
-  const { status, page = 1, limit = 20, restaurant_id } = req.query;
+  const { status, page = 1, limit = 20, restaurant_id, rider_orders } = req.query;
   const offset = (page - 1) * limit;
   const { id, role } = req.user;
 
@@ -84,13 +110,15 @@ async function listOrders(req, res) {
   const params = [];
   let   idx    = 1;
 
-  if (restaurant_id) {
-    // Restaurant owner viewing their orders (role stays 'customer' in dual-role system)
+  if (rider_orders === 'true') {
+    // Rider fetching their own assigned orders
+    where.push(`o.rider_id = $${idx++}`); params.push(id);
+  } else if (restaurant_id) {
     where.push(`o.restaurant_id = $${idx++}`); params.push(parseInt(restaurant_id));
   } else if (role === 'customer') {
-    where.push(`o.customer_id = $${idx++}`);    params.push(id);
+    where.push(`o.customer_id = $${idx++}`); params.push(id);
   } else if (role === 'rider') {
-    where.push(`o.rider_id = $${idx++}`);       params.push(id);
+    where.push(`o.rider_id = $${idx++}`);    params.push(id);
   } else if (role === 'restaurant_owner') {
     where.push(`o.restaurant_id IN (SELECT id FROM restaurants WHERE owner_id = $${idx++})`);
     params.push(id);
@@ -101,7 +129,8 @@ async function listOrders(req, res) {
 
   const { rows } = await pool.query(
     `SELECT o.id, o.status, o.total, o.payment_method, o.payment_status,
-            o.created_at, r.name AS restaurant_name, r.image_url AS restaurant_image,
+            o.created_at, o.delivery_address, o.rider_id,
+            r.name AS restaurant_name, r.image_url AS restaurant_image, r.address AS restaurant_address,
             u.name AS customer_name
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
@@ -149,7 +178,56 @@ async function updateStatus(req, res) {
      WHERE id = $5`,
     [status, status, cancelledReason || null, status, req.params.id]
   );
+
+  // When order is ready for pickup, auto-assign an available rider
+  if (status === 'ready') {
+    const riderId = await autoAssignRider(req.params.id);
+    return res.json({ message: 'Status updated', riderId: riderId || null });
+  }
+
+  // When delivered, free the rider back to available
+  if (status === 'delivered') {
+    const { rows } = await pool.query('SELECT rider_id FROM orders WHERE id = $1', [req.params.id]);
+    if (rows[0]?.rider_id) {
+      await pool.query(
+        'UPDATE rider_profiles SET is_available = true WHERE user_id = $1',
+        [rows[0].rider_id]
+      ).catch(() => {});
+    }
+  }
+
   res.json({ message: 'Status updated' });
+}
+
+// Rider accepts or rejects an assigned order
+async function riderResponse(req, res) {
+  const orderId  = parseInt(req.params.id);
+  const riderId  = req.user.id;
+  const { accept } = req.body;
+
+  const { rows } = await pool.query(
+    'SELECT id, rider_id, status FROM orders WHERE id = $1',
+    [orderId]
+  );
+  const order = rows[0];
+  if (!order) return res.status(404).json({ error: 'Order not found' });
+  if (order.rider_id !== riderId) return res.status(403).json({ error: 'This order is not assigned to you' });
+  if (order.status !== 'ready') return res.status(400).json({ error: 'Order is no longer awaiting pickup' });
+
+  if (accept) {
+    await pool.query('UPDATE orders SET status = $1 WHERE id = $2', ['picked_up', orderId]);
+    // Mark rider as busy
+    await pool.query(
+      'UPDATE rider_profiles SET is_available = false WHERE user_id = $1',
+      [riderId]
+    ).catch(() => {});
+    return res.json({ message: 'Order accepted', status: 'picked_up' });
+  } else {
+    // Rider rejected — clear assignment and try next rider
+    await pool.query('UPDATE orders SET rider_id = NULL WHERE id = $1', [orderId]);
+    const nextRider = await autoAssignRider(orderId);
+    return res.json({ message: 'Order rejected', nextRiderId: nextRider || null });
+  }
 }
 
 async function assignRider(req, res) {
@@ -158,4 +236,4 @@ async function assignRider(req, res) {
   res.json({ message: 'Rider assigned' });
 }
 
-module.exports = { placeOrder, listOrders, getOrder, updateStatus, assignRider };
+module.exports = { placeOrder, listOrders, getOrder, updateStatus, assignRider, riderResponse };

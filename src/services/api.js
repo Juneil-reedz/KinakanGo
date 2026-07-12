@@ -105,13 +105,20 @@ export const menuApi = {
 // ── Orders ────────────────────────────────────────────────────────────────────
 
 export const ordersApi = {
-  place:       (data)           => request('/orders',               { method: 'POST',  body: JSON.stringify(data) }),
-  list:        (params = {})    => request(`/orders?${new URLSearchParams(params)}`),
-  getOne:      (id)             => request(`/orders/${id}`),
-  updateStatus:(id, status, extra = {}) =>
+  place:        (data)           => request('/orders',               { method: 'POST',  body: JSON.stringify(data) }),
+  list:         (params = {})    => request(`/orders?${new URLSearchParams(params)}`),
+  getOne:       (id)             => request(`/orders/${id}`),
+  updateStatus: (id, status, extra = {}) =>
     request(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status, ...extra }) }),
-  assignRider: (id, riderId)    =>
+  assignRider:  (id, riderId)    =>
     request(`/orders/${id}/assign-rider`, { method: 'PATCH', body: JSON.stringify({ riderId }) }),
+  riderResponse:(id, accept)     =>
+    request(`/orders/${id}/rider-response`, { method: 'PATCH', body: JSON.stringify({ accept }) }),
+};
+
+export const riderApi = {
+  setAvailability: (is_available) =>
+    request('/riders/availability', { method: 'PATCH', body: JSON.stringify({ is_available }) }),
 };
 
 // ── Applications ──────────────────────────────────────────────────────────────
