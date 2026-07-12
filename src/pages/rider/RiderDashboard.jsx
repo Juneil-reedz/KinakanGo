@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useRider } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
-import { ordersApi, riderApi } from '../../services/api';
+import { riderRequest } from '../../context/RiderContext';
 import {
   Banknote, Package, Bike, Clock, MapPin, ChevronRight, Store,
   Check, X, TrendingUp, Wifi, WifiOff
@@ -30,17 +30,19 @@ export default function RiderDashboard() {
   const [togglingAvail, setToggling] = useState(false);
   const pollRef = useRef(null);
 
-  // On mount: push "available" status to DB so rider_profiles row exists
+  // On mount: upsert rider_profiles row so auto-assign can find this rider
   useEffect(() => {
-    riderApi.setAvailability(true).catch(() => {});
+    riderRequest('/riders/availability', {
+      method: 'PATCH', body: JSON.stringify({ is_available: true }),
+    }).catch(() => {});
   }, []);
 
   const fetchOrders = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
       const [pendingRes, activeRes] = await Promise.allSettled([
-        ordersApi.list({ rider_orders: 'true', status: 'ready',     limit: 20 }),
-        ordersApi.list({ rider_orders: 'true', status: 'picked_up', limit: 10 }),
+        riderRequest('/orders?rider_orders=true&status=ready&limit=20'),
+        riderRequest('/orders?rider_orders=true&status=picked_up&limit=10'),
       ]);
       if (pendingRes.status === 'fulfilled') {
         const orders = pendingRes.value.data || pendingRes.value || [];
@@ -70,7 +72,9 @@ export default function RiderDashboard() {
     setToggling(true);
     const next = !available;
     try {
-      await riderApi.setAvailability(next);
+      await riderRequest('/riders/availability', {
+        method: 'PATCH', body: JSON.stringify({ is_available: next }),
+      });
       setAvail(next);
       addNotification(next ? 'You are now available for deliveries' : 'You are now offline', 'success');
       if (!next) clearInterval(pollRef.current);
@@ -87,7 +91,9 @@ export default function RiderDashboard() {
 
   const accept = async (id) => {
     try {
-      await ordersApi.riderResponse(id, true);
+      await riderRequest(`/orders/${id}/rider-response`, {
+        method: 'PATCH', body: JSON.stringify({ accept: true }),
+      });
       const order = pendingOrders.find(o => o.id === id);
       setPending(prev => prev.filter(o => o.id !== id));
       if (order) setActive(prev => [...prev, { ...order, status: 'picked_up' }]);
@@ -99,7 +105,11 @@ export default function RiderDashboard() {
   };
 
   const decline = async (id) => {
-    try { await ordersApi.riderResponse(id, false); } catch {}
+    try {
+      await riderRequest(`/orders/${id}/rider-response`, {
+        method: 'PATCH', body: JSON.stringify({ accept: false }),
+      });
+    } catch {}
     setPending(prev => prev.filter(o => o.id !== id));
     addNotification('Order declined. Another rider will be assigned.', 'success');
   };

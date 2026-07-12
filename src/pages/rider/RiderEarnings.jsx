@@ -1,6 +1,5 @@
 import { useState, useEffect } from 'react';
-import { useRider } from '../../context/RiderContext';
-import { ordersApi } from '../../services/api';
+import { useRider, riderRequest } from '../../context/RiderContext';
 import { Banknote, Package, TrendingUp, Star, Clock, MapPin, Store, Download, CreditCard } from 'lucide-react';
 
 export default function RiderEarnings() {
@@ -13,7 +12,7 @@ export default function RiderEarnings() {
     (async () => {
       try {
         setLoading(true);
-        const res = await ordersApi.list({ status: 'delivered', limit: 20 });
+        const res = await riderRequest('/orders?rider_orders=true&status=delivered&limit=20');
         setTrips(res.data || res || []);
       } catch {
         // silently fail
