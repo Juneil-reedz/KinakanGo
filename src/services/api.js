@@ -121,6 +121,12 @@ export const riderApi = {
     request('/riders/availability', { method: 'PATCH', body: JSON.stringify({ is_available }) }),
 };
 
+export const favoritesApi = {
+  list:   ()   => request('/favorites'),
+  add:    (id) => request(`/favorites/${id}`, { method: 'POST' }),
+  remove: (id) => request(`/favorites/${id}`, { method: 'DELETE' }),
+};
+
 // ── Applications ──────────────────────────────────────────────────────────────
 
 export const applicationsApi = {

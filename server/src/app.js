@@ -30,6 +30,15 @@ pool.query(`
   )
 `).catch(err => console.warn('rider_profiles init warning:', err.message));
 
+pool.query(`
+  CREATE TABLE IF NOT EXISTS customer_favorites (
+    user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (user_id, menu_item_id)
+  )
+`).catch(err => console.warn('customer_favorites init warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');
@@ -40,6 +49,7 @@ const promoRoutes  = require('./routes/promos');
 const menuRoutes    = require('./routes/menu');
 const upgradeRoutes = require('./routes/upgrades');
 const riderRoutes   = require('./routes/riders');
+const favoriteRoutes = require('./routes/favorites');
 
 const app = express();
 
@@ -64,6 +74,7 @@ app.use('/api/promos',       promoRoutes);
 app.use('/api/menu',         menuRoutes);
 app.use('/api/upgrades',     upgradeRoutes);
 app.use('/api/riders',       riderRoutes);
+app.use('/api/favorites',    favoriteRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

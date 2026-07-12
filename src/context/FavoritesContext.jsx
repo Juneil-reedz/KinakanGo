@@ -1,4 +1,6 @@
 import { createContext, useContext, useEffect, useState } from 'react';
+import { favoritesApi, storage } from '../services/api';
+import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'kkg_favorites';
 const FavoritesContext = createContext(null);
@@ -16,15 +18,33 @@ const normalizeFavorite = (item, restaurant = {}) => ({
 });
 
 export function FavoritesProvider({ children }) {
+  const { user } = useAuth();
   const [favorites, setFavorites] = useState([]);
 
   useEffect(() => {
-    try {
-      setFavorites(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
-    } catch {
-      setFavorites([]);
+    const localFavorites = (() => {
+      try { return JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'); }
+      catch { return []; }
+    })();
+
+    if (!user || !storage.getAccess()) {
+      setFavorites(localFavorites);
+      return;
     }
-  }, []);
+
+    let cancelled = false;
+    (async () => {
+      try {
+        await Promise.allSettled(localFavorites.map(item => favoritesApi.add(item.id)));
+        const res = await favoritesApi.list();
+        if (!cancelled) setFavorites((res.data || []).map(item => normalizeFavorite(item)));
+      } catch {
+        if (!cancelled) setFavorites(localFavorites);
+      }
+    })();
+
+    return () => { cancelled = true; };
+  }, [user?.id]);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
@@ -35,9 +55,13 @@ export function FavoritesProvider({ children }) {
   const addFavorite = (item, restaurant) => {
     const favorite = normalizeFavorite(item, restaurant);
     setFavorites(prev => prev.some(i => String(i.id) === String(favorite.id)) ? prev : [favorite, ...prev]);
+    if (storage.getAccess()) favoritesApi.add(favorite.id).catch(() => {});
   };
 
-  const removeFavorite = (id) => setFavorites(prev => prev.filter(item => String(item.id) !== String(id)));
+  const removeFavorite = (id) => {
+    setFavorites(prev => prev.filter(item => String(item.id) !== String(id)));
+    if (storage.getAccess()) favoritesApi.remove(id).catch(() => {});
+  };
 
   const toggleFavorite = (item, restaurant) => {
     if (isFavorite(item.id)) {
