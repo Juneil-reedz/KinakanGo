@@ -52,17 +52,31 @@ router.patch('/availability', async (req, res) => {
 
     let assignedOrderId = null;
     if (is_available) {
-      // Find an unassigned ready order and assign it to this rider
-      const { rows } = await pool.query(
+      // 1. Look for a genuinely unassigned ready order
+      let { rows } = await pool.query(
         `SELECT id FROM orders
          WHERE status = 'ready' AND rider_id IS NULL
-         ORDER BY created_at ASC
-         LIMIT 1`
+         ORDER BY created_at ASC LIMIT 1`
       );
+
+      // 2. If nothing unassigned, look for orders assigned to a "ghost" rider —
+      //    i.e. rider_id points to a user who has no rider_profiles row, meaning
+      //    they were assigned by the old upgrade_requests fallback and never responded.
+      if (!rows.length) {
+        ({ rows } = await pool.query(
+          `SELECT o.id FROM orders o
+           LEFT JOIN rider_profiles rp ON rp.user_id = o.rider_id
+           WHERE o.status = 'ready'
+             AND o.rider_id IS NOT NULL
+             AND rp.user_id IS NULL
+           ORDER BY o.created_at ASC LIMIT 1`
+        ));
+      }
+
       if (rows.length) {
         assignedOrderId = rows[0].id;
         await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [req.user.id, assignedOrderId]);
-        console.log(`availability: assigned queued order ${assignedOrderId} to rider ${req.user.id}`);
+        console.log(`availability: assigned order ${assignedOrderId} to rider ${req.user.id}`);
       }
     }
 
