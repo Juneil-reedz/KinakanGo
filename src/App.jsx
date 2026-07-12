@@ -47,6 +47,7 @@ import RiderLogin from './pages/rider/RiderLogin';
 import RiderDashboard from './pages/rider/RiderDashboard';
 import RiderDelivery from './pages/rider/RiderDelivery';
 import RiderEarnings from './pages/rider/RiderEarnings';
+import RiderHistory from './pages/rider/RiderHistory';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -132,6 +133,7 @@ function App() {
                           <Route path="dashboard" element={<RiderDashboard />} />
                           <Route path="delivery/:orderId" element={<RiderDelivery />} />
                           <Route path="earnings" element={<RiderEarnings />} />
+                          <Route path="history" element={<RiderHistory />} />
                         </Routes>
                       </RiderLayout>
                     }

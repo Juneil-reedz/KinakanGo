@@ -2,11 +2,12 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState } from 'react';
 import { useRider } from '../context/RiderContext';
 import { useNotification } from '../context/NotificationContext';
-import { LayoutDashboard, DollarSign, Bike, Star, Home, LogOut, Menu, X } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Bike, Star, LogOut, Menu, X, History } from 'lucide-react';
 
 const NAV = [
   { path:'/rider/dashboard', label:'Dashboard', icon:LayoutDashboard },
   { path:'/rider/earnings',  label:'Earnings',  icon:DollarSign },
+  { path:'/rider/history',   label:'History',   icon:History },
 ];
 
 export default function RiderLayout({ children }) {
@@ -71,10 +72,6 @@ export default function RiderLayout({ children }) {
             <p className="text-forest-200/50 text-xs truncate">{rider.email}</p>
           </div>
         )}
-        <button onClick={() => goTo('/')}
-          className="flex items-center gap-2 text-forest-200/50 hover:text-white hover:glass-green text-sm px-3 py-2.5 rounded-xl transition-all w-full">
-          <Home className="w-4 h-4" /> Customer Home
-        </button>
         <button onClick={handleLogout}
           className="flex items-center gap-2 text-forest-200/50 hover:text-white hover:glass-orange text-sm px-3 py-2.5 rounded-xl transition-all w-full">
           <LogOut className="w-4 h-4" /> Logout
@@ -107,17 +104,10 @@ export default function RiderLayout({ children }) {
             </button>
             <p className="text-white font-semibold">{NAV.find(n => isActive(n.path))?.label || 'Rider'}</p>
           </div>
-          <button onClick={() => navigate('/')} className="glass text-forest-200/70 hover:text-white hover:glass-green text-xs px-3 py-1.5 rounded-lg transition-all flex items-center gap-1.5">
-            <Home className="w-3.5 h-3.5" /> Home
-          </button>
         </header>
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
-          {[
-            { path:'/rider/dashboard', label:'Dashboard', icon:LayoutDashboard },
-            { path:'/rider/earnings',  label:'Earnings',  icon:DollarSign },
-            { path:'/', label:'Home', icon:Home },
-          ].map(({ path, label, icon:Icon }) => (
+          {NAV.map(({ path, label, icon:Icon }) => (
             <button key={path} onClick={() => goTo(path)}
               className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
                 ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-200/55'}`}>

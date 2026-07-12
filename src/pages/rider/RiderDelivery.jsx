@@ -8,6 +8,7 @@ import 'leaflet/dist/leaflet.css';
 import {
   Store, MapPin, Phone, Navigation, ArrowLeft,
   CheckCircle2, Package, ChevronRight, AlertTriangle, Loader2,
+  Upload, Image as ImageIcon,
 } from 'lucide-react';
 
 delete L.Icon.Default.prototype._getIconUrl;
@@ -99,6 +100,7 @@ export default function RiderDelivery() {
   const [restaurantPos, setRestPos]       = useState(null);
   const [customerPos,   setCustPos]       = useState(null);
   const [delivering,    setDelivering]    = useState(false);
+  const [deliveryProof, setDeliveryProof] = useState('');
 
   const watchIdRef  = useRef(null);
   const sendRef     = useRef(null);
@@ -144,10 +146,14 @@ export default function RiderDelivery() {
 
   // ── Deliver action ─────────────────────────────────────────────────────────
   const markDelivered = async () => {
+    if (!deliveryProof) {
+      addNotification('Upload proof of delivery first', 'error');
+      return;
+    }
     setDelivering(true);
     try {
       await riderRequest(`/orders/${orderId}/status`, {
-        method: 'PATCH', body: JSON.stringify({ status: 'delivered' }),
+        method: 'PATCH', body: JSON.stringify({ status: 'delivered', deliveryProof }),
       });
       setStep('delivered');
       addNotification('Delivery complete! Great job.', 'success');
@@ -157,6 +163,22 @@ export default function RiderDelivery() {
     } finally {
       setDelivering(false);
     }
+  };
+
+  const handleProofUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith('image/')) {
+      addNotification('Please upload an image file', 'error');
+      return;
+    }
+    if (file.size > 4 * 1024 * 1024) {
+      addNotification('Proof image must be under 4 MB', 'error');
+      return;
+    }
+    const reader = new FileReader();
+    reader.onload = ev => setDeliveryProof(ev.target.result);
+    reader.readAsDataURL(file);
   };
 
   const markPickedUp = async () => {
@@ -398,6 +420,31 @@ export default function RiderDelivery() {
         </div>
       )}
 
+      {!atRest && !isDone && (
+        <div className="glass rounded-2xl p-4">
+          <div className="flex items-center gap-2 mb-3">
+            <ImageIcon className="w-4 h-4 text-forest-300/70" />
+            <p className="text-white font-semibold text-sm">Proof of Delivery</p>
+          </div>
+          {deliveryProof ? (
+            <div className="space-y-3">
+              <img src={deliveryProof} alt="Delivery proof" className="w-full h-44 object-cover rounded-xl border border-white/10" />
+              <label className="glass hover:glass-green transition-all text-forest-100 text-sm font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer">
+                <Upload className="w-4 h-4" /> Replace Photo
+                <input type="file" accept="image/*" capture="environment" onChange={handleProofUpload} className="hidden" />
+              </label>
+            </div>
+          ) : (
+            <label className="border border-dashed border-white/15 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-forest-400/50 transition-all">
+              <Upload className="w-7 h-7 text-forest-300/60" />
+              <span className="text-white text-sm font-semibold">Upload delivery photo</span>
+              <span className="text-forest-200/45 text-xs text-center">Required before marking the order delivered</span>
+              <input type="file" accept="image/*" capture="environment" onChange={handleProofUpload} className="hidden" />
+            </label>
+          )}
+        </div>
+      )}
+
       {/* CTA */}
       {!isDone && (
         atRest ? (
@@ -406,7 +453,7 @@ export default function RiderDelivery() {
             Picked Up — Head to Customer <ChevronRight className="w-5 h-5" />
           </button>
         ) : (
-          <button onClick={markDelivered} disabled={delivering}
+          <button onClick={markDelivered} disabled={delivering || !deliveryProof}
             className="w-full btn-glow-orange text-white font-heading font-bold py-4 rounded-2xl flex items-center justify-center gap-2 text-base disabled:opacity-60">
             {delivering
               ? <><Loader2 className="w-5 h-5 animate-spin" /> Completing…</>

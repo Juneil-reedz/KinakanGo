@@ -134,7 +134,7 @@ async function listOrders(req, res) {
   const { rows } = await pool.query(
     `SELECT o.id, o.restaurant_id, o.status, o.total, o.subtotal, o.delivery_fee, o.tax,
             o.payment_method, o.payment_status,
-            o.created_at, o.delivery_address, o.rider_id,
+            o.created_at, o.delivered_at, o.delivery_address, o.delivery_proof_image, o.rider_id,
             r.name AS restaurant_name, r.image_url AS restaurant_image, r.address AS restaurant_address,
             u.name  AS customer_name,
             ru.name  AS rider_name,
@@ -176,18 +176,22 @@ async function getOrder(req, res) {
 }
 
 async function updateStatus(req, res) {
-  const { status, cancelledReason } = req.body;
+  const { status, cancelledReason, deliveryProof } = req.body;
   const allowed = ['accepted','preparing','ready','picked_up','delivered','cancelled'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  if (status === 'delivered' && !deliveryProof) {
+    return res.status(400).json({ error: 'Proof of delivery is required' });
+  }
 
   const { rows: updatedRows } = await pool.query(
     `UPDATE orders SET
        status           = $1,
        cancelled_reason = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_reason END,
-       delivered_at     = CASE WHEN $4 = 'delivered'  THEN NOW() ELSE delivered_at END
-     WHERE id = $5
+       delivered_at     = CASE WHEN $4 = 'delivered'  THEN NOW() ELSE delivered_at END,
+       delivery_proof_image = CASE WHEN $4 = 'delivered' THEN $5 ELSE delivery_proof_image END
+     WHERE id = $6
      RETURNING id, status`,
-    [status, status, cancelledReason || null, status, req.params.id]
+    [status, status, cancelledReason || null, status, deliveryProof || null, req.params.id]
   );
   if (!updatedRows.length) return res.status(404).json({ error: 'Order not found' });
 

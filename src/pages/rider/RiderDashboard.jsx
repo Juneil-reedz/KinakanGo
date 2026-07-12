@@ -202,11 +202,6 @@ export default function RiderDashboard() {
             <p className="text-forest-200/60 text-sm">You are offline. Go online to receive delivery assignments.</p>
           </div>
         )}
-
-        <button onClick={() => setMobileSection('orders')}
-          className="lg:hidden w-full btn-glow-green text-white font-semibold py-3 rounded-2xl flex items-center justify-center gap-2">
-          View Deliveries <ChevronRight className="w-4 h-4" />
-        </button>
       </section>
 
       {/* Orders */}

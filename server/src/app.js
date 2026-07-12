@@ -39,6 +39,11 @@ pool.query(`
   )
 `).catch(err => console.warn('customer_favorites init warning:', err.message));
 
+pool.query(`
+  ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS delivery_proof_image TEXT DEFAULT NULL
+`).catch(err => console.warn('orders delivery proof column warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');
