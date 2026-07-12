@@ -18,6 +18,7 @@ export default function Restaurant() {
   const [favorites, setFavorites]       = useState([]);
 
   useEffect(() => {
+    if (!id || id === 'undefined') { setLoading(false); return; }
     setLoading(true);
     Promise.all([
       restaurantsApi.getOne(id),

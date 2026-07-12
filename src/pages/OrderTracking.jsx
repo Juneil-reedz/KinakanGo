@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ordersApi } from '../services/api';
+import { ordersApi, storage } from '../services/api';
 import {
   MapPin, Clock, Phone, Package, ChevronRight,
   ClipboardList, ChefHat, PackageCheck, Bike, Navigation, CheckCircle2,
@@ -23,6 +23,7 @@ export default function OrderTracking() {
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = async (silent = false) => {
+    if (!storage.getAccess()) { setLoading(false); return; }
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
