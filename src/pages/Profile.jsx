@@ -147,8 +147,8 @@ export default function Profile() {
       {activeTab === 'profile' && (
         <div className="space-y-4">
           {/* Hero card */}
-          <div className="glass card-3d rounded-3xl p-6">
-            <div className="flex flex-col sm:flex-row items-center gap-5">
+          <div className="glass card-3d rounded-3xl p-5 sm:p-6 overflow-hidden">
+            <div className="flex flex-col md:flex-row items-center gap-5 min-w-0">
               <div className="relative flex-shrink-0">
                 <input
                   ref={avatarInputRef}
@@ -173,19 +173,19 @@ export default function Profile() {
                   <Camera className="w-3.5 h-3.5 text-white" />
                 </div>
               </div>
-              <div className="flex-1 text-center sm:text-left">
-                <h2 className="text-xl font-heading font-bold text-white mb-0.5">{user.name}</h2>
-                <p className="text-forest-200/60 text-sm mb-3">{user.email}</p>
+              <div className="flex-1 min-w-0 text-center md:text-left">
+                <h2 className="text-xl font-heading font-bold text-white mb-0.5 truncate">{user.name}</h2>
+                <p className="text-forest-200/60 text-sm mb-3 truncate max-w-full">{user.email}</p>
                 <span className="inline-flex items-center gap-1.5 glass-green px-3 py-1.5 rounded-full text-forest-200 text-xs font-semibold capitalize">
                   {user.role?.replace('_', ' ') || 'Customer'}
                 </span>
               </div>
-              <div className="flex gap-5 text-center">
+              <div className="grid grid-cols-2 gap-3 text-center w-full md:w-auto md:flex md:gap-5">
                 {[
                   { val: orders.length, label:'Orders' },
                   { val:`₱${totalSpent.toFixed(0)}`, label:'Spent' },
                 ].map(({val,label}) => (
-                  <div key={label}>
+                  <div key={label} className="glass rounded-2xl px-4 py-3 md:bg-transparent md:border-0 md:shadow-none md:p-0">
                     <p className="text-xl font-heading font-bold text-ember-400">{val}</p>
                     <p className="text-forest-200/50 text-xs">{label}</p>
                   </div>
@@ -197,7 +197,7 @@ export default function Profile() {
           {/* Quick actions */}
           <div>
             <p className="text-white font-semibold mb-3">Quick Actions</p>
-            <div className="grid grid-cols-3 sm:grid-cols-6 gap-3">
+            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 sm:grid sm:grid-cols-6 sm:overflow-visible">
               {QUICK_ACTIONS.map(({ label, icon:Icon, color, tab, to, logout: isLogout }) => (
                 <button key={label}
                   onClick={() => {
@@ -205,7 +205,7 @@ export default function Profile() {
                     else if (tab) setActiveTab(tab);
                     else navigate(to);
                   }}
-                  className="glass card-3d rounded-2xl p-3 flex flex-col items-center gap-2 hover:glass-green transition-all group">
+                  className="glass card-3d rounded-2xl p-3 min-w-[5.2rem] sm:min-w-0 flex flex-col items-center gap-2 hover:glass-green transition-all group">
                   <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
