@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
-import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home, LogOut } from 'lucide-react';
 
 const NAV = [
   { path:'/owner/dashboard', label:'Dashboard', icon:LayoutDashboard },
@@ -79,6 +79,10 @@ export default function RestaurantLayout({ children }) {
             <button onClick={() => navigate('/')} title={collapsed ? 'Customer Home' : ''}
               className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-forest-200/50 hover:text-white hover:glass-green text-sm transition-all ${collapsed ? 'justify-center' : ''}`}>
               <Home className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Customer Home'}
+            </button>
+            <button onClick={handleLogout} title={collapsed ? 'Logout' : ''}
+              className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-forest-200/50 hover:text-white hover:glass-orange text-sm transition-all ${collapsed ? 'justify-center' : ''}`}>
+              <LogOut className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Logout'}
             </button>
           </div>
 

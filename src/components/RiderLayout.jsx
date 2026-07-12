@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRider } from '../context/RiderContext';
 import { useNotification } from '../context/NotificationContext';
-import { LayoutDashboard, DollarSign, Bike, Star, Home } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Bike, Star, Home, LogOut } from 'lucide-react';
 
 const NAV = [
   { path:'/rider/dashboard', label:'Dashboard', icon:LayoutDashboard },
@@ -11,7 +11,9 @@ const NAV = [
 export default function RiderLayout({ children }) {
   const location = useLocation();
   const navigate  = useNavigate();
-  const { rider } = useRider();
+  const { rider, logout } = useRider();
+
+  const handleLogout = () => { logout(); navigate('/rider/login'); };
 
   const isActive = (p) => location.pathname === p;
 
@@ -65,6 +67,10 @@ export default function RiderLayout({ children }) {
             <button onClick={() => navigate('/')}
               className="flex items-center gap-2 text-forest-200/50 hover:text-white hover:glass-green text-sm px-3 py-2.5 rounded-xl transition-all w-full">
               <Home className="w-4 h-4" /> Customer Home
+            </button>
+            <button onClick={handleLogout}
+              className="flex items-center gap-2 text-forest-200/50 hover:text-white hover:glass-orange text-sm px-3 py-2.5 rounded-xl transition-all w-full">
+              <LogOut className="w-4 h-4" /> Logout
             </button>
           </div>
         </div>
