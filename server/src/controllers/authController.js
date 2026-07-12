@@ -59,11 +59,13 @@ async function login(req, res) {
   const ok = await bcrypt.compare(password, row.password_hash);
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
-  // Check extra capabilities (restaurant / rider)
-  const [{ rows: rRows }, { rows: rpRows }] = await Promise.all([
+  // Check extra capabilities (restaurant / rider) — use allSettled so a missing table won't crash login
+  const [rResult, rpResult] = await Promise.allSettled([
     pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [row.id]),
     pool.query('SELECT user_id FROM rider_profiles WHERE user_id = $1 LIMIT 1', [row.id]),
   ]);
+  const rRows  = rResult.status  === 'fulfilled' ? rResult.value.rows  : [];
+  const rpRows = rpResult.status === 'fulfilled' ? rpResult.value.rows : [];
 
   const user = {
     id: row.id, name: row.name, email: row.email, role: row.role, avatarUrl: row.avatar_url,
@@ -121,12 +123,14 @@ async function me(req, res) {
     [req.user.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'User not found' });
-  const [{ rows: rRows }, { rows: rpRows }] = await Promise.all([
+  const [rResult, rpResult] = await Promise.allSettled([
     pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [req.user.id]),
     pool.query('SELECT user_id FROM rider_profiles WHERE user_id = $1 LIMIT 1', [req.user.id]),
   ]);
+  const rRows2  = rResult.status  === 'fulfilled' ? rResult.value.rows  : [];
+  const rpRows2 = rpResult.status === 'fulfilled' ? rpResult.value.rows : [];
   const u = rows[0];
-  res.json({ ...u, has_restaurant: rRows.length > 0, has_rider_profile: rpRows.length > 0 });
+  res.json({ ...u, has_restaurant: rRows2.length > 0, has_rider_profile: rpRows2.length > 0 });
 }
 
 async function forgotPassword(req, res) {
