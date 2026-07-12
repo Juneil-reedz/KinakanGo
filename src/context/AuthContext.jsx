@@ -1,7 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, storage } from '../services/api';
+import { authApi, storage, usersApi } from '../services/api';
 
 const AuthContext = createContext();
+
+const normalizeUser = (u) => {
+  if (!u) return null;
+  return { ...u, avatar: u.avatar || u.avatarUrl || u.avatar_url || null };
+};
 
 export const useAuth = () => {
   const ctx = useContext(AuthContext);
@@ -17,12 +22,12 @@ export const AuthProvider = ({ children }) => {
   useEffect(() => {
     const saved = localStorage.getItem('kkg_user');
     if (saved && storage.getAccess()) {
-      const cached = JSON.parse(saved);
+      const cached = normalizeUser(JSON.parse(saved));
       setUser(cached);
       // Refresh has_restaurant / has_rider_profile in background
       authApi.me()
         .then(fresh => {
-          if (fresh) persist({ ...cached, ...fresh });
+            if (fresh) persist({ ...cached, ...normalizeUser(fresh) });
         })
         .catch(() => {})
         .finally(() => setLoading(false));
@@ -32,8 +37,9 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const persist = (u) => {
-    setUser(u);
-    if (u) localStorage.setItem('kkg_user', JSON.stringify(u));
+    const normalized = normalizeUser(u);
+    setUser(normalized);
+    if (normalized) localStorage.setItem('kkg_user', JSON.stringify(normalized));
     else   localStorage.removeItem('kkg_user');
   };
 
@@ -44,14 +50,14 @@ export const AuthProvider = ({ children }) => {
     }
     storage.setTokens(res.accessToken, res.refreshToken);
     persist(res.user);
-    return res.user;
+    return normalizeUser(res.user);
   };
 
   const register = async (userData) => {
     const res = await authApi.register({ ...userData, role: 'customer' });
     storage.setTokens(res.accessToken, res.refreshToken);
     persist(res.user);
-    return res.user;
+    return normalizeUser(res.user);
   };
 
   const logout = useCallback(async () => {
@@ -60,9 +66,18 @@ export const AuthProvider = ({ children }) => {
     persist(null);
   }, []);
 
-  const updateUser = (updates) => {
-    const updated = { ...user, ...updates };
+  const updateUser = async (updates) => {
+    const updated = normalizeUser({ ...user, ...updates });
+    const shouldPersistProfile = ['name', 'phone', 'avatar', 'avatarUrl'].some(key => Object.prototype.hasOwnProperty.call(updates, key));
+    if (user?.id && shouldPersistProfile) {
+      await usersApi.update(user.id, {
+        name: updates.name,
+        phone: updates.phone,
+        avatarUrl: updates.avatar || updates.avatarUrl,
+      });
+    }
     persist(updated);
+    return updated;
   };
 
   // Address helpers (local-only until address API is wired)

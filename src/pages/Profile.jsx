@@ -45,9 +45,13 @@ export default function Profile() {
       return;
     }
     const reader = new FileReader();
-    reader.onload = (ev) => {
-      updateUser({ avatar: ev.target.result });
-      addNotification('Profile photo updated!', 'success');
+    reader.onload = async (ev) => {
+      try {
+        await updateUser({ avatar: ev.target.result });
+        addNotification('Profile photo updated!', 'success');
+      } catch {
+        addNotification('Failed to save profile photo', 'error');
+      }
     };
     reader.readAsDataURL(file);
   };
@@ -68,7 +72,7 @@ export default function Profile() {
   const handleSave = async () => {
     setSaving(true);
     try {
-      updateUser(form);
+      await updateUser(form);
       setIsEditing(false);
       addNotification('Profile updated!', 'success');
     } catch {
