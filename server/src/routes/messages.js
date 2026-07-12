@@ -1,0 +1,93 @@
+const router = require('express').Router();
+const pool = require('../config/db');
+const { authenticate } = require('../middleware/auth');
+
+router.use(authenticate);
+
+async function resolveRecipient(to) {
+  const needle = String(to || '').trim();
+  if (!needle) return { recipient_user_id: null, recipient_label: '' };
+
+  const { rows: restaurants } = await pool.query(
+    `SELECT owner_id AS user_id, name
+     FROM restaurants
+     WHERE name ILIKE $1
+     ORDER BY CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [`%${needle}%`, needle]
+  );
+  if (restaurants.length) {
+    return { recipient_user_id: restaurants[0].user_id, recipient_label: restaurants[0].name };
+  }
+
+  const { rows: users } = await pool.query(
+    `SELECT id, name, email
+     FROM users
+     WHERE name ILIKE $1 OR email ILIKE $1
+     ORDER BY CASE WHEN lower(email) = lower($2) OR lower(name) = lower($2) THEN 0 ELSE 1 END
+     LIMIT 1`,
+    [`%${needle}%`, needle]
+  );
+  if (users.length) {
+    return { recipient_user_id: users[0].id, recipient_label: users[0].name || users[0].email };
+  }
+
+  return { recipient_user_id: null, recipient_label: needle };
+}
+
+router.get('/', async (req, res) => {
+  try {
+    const box = req.query.box === 'sent' ? 'sent' : 'inbox';
+    const where = box === 'sent' ? 'm.sender_id = $1' : 'm.recipient_user_id = $1';
+    const { rows } = await pool.query(
+      `SELECT m.id, m.sender_id, m.recipient_user_id, m.recipient_label,
+              m.subject, m.body, m.is_read, m.created_at,
+              sender.name AS sender_name, sender.email AS sender_email
+       FROM messages m
+       JOIN users sender ON sender.id = m.sender_id
+       WHERE ${where}
+       ORDER BY m.created_at DESC
+       LIMIT 50`,
+      [req.user.id]
+    );
+    res.json({ data: rows });
+  } catch (err) {
+    console.error('messages list error:', err);
+    res.status(500).json({ error: 'Failed to load messages' });
+  }
+});
+
+router.post('/', async (req, res) => {
+  try {
+    const { to, subject, body } = req.body;
+    if (!String(to || '').trim() || !String(body || '').trim()) {
+      return res.status(400).json({ error: 'Recipient and message are required' });
+    }
+    const recipient = await resolveRecipient(to);
+    const { rows } = await pool.query(
+      `INSERT INTO messages (sender_id, recipient_user_id, recipient_label, subject, body)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING *`,
+      [req.user.id, recipient.recipient_user_id, recipient.recipient_label, subject || 'New message', body]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('messages create error:', err);
+    res.status(500).json({ error: 'Failed to create message' });
+  }
+});
+
+router.patch('/:id/read', async (req, res) => {
+  try {
+    await pool.query(
+      'UPDATE messages SET is_read = true WHERE id = $1 AND recipient_user_id = $2',
+      [req.params.id, req.user.id]
+    );
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('messages read error:', err);
+    res.status(500).json({ error: 'Failed to update message' });
+  }
+});
+
+module.exports = router;

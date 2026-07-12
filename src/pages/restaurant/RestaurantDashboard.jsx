@@ -1,8 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useRestaurant } from '../../context/RestaurantContext';
-import { ordersApi } from '../../services/api';
-import { DollarSign, Package, TrendingUp, ChefHat, ArrowRight, Clock, User } from 'lucide-react';
+import { messagesApi, ordersApi } from '../../services/api';
+import { DollarSign, Package, TrendingUp, ChefHat, ArrowRight, Clock, User, MessageSquare, MapPin, Store } from 'lucide-react';
 
 const STATUS_STYLE = {
   pending:   'glass-orange text-ember-200',
@@ -14,6 +14,7 @@ const STATUS_STYLE = {
 export default function RestaurantDashboard() {
   const { restaurant }            = useRestaurant();
   const [recentOrders, setOrders] = useState([]);
+  const [messages, setMessages]   = useState([]);
   const [loading, setLoading]     = useState(true);
 
   useEffect(() => {
@@ -22,6 +23,8 @@ export default function RestaurantDashboard() {
         setLoading(true);
         const res = await ordersApi.list({ limit: 5 });
         setOrders(res.data || res || []);
+        const inbox = await messagesApi.list('inbox').catch(() => null);
+        setMessages(inbox?.data || []);
       } catch {
         // silently fail — dashboard is non-critical
       } finally {
@@ -49,6 +52,38 @@ export default function RestaurantDashboard() {
       <div>
         <p className="text-forest-200/50 text-sm">Overview</p>
         <h1 className="text-2xl font-heading font-bold text-white">{restaurant?.name || 'Restaurant'}</h1>
+      </div>
+
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
+        <div className="lg:col-span-2 glass rounded-3xl p-5 flex items-center gap-4">
+          <div className="w-16 h-16 rounded-2xl overflow-hidden btn-glow-orange flex items-center justify-center flex-shrink-0">
+            {restaurant?.image_url
+              ? <img src={restaurant.image_url} alt={restaurant.name} className="w-full h-full object-cover" />
+              : <Store className="w-8 h-8 text-white" />}
+          </div>
+          <div className="min-w-0 flex-1">
+            <p className="text-white font-heading font-bold text-lg truncate">{restaurant?.name || 'Restaurant Profile'}</p>
+            <p className="text-forest-200/60 text-sm truncate">{restaurant?.cuisine || 'Restaurant'} · {restaurant?.is_open ? 'Open' : 'Closed'}</p>
+            <p className="text-forest-200/45 text-xs flex items-center gap-1 mt-1 truncate">
+              <MapPin className="w-3 h-3 flex-shrink-0" />{restaurant?.address || 'No address set'}
+            </p>
+          </div>
+          <Link to="/owner/settings" className="glass hover:glass-green transition-all text-forest-100 text-xs px-3 py-2 rounded-xl flex-shrink-0">
+            Edit Profile
+          </Link>
+        </div>
+        <div className="glass rounded-3xl p-5">
+          <div className="flex items-center justify-between mb-3">
+            <div className="flex items-center gap-2">
+              <MessageSquare className="w-4 h-4 text-forest-300" />
+              <p className="text-white font-semibold">Messages</p>
+            </div>
+            <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full">{messages.length}</span>
+          </div>
+          <p className="text-forest-200/60 text-sm line-clamp-2">
+            {messages[0] ? `${messages[0].sender_name}: ${messages[0].body}` : 'No customer messages yet.'}
+          </p>
+        </div>
       </div>
 
       {/* Stat cards */}

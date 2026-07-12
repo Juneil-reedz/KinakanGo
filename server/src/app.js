@@ -49,6 +49,19 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS delivery_proof_image TEXT DEFAULT NULL
 `).catch(err => console.warn('orders delivery proof column warning:', err.message));
 
+pool.query(`
+  CREATE TABLE IF NOT EXISTS messages (
+    id                SERIAL PRIMARY KEY,
+    sender_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    recipient_user_id INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+    recipient_label   VARCHAR(160) NOT NULL,
+    subject           VARCHAR(160) NOT NULL DEFAULT 'New message',
+    body              TEXT NOT NULL,
+    is_read           BOOLEAN NOT NULL DEFAULT FALSE,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`).catch(err => console.warn('messages init warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');
@@ -60,6 +73,7 @@ const menuRoutes    = require('./routes/menu');
 const upgradeRoutes = require('./routes/upgrades');
 const riderRoutes   = require('./routes/riders');
 const favoriteRoutes = require('./routes/favorites');
+const messageRoutes = require('./routes/messages');
 
 const app = express();
 
@@ -85,6 +99,7 @@ app.use('/api/menu',         menuRoutes);
 app.use('/api/upgrades',     upgradeRoutes);
 app.use('/api/riders',       riderRoutes);
 app.use('/api/favorites',    favoriteRoutes);
+app.use('/api/messages',     messageRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

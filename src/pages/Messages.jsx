@@ -1,35 +1,52 @@
 import { useEffect, useState } from 'react';
 import { MessageSquare, Plus, Send, X } from 'lucide-react';
+import { messagesApi } from '../services/api';
 
 const STORAGE_KEY = 'kkg_messages';
 
 export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [showComposer, setShowComposer] = useState(false);
+  const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ to: '', subject: '', body: '' });
 
-  useEffect(() => {
+  const loadMessages = async () => {
     try {
-      setMessages(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]'));
+      const [sent, inbox] = await Promise.all([
+        messagesApi.list('sent'),
+        messagesApi.list('inbox'),
+      ]);
+      const inboxMessages = (inbox.data || []).map(message => ({ ...message, box: 'inbox' }));
+      const sentMessages = (sent.data || []).map(message => ({ ...message, box: 'sent' }));
+      setMessages([...inboxMessages, ...sentMessages].sort((a, b) => new Date(b.created_at) - new Date(a.created_at)));
     } catch {
-      setMessages([]);
+      try { setMessages(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
+      catch { setMessages([]); }
+    } finally {
+      setLoading(false);
     }
-  }, []);
+  };
+
+  useEffect(() => { loadMessages(); }, []);
 
   useEffect(() => {
     localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
   }, [messages]);
 
-  const createMessage = (e) => {
+  const createMessage = async (e) => {
     e.preventDefault();
     if (!form.to.trim() || !form.body.trim()) return;
-    setMessages(prev => [{
-      id: Date.now(),
-      to: form.to.trim(),
-      subject: form.subject.trim() || 'New message',
-      body: form.body.trim(),
-      createdAt: new Date().toISOString(),
-    }, ...prev]);
+    const localMessage = {
+      id: Date.now(), recipient_label: form.to.trim(), to: form.to.trim(), box: 'sent',
+      subject: form.subject.trim() || 'New message', body: form.body.trim(),
+      created_at: new Date().toISOString(), createdAt: new Date().toISOString(),
+    };
+    try {
+      const saved = await messagesApi.create({ to: form.to, subject: form.subject, body: form.body });
+      setMessages(prev => [saved, ...prev]);
+    } catch {
+      setMessages(prev => [localMessage, ...prev]);
+    }
     setForm({ to: '', subject: '', body: '' });
     setShowComposer(false);
   };
@@ -44,7 +61,9 @@ export default function Messages() {
         </button>
       </div>
 
-      {messages.length === 0 ? (
+      {loading ? (
+        <div className="glass rounded-3xl h-40 animate-pulse" />
+      ) : messages.length === 0 ? (
         <div className="glass rounded-3xl flex-1 flex items-center justify-center py-20">
           <div className="flex flex-col items-center gap-3 text-center px-6">
             <MessageSquare className="w-14 h-14 text-forest-300/30" />
@@ -59,10 +78,12 @@ export default function Messages() {
               <div className="flex items-start justify-between gap-3 mb-2">
                 <div>
                   <p className="text-white font-semibold text-sm">{message.subject}</p>
-                  <p className="text-forest-200/50 text-xs">To: {message.to}</p>
+                  <p className="text-forest-200/50 text-xs">
+                    {message.box === 'sent' ? `To: ${message.to || message.recipient_label}` : `From: ${message.sender_name || 'User'}`}
+                  </p>
                 </div>
                 <span className="text-forest-200/35 text-xs flex-shrink-0">
-                  {new Date(message.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
+                  {new Date(message.created_at || message.createdAt).toLocaleDateString('en-PH', { month: 'short', day: 'numeric' })}
                 </span>
               </div>
               <p className="text-forest-100/70 text-sm leading-relaxed">{message.body}</p>
@@ -94,7 +115,7 @@ export default function Messages() {
               className="w-full input-glass py-3 text-sm resize-none" />
             <button type="submit" disabled={!form.to.trim() || !form.body.trim()}
               className="w-full btn-glow-green text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-              <Send className="w-4 h-4" /> Save Message
+              <Send className="w-4 h-4" /> Send Message
             </button>
           </form>
         </div>

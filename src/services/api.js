@@ -127,6 +127,12 @@ export const favoritesApi = {
   remove: (id) => request(`/favorites/${id}`, { method: 'DELETE' }),
 };
 
+export const messagesApi = {
+  list: (box = 'inbox') => request(`/messages?${new URLSearchParams({ box })}`),
+  create: (data) => request('/messages', { method: 'POST', body: JSON.stringify(data) }),
+  markRead: (id) => request(`/messages/${id}/read`, { method: 'PATCH' }),
+};
+
 // ── Applications ──────────────────────────────────────────────────────────────
 
 export const applicationsApi = {
