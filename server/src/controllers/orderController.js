@@ -3,25 +3,52 @@ const pool = require('../config/db');
 // Finds a random available rider not currently on an active delivery, assigns them to the order.
 // Returns the rider's user_id, or null if none available.
 async function autoAssignRider(orderId) {
+  const busySubquery = `
+    SELECT rider_id FROM orders
+    WHERE status IN ('ready', 'picked_up') AND rider_id IS NOT NULL
+  `;
+
+  // 1. Try rider_profiles first (respects is_available flag)
   try {
     const { rows } = await pool.query(
       `SELECT rp.user_id
        FROM rider_profiles rp
        WHERE rp.is_available = true
-         AND rp.user_id NOT IN (
-           SELECT rider_id FROM orders
-           WHERE status IN ('ready', 'picked_up')
-             AND rider_id IS NOT NULL
-         )
-       ORDER BY RANDOM()
-       LIMIT 1`
+         AND rp.user_id NOT IN (${busySubquery})
+       ORDER BY RANDOM() LIMIT 1`
     );
-    if (!rows.length) return null;
+    if (rows.length) {
+      const riderId = rows[0].user_id;
+      await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, orderId]);
+      console.log(`autoAssignRider: assigned rider ${riderId} (from rider_profiles) to order ${orderId}`);
+      return riderId;
+    }
+  } catch (err) {
+    console.warn('autoAssignRider rider_profiles query failed:', err.message);
+  }
+
+  // 2. Fallback: any approved rider from upgrade_requests not currently busy
+  try {
+    const { rows } = await pool.query(
+      `SELECT DISTINCT u.id AS user_id
+       FROM users u
+       JOIN upgrade_requests ur ON ur.user_id = u.id
+       WHERE ur.status = 'approved'
+         AND (ur.plan ILIKE '%rider%' OR ur.notes ILIKE '%"role":"rider"%')
+         AND u.is_active = true
+         AND u.id NOT IN (${busySubquery})
+       ORDER BY RANDOM() LIMIT 1`
+    );
+    if (!rows.length) {
+      console.log(`autoAssignRider: no available rider found for order ${orderId}`);
+      return null;
+    }
     const riderId = rows[0].user_id;
     await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, orderId]);
+    console.log(`autoAssignRider: assigned rider ${riderId} (from upgrade_requests fallback) to order ${orderId}`);
     return riderId;
   } catch (err) {
-    console.error('autoAssignRider error:', err);
+    console.error('autoAssignRider fallback error:', err);
     return null;
   }
 }
@@ -128,7 +155,8 @@ async function listOrders(req, res) {
   const cond = where.length ? `WHERE ${where.join(' AND ')}` : '';
 
   const { rows } = await pool.query(
-    `SELECT o.id, o.status, o.total, o.payment_method, o.payment_status,
+    `SELECT o.id, o.status, o.total, o.subtotal, o.delivery_fee, o.tax,
+            o.payment_method, o.payment_status,
             o.created_at, o.delivery_address, o.rider_id,
             r.name AS restaurant_name, r.image_url AS restaurant_image, r.address AS restaurant_address,
             u.name AS customer_name

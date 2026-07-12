@@ -3,6 +3,24 @@ const express      = require('express');
 const cors         = require('cors');
 const helmet       = require('helmet');
 const morgan       = require('morgan');
+const pool         = require('./config/db');
+
+// Ensure rider_profiles table exists (safe to run on every startup)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS rider_profiles (
+    user_id          INT PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+    vehicle_type     VARCHAR(40)    DEFAULT NULL,
+    plate_number     VARCHAR(20)    DEFAULT NULL,
+    vehicle_model    VARCHAR(80)    DEFAULT NULL,
+    zone             VARCHAR(80)    DEFAULT NULL,
+    is_available     BOOLEAN        NOT NULL DEFAULT FALSE,
+    rating           DECIMAL(3,2)   NOT NULL DEFAULT 0.00,
+    total_deliveries INT            NOT NULL DEFAULT 0,
+    today_deliveries INT            NOT NULL DEFAULT 0,
+    total_earnings   DECIMAL(10,2)  NOT NULL DEFAULT 0.00,
+    today_earnings   DECIMAL(10,2)  NOT NULL DEFAULT 0.00
+  )
+`).catch(err => console.warn('rider_profiles init warning:', err.message));
 
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
