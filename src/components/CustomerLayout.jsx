@@ -237,8 +237,8 @@ export default function CustomerLayout() {
                 </button>
 
                 {bellOpen && (
-                  <div className="fixed left-4 right-4 top-16 z-[9999] glass rounded-2xl shadow-2xl overflow-hidden xs:absolute xs:left-auto xs:right-0 xs:top-11 xs:w-80"
-                    style={{ boxShadow: '0 24px 48px rgba(0,0,0,.5)' }}>
+                  <div className="fixed left-4 right-4 top-16 z-[9999] rounded-2xl shadow-2xl overflow-hidden xs:absolute xs:left-auto xs:right-0 xs:top-11 xs:w-80"
+                    style={{ background: '#061a10', border: '1px solid rgba(255,255,255,.12)', boxShadow: '0 24px 48px rgba(0,0,0,.65)' }}>
                     <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
                       <p className="text-white font-semibold text-sm">Notifications</p>
                       <div className="flex gap-2">
