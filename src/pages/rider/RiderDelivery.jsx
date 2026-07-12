@@ -181,6 +181,14 @@ export default function RiderDelivery() {
     reader.readAsDataURL(file);
   };
 
+  const proofInputProps = {
+    type: 'file',
+    accept: 'image/*',
+    capture: 'environment',
+    onChange: handleProofUpload,
+    className: 'hidden',
+  };
+
   const markPickedUp = async () => {
     try {
       await riderRequest(`/orders/${orderId}/status`, {
@@ -430,16 +438,16 @@ export default function RiderDelivery() {
             <div className="space-y-3">
               <img src={deliveryProof} alt="Delivery proof" className="w-full h-44 object-cover rounded-xl border border-white/10" />
               <label className="glass hover:glass-green transition-all text-forest-100 text-sm font-medium py-2.5 rounded-xl flex items-center justify-center gap-2 cursor-pointer">
-                <Upload className="w-4 h-4" /> Replace Photo
-                <input type="file" accept="image/*" capture="environment" onChange={handleProofUpload} className="hidden" />
+                <Upload className="w-4 h-4" /> Retake / Replace Photo
+                <input {...proofInputProps} />
               </label>
             </div>
           ) : (
             <label className="border border-dashed border-white/15 rounded-xl p-5 flex flex-col items-center justify-center gap-2 cursor-pointer hover:border-forest-400/50 transition-all">
               <Upload className="w-7 h-7 text-forest-300/60" />
-              <span className="text-white text-sm font-semibold">Upload delivery photo</span>
-              <span className="text-forest-200/45 text-xs text-center">Required before marking the order delivered</span>
-              <input type="file" accept="image/*" capture="environment" onChange={handleProofUpload} className="hidden" />
+              <span className="text-white text-sm font-semibold">Take delivery photo</span>
+              <span className="text-forest-200/45 text-xs text-center">Camera opens on supported phones. Gallery is available if camera capture is not supported.</span>
+              <input {...proofInputProps} />
             </label>
           )}
         </div>
