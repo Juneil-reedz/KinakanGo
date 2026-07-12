@@ -111,8 +111,21 @@ export default function RiderLayout({ children }) {
             <Home className="w-3.5 h-3.5" /> Home
           </button>
         </header>
-        <main className="flex-1 p-4 md:p-6">{children}</main>
-        <footer className="glass-dark px-5 py-3 text-center text-forest-200/40 text-xs" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+          {[
+            { path:'/rider/dashboard', label:'Dashboard', icon:LayoutDashboard },
+            { path:'/rider/earnings',  label:'Earnings',  icon:DollarSign },
+            { path:'/', label:'Home', icon:Home },
+          ].map(({ path, label, icon:Icon }) => (
+            <button key={path} onClick={() => goTo(path)}
+              className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
+                ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-200/55'}`}>
+              <Icon className="w-4 h-4" />{label}
+            </button>
+          ))}
+        </nav>
+        <footer className="hidden lg:block glass-dark px-5 py-3 text-center text-forest-200/40 text-xs" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
           © 2024 KinakanGo Rider Portal
         </footer>
       </div>

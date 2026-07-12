@@ -26,6 +26,7 @@ export default function RiderDashboard() {
   const [activeOrders,  setActive]  = useState([]);
   const [loading,  setLoading]      = useState(true);
   const [filter,   setFilter]       = useState('all');
+  const [mobileSection, setMobileSection] = useState('overview');
   const [available, setAvail]       = useState(true);
   const [togglingAvail, setToggling] = useState(false);
   const [riderStats, setRiderStats] = useState({
@@ -159,40 +160,57 @@ export default function RiderDashboard() {
         </button>
       </div>
 
-      {/* Stats */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-        {STATS_DEF.map(({ label, key, icon:Icon, fmt, color }) => (
-          <div key={key} className="glass card-3d rounded-2xl p-4">
-            <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-3`}>
-              <Icon className="w-4 h-4 text-white" />
-            </div>
-            <p className="text-white font-heading font-bold text-xl">{fmt(stats[key])}</p>
-            <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
-          </div>
+      <div className="lg:hidden glass rounded-2xl p-1 grid grid-cols-2 gap-1">
+        {[{ key: 'overview', label: 'Overview' }, { key: 'orders', label: `Deliveries (${orders.length})` }].map(tab => (
+          <button key={tab.key} onClick={() => setMobileSection(tab.key)}
+            className={`py-2.5 rounded-xl text-sm font-semibold transition-all
+              ${mobileSection === tab.key ? 'btn-glow-orange text-white' : 'text-forest-200/60'}`}>
+            {tab.label}
+          </button>
         ))}
       </div>
 
-      {/* Quick actions */}
-      <div className="flex gap-3">
-        <button onClick={() => navigate('/rider/earnings')}
-          className="flex-1 glass hover:glass-green transition-all rounded-xl py-2.5 flex items-center justify-center gap-2 text-forest-100 text-sm font-medium">
-          <TrendingUp className="w-4 h-4" /> Earnings
-        </button>
-        <button className="flex-1 glass hover:glass-orange transition-all rounded-xl py-2.5 flex items-center justify-center gap-2 text-forest-100 text-sm font-medium">
-          <MapPin className="w-4 h-4" /> My Zone
-        </button>
-      </div>
-
-      {/* Offline notice */}
-      {!available && (
-        <div className="glass rounded-2xl p-4 flex items-center gap-3">
-          <WifiOff className="w-5 h-5 text-forest-300/50 flex-shrink-0" />
-          <p className="text-forest-200/60 text-sm">You are offline. Go online to receive delivery assignments.</p>
+      <section className={`${mobileSection === 'overview' ? 'block' : 'hidden'} lg:block space-y-5`}>
+        {/* Stats */}
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          {STATS_DEF.map(({ label, key, icon:Icon, fmt, color }) => (
+            <div key={key} className="glass card-3d rounded-2xl p-4">
+              <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-3`}>
+                <Icon className="w-4 h-4 text-white" />
+              </div>
+              <p className="text-white font-heading font-bold text-xl">{fmt(stats[key])}</p>
+              <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
+            </div>
+          ))}
         </div>
-      )}
+
+        {/* Quick actions */}
+        <div className="grid grid-cols-2 gap-3">
+          <button onClick={() => navigate('/rider/earnings')}
+            className="glass hover:glass-green transition-all rounded-xl py-2.5 flex items-center justify-center gap-2 text-forest-100 text-sm font-medium">
+            <TrendingUp className="w-4 h-4" /> Earnings
+          </button>
+          <button className="glass hover:glass-orange transition-all rounded-xl py-2.5 flex items-center justify-center gap-2 text-forest-100 text-sm font-medium">
+            <MapPin className="w-4 h-4" /> My Zone
+          </button>
+        </div>
+
+        {/* Offline notice */}
+        {!available && (
+          <div className="glass rounded-2xl p-4 flex items-center gap-3">
+            <WifiOff className="w-5 h-5 text-forest-300/50 flex-shrink-0" />
+            <p className="text-forest-200/60 text-sm">You are offline. Go online to receive delivery assignments.</p>
+          </div>
+        )}
+
+        <button onClick={() => setMobileSection('orders')}
+          className="lg:hidden w-full btn-glow-green text-white font-semibold py-3 rounded-2xl flex items-center justify-center gap-2">
+          View Deliveries <ChevronRight className="w-4 h-4" />
+        </button>
+      </section>
 
       {/* Orders */}
-      <div className="glass rounded-3xl overflow-hidden">
+      <section className={`${mobileSection === 'orders' ? 'block' : 'hidden'} lg:block glass rounded-3xl overflow-hidden`}>
         <div className="flex" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
           {FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
@@ -297,7 +315,7 @@ export default function RiderDashboard() {
             );
           })}
         </div>
-      </div>
+      </section>
     </div>
   );
 }
