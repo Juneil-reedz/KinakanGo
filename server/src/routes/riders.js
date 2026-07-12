@@ -4,6 +4,26 @@ const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate);
 
+router.get('/me', async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT u.id, u.name, u.email, u.phone,
+              rp.is_available, rp.total_deliveries, rp.today_deliveries,
+              rp.total_earnings, rp.today_earnings, rp.rating,
+              rp.vehicle_type, rp.plate_number, rp.zone
+       FROM users u
+       LEFT JOIN rider_profiles rp ON rp.user_id = u.id
+       WHERE u.id = $1`,
+      [req.user.id]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Rider not found' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('rider me error:', err);
+    res.status(500).json({ error: 'Failed to load rider profile' });
+  }
+});
+
 // List all approved riders — admin only
 router.get('/', requireRole('admin'), async (req, res) => {
   try {

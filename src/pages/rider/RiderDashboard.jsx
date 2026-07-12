@@ -28,31 +28,43 @@ export default function RiderDashboard() {
   const [filter,   setFilter]       = useState('all');
   const [available, setAvail]       = useState(true);
   const [togglingAvail, setToggling] = useState(false);
+  const [riderStats, setRiderStats] = useState({
+    todayEarnings: 0,
+    todayDeliveries: 0,
+  });
   const pollRef = useRef(null);
 
   // On mount: upsert rider_profiles row so auto-assign can find this rider
   useEffect(() => {
     riderRequest('/riders/availability', {
       method: 'PATCH', body: JSON.stringify({ is_available: true }),
-    }).catch(() => {});
+    }).then(() => fetchOrders(true)).catch(() => {});
   }, []);
 
   const fetchOrders = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const [pendingRes, activeRes] = await Promise.allSettled([
-        riderRequest('/orders?rider_orders=true&status=ready&limit=20'),
-        riderRequest('/orders?rider_orders=true&status=picked_up&limit=10'),
+      const [ordersRes, profileRes] = await Promise.allSettled([
+        riderRequest('/orders?rider_orders=true&limit=50'),
+        riderRequest('/riders/me'),
       ]);
-      if (pendingRes.status === 'fulfilled') {
-        const orders = pendingRes.value.data || pendingRes.value || [];
+      if (ordersRes.status === 'fulfilled') {
+        const orders = ordersRes.value.data || ordersRes.value || [];
+        const pending = orders.filter(o => o.status === 'ready');
+        const active = orders.filter(o => o.status === 'picked_up');
         setPending(prev => {
-          if (silent && orders.length > prev.length) addNotification('New delivery assignment!', 'success');
-          return orders;
+          if (silent && pending.length > prev.length) addNotification('New delivery assignment!', 'success');
+          return pending;
         });
+        setActive(active);
       }
-      if (activeRes.status === 'fulfilled') {
-        setActive(activeRes.value.data || activeRes.value || []);
+      if (profileRes.status === 'fulfilled') {
+        const profile = profileRes.value;
+        setAvail(Boolean(profile.is_available));
+        setRiderStats({
+          todayEarnings: Number(profile.today_earnings || 0),
+          todayDeliveries: Number(profile.today_deliveries || 0),
+        });
       }
     } catch {
       if (!silent) addNotification('Failed to load orders', 'error');
@@ -79,7 +91,7 @@ export default function RiderDashboard() {
       addNotification(next ? 'You are now available for deliveries' : 'You are now offline', 'success');
       if (!next) clearInterval(pollRef.current);
       else {
-        fetchOrders();
+        fetchOrders(true);
         pollRef.current = setInterval(() => fetchOrders(true), POLL_MS);
       }
     } catch {
@@ -119,7 +131,8 @@ export default function RiderDashboard() {
     ...activeOrders.map(o => ({ ...o,  _view: 'in_progress' })),
   ];
   const stats = {
-    todayEarnings: 0, todayDeliveries: 0,
+    todayEarnings: riderStats.todayEarnings,
+    todayDeliveries: riderStats.todayDeliveries,
     activeDeliveries: activeOrders.length,
     pendingOffers:    pendingOrders.length,
   };
