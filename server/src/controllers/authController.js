@@ -60,17 +60,24 @@ async function login(req, res) {
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
   // Check extra capabilities (restaurant / rider) — use allSettled so a missing table won't crash login
-  const [rResult, rpResult] = await Promise.allSettled([
+  const [rResult, rpResult, urResult] = await Promise.allSettled([
     pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [row.id]),
     pool.query('SELECT user_id FROM rider_profiles WHERE user_id = $1 LIMIT 1', [row.id]),
+    pool.query(
+      `SELECT id FROM upgrade_requests WHERE user_id = $1 AND status = 'approved'
+       AND (plan ILIKE '%rider%' OR notes ILIKE '%"role":"rider"%') LIMIT 1`,
+      [row.id]
+    ),
   ]);
   const rRows  = rResult.status  === 'fulfilled' ? rResult.value.rows  : [];
   const rpRows = rpResult.status === 'fulfilled' ? rpResult.value.rows : [];
+  const urRows = urResult.status === 'fulfilled' ? urResult.value.rows : [];
 
   const user = {
     id: row.id, name: row.name, email: row.email, role: row.role, avatarUrl: row.avatar_url,
     has_restaurant: rRows.length > 0,
-    has_rider_profile: rpRows.length > 0,
+    // true if rider_profiles row exists OR upgrade_request was approved as rider
+    has_rider_profile: rpRows.length > 0 || urRows.length > 0,
   };
   const accessToken  = signAccess(user);
   const refreshToken = signRefresh(user);

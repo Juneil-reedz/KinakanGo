@@ -136,10 +136,13 @@ async function listOrders(req, res) {
             o.payment_method, o.payment_status,
             o.created_at, o.delivery_address, o.rider_id,
             r.name AS restaurant_name, r.image_url AS restaurant_image, r.address AS restaurant_address,
-            u.name AS customer_name
+            u.name  AS customer_name,
+            ru.name  AS rider_name,
+            ru.phone AS rider_phone
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
+     LEFT JOIN users ru ON ru.id = o.rider_id
      ${cond} ORDER BY o.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, parseInt(limit), offset]
   );
@@ -149,12 +152,14 @@ async function listOrders(req, res) {
 async function getOrder(req, res) {
   const { rows } = await pool.query(
     `SELECT o.*,
-            r.name AS restaurant_name, r.image_url AS restaurant_image,
+            r.name  AS restaurant_name, r.image_url AS restaurant_image,
             r.address AS restaurant_address,
-            u.name AS customer_name, u.phone AS customer_phone
+            u.name  AS customer_name, u.phone AS customer_phone,
+            ru.name  AS rider_name,   ru.phone AS rider_phone
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
+     LEFT JOIN users ru ON ru.id = o.rider_id
      WHERE o.id = $1`,
     [req.params.id]
   );

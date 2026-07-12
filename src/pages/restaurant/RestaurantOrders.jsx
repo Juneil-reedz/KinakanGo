@@ -5,7 +5,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { ordersApi } from '../../services/api';
 import {
   Package, Search, MapPin, Clock, Check, X, AlertTriangle,
-  User, Phone, Smartphone, ImageIcon, RefreshCw, ChevronRight,
+  User, Phone, Smartphone, ImageIcon, RefreshCw, ChevronRight, Bike,
 } from 'lucide-react';
 
 const STATUS_STYLE = {
@@ -32,20 +32,25 @@ export default function RestaurantOrders() {
   const [rejectReason, setRejectReason]   = useState('');
   const [rejecting, setRejecting]         = useState(false);
 
-  const load = useCallback(async () => {
+  const load = useCallback(async (silent = false) => {
     if (!restaurant?.id) return;
     try {
-      setLoading(true);
+      if (!silent) setLoading(true);
       const res = await ordersApi.list({ restaurant_id: restaurant.id, limit: 200 });
       setOrders(res.data || res || []);
     } catch {
-      addNotification('Failed to load orders', 'error');
+      if (!silent) addNotification('Failed to load orders', 'error');
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, [restaurant?.id]);
 
-  useEffect(() => { load(); }, [load]);
+  useEffect(() => {
+    load();
+    // Poll every 10 s so rider assignment shows up automatically
+    const t = setInterval(() => load(true), 10000);
+    return () => clearInterval(t);
+  }, [load]);
 
   const openDetail = async (order) => {
     setDetail({ ...order, items: [] });
@@ -179,6 +184,16 @@ export default function RestaurantOrders() {
                   <p className="text-white text-sm font-medium truncate">{order.customer_name || 'Customer'}</p>
                 </div>
 
+                {/* Rider badge — shown when assigned */}
+                {order.rider_id && (
+                  <div className="flex items-center gap-1.5 mb-1">
+                    <Bike className="w-3.5 h-3.5 text-teal-400 flex-shrink-0" />
+                    <p className="text-teal-300 text-xs font-medium truncate">
+                      {order.rider_name || 'Rider assigned'}
+                    </p>
+                  </div>
+                )}
+
                 {/* Time + payment */}
                 <div className="flex items-center gap-3 text-xs text-forest-200/40 mb-3">
                   <span className="flex items-center gap-1">
@@ -259,6 +274,25 @@ export default function RestaurantOrders() {
                     )}
                   </div>
                 </div>
+
+                {/* Rider card — only when a rider is assigned */}
+                {detail.rider_id && (
+                  <div className="glass rounded-2xl p-4">
+                    <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3">Assigned Rider</p>
+                    <div className="space-y-2.5">
+                      <div className="flex items-center gap-2">
+                        <Bike className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                        <p className="text-white text-sm font-medium">{detail.rider_name || 'Rider #' + detail.rider_id}</p>
+                      </div>
+                      {detail.rider_phone && (
+                        <div className="flex items-center gap-2">
+                          <Phone className="w-4 h-4 text-teal-400 flex-shrink-0" />
+                          <p className="text-forest-100/70 text-sm">{detail.rider_phone}</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
 
                 {/* Items card */}
                 <div className="glass rounded-2xl p-4">
