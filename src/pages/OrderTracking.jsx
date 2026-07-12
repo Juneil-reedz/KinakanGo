@@ -18,6 +18,7 @@ L.Icon.Default.mergeOptions({
 });
 
 const ROUTE_COLOR = '#e11d48';
+const TRACKABLE_STATUSES = ['ready', 'picked_up'];
 
 const dotIcon = (label, pulse = false) => L.divIcon({
   html: `<div style="display:flex;align-items:center;gap:8px;">
@@ -123,9 +124,13 @@ export default function OrderTracking() {
     }
   };
 
+  const canTrackRider = (order) => (
+    order.rider_id && TRACKABLE_STATUSES.includes(order.status)
+  );
+
   const fetchRiderLocations = async () => {
-    const inTransit = orders.filter(o => o.rider_id && o.status === 'picked_up');
-    for (const o of inTransit) {
+    const trackable = orders.filter(canTrackRider);
+    for (const o of trackable) {
       try {
         const loc = await request(`/orders/${o.id}/rider-location`);
         setRiderLocs(prev => ({ ...prev, [o.id]: loc }));
@@ -141,7 +146,7 @@ export default function OrderTracking() {
 
   useEffect(() => {
     clearInterval(pollLocRef.current);
-    if (orders.some(o => o.rider_id && o.status === 'picked_up')) {
+    if (orders.some(canTrackRider)) {
       fetchRiderLocations();
       pollLocRef.current = setInterval(fetchRiderLocations, 5000);
     }
@@ -277,18 +282,21 @@ export default function OrderTracking() {
                   <Navigation className={`w-5 h-5 ${riderLocs[order.id] ? 'text-forest-400 animate-pulse' : 'text-ember-400'}`} />
                 </div>
 
-                {/* Live map — shown when rider is in transit (picked_up) */}
-                {order.status === 'picked_up' && (() => {
+                {/* Live map — shown when a rider is assigned and actively handling the order */}
+                {canTrackRider(order) && (() => {
                   const rLoc   = riderLocs[order.id];
                   const cLoc   = custLocs[order.id];
                   const pts    = [rLoc, cLoc].filter(Boolean);
                   const center = rLoc || cLoc || { lat: 5.0293, lng: 119.7731 };
+                  const isDelivering = order.status === 'picked_up';
                   return (
                     <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,.35)' }}>
                       <div className="px-4 py-2.5 flex items-center gap-2 glass"
                         style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
                         <MapPin className="w-3.5 h-3.5 text-rose-400" />
-                        <p className="text-white text-xs font-semibold">Live Rider Location</p>
+                        <p className="text-white text-xs font-semibold">
+                          {isDelivering ? 'Live Rider Location' : 'Rider Heading to Pickup'}
+                        </p>
                         {rLoc
                           ? <span className="ml-auto flex items-center gap-1 text-rose-400 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />Live</span>
                           : <span className="ml-auto text-forest-200/40 text-xs">Waiting for GPS…</span>}
