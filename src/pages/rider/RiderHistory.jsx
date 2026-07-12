@@ -1,10 +1,11 @@
 import { useEffect, useState } from 'react';
 import { riderRequest } from '../../context/RiderContext';
-import { Bike, CheckCircle2, Clock, MapPin, Package, Store, User } from 'lucide-react';
+import { Bike, CheckCircle2, ChevronDown, Clock, Image as ImageIcon, MapPin, Package, Store, User } from 'lucide-react';
 
 export default function RiderHistory() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [openOrderId, setOpenOrderId] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -59,11 +60,16 @@ export default function RiderHistory() {
           </div>
         ) : (
           <div className="divide-y divide-white/5">
-            {orders.map(order => (
+            {orders.map(order => {
+              const open = openOrderId === order.id;
+              return (
               <div key={order.id} className="p-4 space-y-3">
-                <div className="flex items-start justify-between gap-3">
+                <button onClick={() => setOpenOrderId(open ? null : order.id)} className="w-full flex items-start justify-between gap-3 text-left">
                   <div>
-                    <p className="text-white font-semibold text-sm">Order #{order.id}</p>
+                    <p className="text-white font-semibold text-sm flex items-center gap-2">
+                      Order #{order.id}
+                      <ChevronDown className={`w-4 h-4 text-forest-200/50 transition-transform ${open ? 'rotate-180' : ''}`} />
+                    </p>
                     <p className="text-forest-200/40 text-xs flex items-center gap-1 mt-0.5">
                       <Clock className="w-3 h-3" />
                       {order.delivered_at
@@ -75,7 +81,7 @@ export default function RiderHistory() {
                     <p className="text-forest-300 font-heading font-bold">₱{Number(order.delivery_fee || 0).toFixed(2)}</p>
                     <p className="text-forest-200/40 text-xs">your fee</p>
                   </div>
-                </div>
+                </button>
 
                 <div className="grid gap-2 sm:grid-cols-2">
                   <div className="glass rounded-xl p-3">
@@ -97,8 +103,40 @@ export default function RiderHistory() {
                     </p>
                   </div>
                 </div>
+                {open && (
+                  <div className="glass-dark rounded-2xl p-4 space-y-3 border border-white/5">
+                    <div className="grid grid-cols-2 gap-2 text-xs">
+                      <div className="glass rounded-xl p-3">
+                        <p className="text-forest-200/45 mb-1">Order Total</p>
+                        <p className="text-white font-bold">₱{Number(order.total || 0).toFixed(2)}</p>
+                      </div>
+                      <div className="glass rounded-xl p-3">
+                        <p className="text-forest-200/45 mb-1">Status</p>
+                        <p className="text-forest-300 font-bold capitalize">{order.status?.replace('_', ' ')}</p>
+                      </div>
+                    </div>
+
+                    <div>
+                      <div className="flex items-center gap-2 mb-2">
+                        <ImageIcon className="w-4 h-4 text-forest-300/70" />
+                        <p className="text-white font-semibold text-sm">Proof of Delivery</p>
+                      </div>
+                      {order.delivery_proof_image ? (
+                        <a href={order.delivery_proof_image} target="_blank" rel="noreferrer">
+                          <img src={order.delivery_proof_image} alt={`Proof for order ${order.id}`} className="w-full max-h-80 object-cover rounded-xl border border-white/10" />
+                        </a>
+                      ) : (
+                        <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+                          <ImageIcon className="w-8 h-8 text-forest-300/25 mx-auto mb-2" />
+                          <p className="text-forest-200/45 text-sm">No proof image saved for this delivery</p>
+                        </div>
+                      )}
+                    </div>
+                  </div>
+                )}
               </div>
-            ))}
+              );
+            })}
           </div>
         )}
       </div>
