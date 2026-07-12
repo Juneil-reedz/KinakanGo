@@ -33,7 +33,6 @@ jobs:
         run: npm run build
 
       - name: Deploy to gh-pages branch
-        uses: peaceiris/actions-gh-pages@v4
-        with:
-          github_token: ${{ secrets.GITHUB_TOKEN }}
-          publish_dir: ./dist
+        run: npx gh-pages -d dist -u "github-actions[bot] <github-actions[bot]@users.noreply.github.com>"
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
