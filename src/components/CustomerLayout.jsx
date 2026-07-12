@@ -32,6 +32,7 @@ export default function CustomerLayout() {
   const [bellOpen, setBellOpen]         = useState(false);
   const [dashLoading, setDashLoading]   = useState(false);
   const bellRef                          = useRef(null);
+  const notificationPanelRef             = useRef(null);
 
   const goToRestaurantDashboard = async () => {
     setDashLoading(true);
@@ -47,7 +48,10 @@ export default function CustomerLayout() {
   };
 
   useEffect(() => {
-    const handler = (e) => { if (bellRef.current && !bellRef.current.contains(e.target)) setBellOpen(false); };
+    const handler = (e) => {
+      if (bellRef.current?.contains(e.target) || notificationPanelRef.current?.contains(e.target)) return;
+      setBellOpen(false);
+    };
     document.addEventListener('mousedown', handler);
     return () => document.removeEventListener('mousedown', handler);
   }, []);
@@ -76,8 +80,59 @@ export default function CustomerLayout() {
   const rightPanelPages = ['favorite','message','order-history','setting','upgrade'];
   const showVideoPanel = rightPanelPages.includes(active);
 
+  const notificationPanel = bellOpen && (
+    <div ref={notificationPanelRef}
+      className="fixed left-4 right-4 top-20 z-[2147483647] rounded-2xl shadow-2xl overflow-hidden sm:left-auto sm:right-6 sm:w-80"
+      style={{ background: '#061a10', border: '1px solid rgba(255,255,255,.12)', boxShadow: '0 24px 48px rgba(0,0,0,.75)' }}>
+      <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
+        <p className="text-white font-semibold text-sm">Notifications</p>
+        <div className="flex gap-2">
+          {notifications.length > 0 && (
+            <>
+              <button onClick={markAllRead} title="Mark all read"
+                className="text-forest-300/60 hover:text-forest-200 transition-colors">
+                <CheckCheck className="w-4 h-4" />
+              </button>
+              <button onClick={clearAll} title="Clear all"
+                className="text-forest-300/60 hover:text-red-400 transition-colors">
+                <Trash2 className="w-4 h-4" />
+              </button>
+            </>
+          )}
+        </div>
+      </div>
+
+      <div className="max-h-72 overflow-y-auto scrollbar-hide">
+        {notifications.length === 0 ? (
+          <div className="flex flex-col items-center gap-2 py-10 text-center">
+            <Bell className="w-8 h-8 text-forest-300/20" />
+            <p className="text-forest-200/50 text-sm">No notifications yet</p>
+          </div>
+        ) : (
+          notifications.map(n => (
+            <div key={n.id}
+              className={`px-4 py-3 border-b border-white/5 flex items-start gap-3 ${!n.read ? 'bg-white/5' : ''}`}>
+              <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
+                n.type === 'success' ? 'bg-forest-400' :
+                n.type === 'error'   ? 'bg-red-400' :
+                n.type === 'warning' ? 'bg-ember-400' : 'bg-forest-300/50'
+              }`} />
+              <div className="flex-1 min-w-0">
+                <p className="text-white text-xs leading-relaxed">{n.message}</p>
+                <p className="text-forest-200/40 text-[10px] mt-0.5">
+                  {new Date(n.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
+                </p>
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    </div>
+  );
+
   return (
     <div className="flex h-screen overflow-hidden relative">
+      {notificationPanel}
 
       {/* ── Ambient background orbs ── */}
       <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
@@ -235,55 +290,6 @@ export default function CustomerLayout() {
                     </span>
                   )}
                 </button>
-
-                {bellOpen && (
-                  <div className="fixed left-4 right-4 top-16 z-[9999] rounded-2xl shadow-2xl overflow-hidden xs:absolute xs:left-auto xs:right-0 xs:top-11 xs:w-80"
-                    style={{ background: '#061a10', border: '1px solid rgba(255,255,255,.12)', boxShadow: '0 24px 48px rgba(0,0,0,.65)' }}>
-                    <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
-                      <p className="text-white font-semibold text-sm">Notifications</p>
-                      <div className="flex gap-2">
-                        {notifications.length > 0 && (
-                          <>
-                            <button onClick={markAllRead} title="Mark all read"
-                              className="text-forest-300/60 hover:text-forest-200 transition-colors">
-                              <CheckCheck className="w-4 h-4" />
-                            </button>
-                            <button onClick={clearAll} title="Clear all"
-                              className="text-forest-300/60 hover:text-red-400 transition-colors">
-                              <Trash2 className="w-4 h-4" />
-                            </button>
-                          </>
-                        )}
-                      </div>
-                    </div>
-
-                    <div className="max-h-72 overflow-y-auto scrollbar-hide">
-                      {notifications.length === 0 ? (
-                        <div className="flex flex-col items-center gap-2 py-10 text-center">
-                          <Bell className="w-8 h-8 text-forest-300/20" />
-                          <p className="text-forest-200/50 text-sm">No notifications yet</p>
-                        </div>
-                      ) : (
-                        notifications.map(n => (
-                          <div key={n.id}
-                            className={`px-4 py-3 border-b border-white/5 flex items-start gap-3 ${!n.read ? 'bg-white/5' : ''}`}>
-                            <div className={`w-2 h-2 rounded-full mt-1.5 flex-shrink-0 ${
-                              n.type === 'success' ? 'bg-forest-400' :
-                              n.type === 'error'   ? 'bg-red-400' :
-                              n.type === 'warning' ? 'bg-ember-400' : 'bg-forest-300/50'
-                            }`} />
-                            <div className="flex-1 min-w-0">
-                              <p className="text-white text-xs leading-relaxed">{n.message}</p>
-                              <p className="text-forest-200/40 text-[10px] mt-0.5">
-                                {new Date(n.createdAt).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' })}
-                              </p>
-                            </div>
-                          </div>
-                        ))
-                      )}
-                    </div>
-                  </div>
-                )}
               </div>
               <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })}
                 className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all flex items-center justify-center glass-dark">
