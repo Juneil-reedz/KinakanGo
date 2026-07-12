@@ -46,11 +46,9 @@ function FitBounds({ points }) {
 
 function AnimatedRiderRoute({ from, to, label = 'Rider' }) {
   const [pts, setPts] = useState([[from.lat, from.lng], [to.lat, to.lng]]);
-  const [markerPos, setMarkerPos] = useState([from.lat, from.lng]);
 
   useEffect(() => {
     if (!from || !to) return;
-    setMarkerPos([from.lat, from.lng]);
     fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`)
       .then(r => r.json())
       .then(d => {
@@ -63,34 +61,10 @@ function AnimatedRiderRoute({ from, to, label = 'Rider' }) {
       .catch(() => setPts([[from.lat, from.lng], [to.lat, to.lng]]));
   }, [from?.lat, from?.lng, to?.lat, to?.lng]);
 
-  useEffect(() => {
-    if (pts.length < 2) return;
-    let frameId;
-    const startedAt = performance.now();
-    const duration = 22000;
-
-    const tick = (now) => {
-      const progress = Math.min((now - startedAt) / duration, 1);
-      const scaled = progress * (pts.length - 1);
-      const idx = Math.min(Math.floor(scaled), pts.length - 2);
-      const local = scaled - idx;
-      const a = pts[idx];
-      const b = pts[idx + 1];
-      setMarkerPos([
-        a[0] + (b[0] - a[0]) * local,
-        a[1] + (b[1] - a[1]) * local,
-      ]);
-      if (progress < 1) frameId = requestAnimationFrame(tick);
-    };
-
-    frameId = requestAnimationFrame(tick);
-    return () => cancelAnimationFrame(frameId);
-  }, [pts]);
-
   return (
     <>
       <Polyline positions={pts} pathOptions={{ color: ROUTE_COLOR, weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }} />
-      <Marker position={markerPos} icon={mapIcon(label, '🏍️', '#f59e0b', true)} />
+      <Marker position={[from.lat, from.lng]} icon={mapIcon(label, '🏍️', '#f59e0b', true)} />
     </>
   );
 }
