@@ -2,9 +2,9 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ordersApi, storage } from '../services/api';
 import {
-  MapPin, Clock, Phone, Package, ChevronRight,
+  Clock, Package, ChevronRight,
   ClipboardList, ChefHat, PackageCheck, Bike, Navigation, CheckCircle2,
-  ArrowRight, Store, RefreshCw
+  ArrowRight, Store, RefreshCw, UtensilsCrossed, Phone,
 } from 'lucide-react';
 
 const STATUSES = [
@@ -18,8 +18,8 @@ const STATUSES = [
 
 export default function OrderTracking() {
   const navigate = useNavigate();
-  const [orders, setOrders]     = useState([]);
-  const [loading, setLoading]   = useState(true);
+  const [orders, setOrders]         = useState([]);
+  const [loading, setLoading]       = useState(true);
   const [refreshing, setRefreshing] = useState(false);
 
   const fetchOrders = async (silent = false) => {
@@ -30,7 +30,15 @@ export default function OrderTracking() {
       const res = await ordersApi.list({ limit: 10 });
       const list = res?.data ?? [];
       const active = list.filter(o => !['delivered','cancelled','refunded'].includes(o.status));
-      setOrders(active.length ? active : list.slice(0, 5));
+      const base   = active.length ? active : list.slice(0, 5);
+
+      // Fetch full details (items + images) for each order in parallel
+      const detailed = await Promise.allSettled(base.map(o => ordersApi.getOne(o.id)));
+      const merged = base.map((o, i) => {
+        const full = detailed[i].status === 'fulfilled' ? detailed[i].value : {};
+        return { ...o, ...full, items: full.items ?? [] };
+      });
+      setOrders(merged);
     } catch {
       setOrders([]);
     } finally {
@@ -160,11 +168,83 @@ export default function OrderTracking() {
                       <Bike className="w-5 h-5 text-white" />
                     </div>
                     <div>
-                      <p className="text-white font-semibold text-sm">Rider assigned</p>
-                      <p className="text-forest-200/50 text-xs">On the way</p>
+                      <p className="text-white font-semibold text-sm">
+                        {order.rider_name || 'Rider assigned'}
+                      </p>
+                      <p className="text-forest-200/50 text-xs">
+                        {order.rider_phone
+                          ? <span className="flex items-center gap-1"><Phone className="w-3 h-3" />{order.rider_phone}</span>
+                          : 'On the way'}
+                      </p>
                     </div>
                   </div>
                   <Navigation className="w-5 h-5 text-ember-400" />
+                </div>
+              </div>
+            )}
+
+            {/* Order items */}
+            {order.items && order.items.length > 0 && (
+              <div className="px-5 pb-4">
+                <div className="glass rounded-2xl overflow-hidden">
+                  <div className="flex items-center gap-2 px-4 py-3"
+                    style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+                    <UtensilsCrossed className="w-4 h-4 text-ember-400" />
+                    <p className="text-white text-sm font-semibold">
+                      {order.restaurant_name} · {order.items.length} item{order.items.length !== 1 ? 's' : ''}
+                    </p>
+                  </div>
+                  <div className="divide-y divide-white/5">
+                    {order.items.map((item, i) => (
+                      <div key={i} className="flex items-center gap-3 px-4 py-3">
+                        {/* Food image */}
+                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 glass">
+                          {item.image_url
+                            ? <img src={item.image_url} alt={item.name}
+                                className="w-full h-full object-cover" />
+                            : <div className="w-full h-full flex items-center justify-center">
+                                <UtensilsCrossed className="w-5 h-5 text-forest-300/30" />
+                              </div>
+                          }
+                        </div>
+                        {/* Name + notes */}
+                        <div className="flex-1 min-w-0">
+                          <p className="text-white text-sm font-semibold truncate">{item.name}</p>
+                          {item.notes && (
+                            <p className="text-ember-300/70 text-xs mt-0.5 truncate">Note: {item.notes}</p>
+                          )}
+                          <p className="text-forest-200/50 text-xs mt-0.5">
+                            ₱{Number(item.price).toFixed(2)} × {item.quantity}
+                          </p>
+                        </div>
+                        {/* Line total */}
+                        <p className="text-ember-400 font-heading font-bold text-sm flex-shrink-0">
+                          ₱{(Number(item.price) * item.quantity).toFixed(2)}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                  {/* Totals */}
+                  <div className="px-4 py-3 space-y-1.5 glass-dark"
+                    style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+                    {[
+                      ['Subtotal',       order.subtotal],
+                      ['Delivery fee',   order.delivery_fee],
+                      ['Tax',            order.tax],
+                    ].filter(([, v]) => v != null && Number(v) > 0).map(([label, val]) => (
+                      <div key={label} className="flex justify-between text-xs text-forest-200/50">
+                        <span>{label}</span>
+                        <span>₱{Number(val).toFixed(2)}</span>
+                      </div>
+                    ))}
+                    <div className="flex justify-between items-center pt-1.5"
+                      style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+                      <span className="text-white font-bold text-sm">Total</span>
+                      <span className="text-ember-400 font-heading font-bold text-base">
+                        ₱{Number(order.total).toFixed(2)}
+                      </span>
+                    </div>
+                  </div>
                 </div>
               </div>
             )}
