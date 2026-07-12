@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useRider, riderRequest } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -10,7 +10,6 @@ import {
   CheckCircle2, Package, ChevronRight, AlertTriangle, Loader2,
 } from 'lucide-react';
 
-// Fix leaflet default icons
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -18,34 +17,48 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const makeIcon = (emoji, bg) => L.divIcon({
-  html: `<div style="width:40px;height:40px;border-radius:50%;background:${bg};border:3px solid #fff;
-    box-shadow:0 4px 10px rgba(0,0,0,.4);display:flex;align-items:center;justify-content:center;font-size:20px;">${emoji}</div>`,
-  className: '', iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -22],
-});
+const ROUTE_COLOR = '#e11d48';
 
-const riderIcon    = L.divIcon({
-  html: `<div style="position:relative;width:52px;height:52px;">
-    <div style="position:absolute;inset:0;border-radius:50%;background:rgba(245,158,11,.4);animation:pulse2 1.6s infinite;"></div>
-    <div style="position:absolute;inset:6px;border-radius:50%;background:#f59e0b;border:3px solid #fff;
-      box-shadow:0 0 20px rgba(245,158,11,.8);display:flex;align-items:center;justify-content:center;font-size:22px;">🏍️</div>
-    <style>@keyframes pulse2{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.8);opacity:.2}}</style>
+// Clean dot marker with a pill label — matches the reference design
+const dotIcon = (label, pulse = false) => L.divIcon({
+  html: `<div style="display:flex;align-items:center;gap:8px;">
+    <div style="position:relative;width:18px;height:18px;flex-shrink:0;">
+      ${pulse ? `<div style="position:absolute;inset:-5px;border-radius:50%;background:${ROUTE_COLOR}33;animation:dp 1.6s infinite;"></div>` : ''}
+      <div style="width:18px;height:18px;border-radius:50%;background:${ROUTE_COLOR};border:3px solid #fff;box-shadow:0 2px 10px rgba(225,29,72,.5);"></div>
+      <style>@keyframes dp{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(2.2);opacity:.1}}</style>
+    </div>
+    <div style="background:white;border-radius:20px;padding:5px 12px;white-space:nowrap;font-size:12px;font-weight:700;color:#111827;box-shadow:0 2px 10px rgba(0,0,0,.18);">${label}</div>
   </div>`,
-  className: '', iconSize: [52, 52], iconAnchor: [26, 26], popupAnchor: [0, -28],
+  className: '', iconSize: [0, 0], iconAnchor: [9, 9],
 });
-const restaurantIcon = makeIcon('🍽️', '#dc2626');
-const customerIcon   = makeIcon('🏠', '#10b981');
 
 function FitBounds({ points }) {
   const map = useMap();
   useEffect(() => {
     if (points.length > 1) {
-      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [50, 50] });
+      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [55, 55] });
     } else if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 15);
     }
   }, [points, map]);
   return null;
+}
+
+// Fetches a real road route from OSRM, falls back to straight line
+function RoutePolyline({ from, to }) {
+  const [pts, setPts] = useState([[from.lat, from.lng], [to.lat, to.lng]]);
+  useEffect(() => {
+    if (!from || !to) return;
+    fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.routes?.[0]) {
+          setPts(d.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]));
+        }
+      })
+      .catch(() => {});
+  }, [from?.lat, from?.lng, to?.lat, to?.lng]);
+  return <Polyline positions={pts} pathOptions={{ color: ROUTE_COLOR, weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }} />;
 }
 
 // Geocode a text address → {lat, lng} using free OpenStreetMap Nominatim
@@ -256,52 +269,49 @@ export default function RiderDelivery() {
       )}
 
       {/* Live map */}
-      <div className="glass rounded-2xl overflow-hidden">
-        <div className="px-4 py-3 flex items-center justify-between" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+      <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,.35)' }}>
+        <div className="px-4 py-3 flex items-center justify-between glass"
+          style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
           <p className="text-white font-semibold text-sm">
             {atRest ? 'Route to Restaurant' : "Route to Customer's Home"}
           </p>
-          {!riderPos && (
-            <span className="text-forest-200/40 text-xs flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" /> Getting GPS…
-            </span>
-          )}
+          {riderPos
+            ? <span className="flex items-center gap-1.5 text-xs text-forest-300"><span className="w-2 h-2 rounded-full bg-forest-400 animate-pulse" />Live GPS</span>
+            : <span className="text-forest-200/40 text-xs flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Getting GPS…</span>}
         </div>
-        <div style={{ height: 340 }}>
+        <div style={{ height: 360 }}>
           <MapContainer
             center={[mapCenter.lat, mapCenter.lng]}
             zoom={14}
             style={{ height: '100%', width: '100%' }}
-            scrollWheelZoom={false}>
+            scrollWheelZoom={false}
+            zoomControl={false}>
             <TileLayer
-              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
+              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
             />
             <FitBounds points={activeMarkers} />
 
+            {/* Route line */}
+            {atRest && riderPos && restaurantPos && (
+              <RoutePolyline from={riderPos} to={restaurantPos} />
+            )}
+            {!atRest && restaurantPos && customerPos && (
+              <RoutePolyline from={restaurantPos} to={customerPos} />
+            )}
+
+            {/* Markers */}
             {riderPos && (
-              <Marker position={[riderPos.lat, riderPos.lng]} icon={riderIcon}>
-                <Popup><b>You (Rider)</b><br />{rider?.name}</Popup>
-              </Marker>
+              <Marker position={[riderPos.lat, riderPos.lng]} icon={dotIcon('You', true)} />
             )}
             {restaurantPos && (
-              <Marker position={[restaurantPos.lat, restaurantPos.lng]} icon={restaurantIcon}>
-                <Popup><b>Restaurant</b><br />{order?.restaurant_name}</Popup>
-              </Marker>
+              <Marker position={[restaurantPos.lat, restaurantPos.lng]}
+                icon={dotIcon(order?.restaurant_name ? order.restaurant_name.split(' ').slice(0,2).join(' ') : 'Restaurant')} />
             )}
             {customerPos && (
-              <Marker position={[customerPos.lat, customerPos.lng]} icon={customerIcon}>
-                <Popup><b>Delivery Address</b><br />{order?.delivery_address}</Popup>
-              </Marker>
+              <Marker position={[customerPos.lat, customerPos.lng]} icon={dotIcon('Home')} />
             )}
           </MapContainer>
-        </div>
-        {/* Legend */}
-        <div className="px-4 py-2.5 flex items-center gap-4 text-xs text-forest-200/50"
-          style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
-          <span>🏍️ You</span>
-          <span>🍽️ Restaurant</span>
-          <span>🏠 Customer</span>
         </div>
       </div>
 

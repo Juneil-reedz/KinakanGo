@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ordersApi, storage, request } from '../services/api';
-import { MapContainer, TileLayer, Marker, Popup, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -10,7 +10,6 @@ import {
   ArrowRight, Store, RefreshCw, UtensilsCrossed, Phone, MapPin,
 } from 'lucide-react';
 
-// Leaflet icon setup
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
   iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
@@ -18,32 +17,46 @@ L.Icon.Default.mergeOptions({
   shadowUrl:     'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-const makeIcon = (emoji, bg) => L.divIcon({
-  html: `<div style="width:40px;height:40px;border-radius:50%;background:${bg};border:3px solid #fff;
-    box-shadow:0 4px 10px rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;font-size:20px;">${emoji}</div>`,
-  className: '', iconSize: [40, 40], iconAnchor: [20, 20], popupAnchor: [0, -22],
-});
-const riderMapIcon   = L.divIcon({
-  html: `<div style="position:relative;width:52px;height:52px;">
-    <div style="position:absolute;inset:0;border-radius:50%;background:rgba(245,158,11,.35);animation:rPulse 1.6s infinite;"></div>
-    <div style="position:absolute;inset:6px;border-radius:50%;background:#f59e0b;border:3px solid #fff;
-      box-shadow:0 0 18px rgba(245,158,11,.8);display:flex;align-items:center;justify-content:center;font-size:22px;z-index:2;">🏍️</div>
-    <style>@keyframes rPulse{0%,100%{transform:scale(1);opacity:.7}50%{transform:scale(1.8);opacity:.2}}</style>
+const ROUTE_COLOR = '#e11d48';
+
+const dotIcon = (label, pulse = false) => L.divIcon({
+  html: `<div style="display:flex;align-items:center;gap:8px;">
+    <div style="position:relative;width:18px;height:18px;flex-shrink:0;">
+      ${pulse ? `<div style="position:absolute;inset:-5px;border-radius:50%;background:${ROUTE_COLOR}33;animation:dp2 1.6s infinite;"></div>` : ''}
+      <div style="width:18px;height:18px;border-radius:50%;background:${ROUTE_COLOR};border:3px solid #fff;box-shadow:0 2px 10px rgba(225,29,72,.5);"></div>
+      <style>@keyframes dp2{0%,100%{transform:scale(1);opacity:.6}50%{transform:scale(2.2);opacity:.1}}</style>
+    </div>
+    <div style="background:white;border-radius:20px;padding:5px 12px;white-space:nowrap;font-size:12px;font-weight:700;color:#111827;box-shadow:0 2px 10px rgba(0,0,0,.18);">${label}</div>
   </div>`,
-  className: '', iconSize: [52, 52], iconAnchor: [26, 26], popupAnchor: [0, -28],
+  className: '', iconSize: [0, 0], iconAnchor: [9, 9],
 });
-const homeIcon = makeIcon('🏠', '#10b981');
 
 function FitBounds({ points }) {
   const map = useMap();
   useEffect(() => {
     if (points.length > 1) {
-      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [50, 50] });
+      map.fitBounds(L.latLngBounds(points.map(p => [p.lat, p.lng])), { padding: [55, 55] });
     } else if (points.length === 1) {
       map.setView([points[0].lat, points[0].lng], 14);
     }
   }, [points, map]);
   return null;
+}
+
+function RoutePolyline({ from, to }) {
+  const [pts, setPts] = useState([[from.lat, from.lng], [to.lat, to.lng]]);
+  useEffect(() => {
+    if (!from || !to) return;
+    fetch(`https://router.project-osrm.org/route/v1/driving/${from.lng},${from.lat};${to.lng},${to.lat}?overview=full&geometries=geojson`)
+      .then(r => r.json())
+      .then(d => {
+        if (d.routes?.[0]) {
+          setPts(d.routes[0].geometry.coordinates.map(([lng, lat]) => [lat, lng]));
+        }
+      })
+      .catch(() => {});
+  }, [from?.lat, from?.lng, to?.lat, to?.lng]);
+  return <Polyline positions={pts} pathOptions={{ color: ROUTE_COLOR, weight: 4, opacity: 0.85, lineCap: 'round', lineJoin: 'round' }} />;
 }
 
 async function geocode(address) {
@@ -265,54 +278,47 @@ export default function OrderTracking() {
                 </div>
 
                 {/* Live map — shown when rider is in transit (picked_up) */}
-                {order.status === 'picked_up' && (
-                  <div className="glass rounded-2xl overflow-hidden">
-                    <div className="px-4 py-2.5 flex items-center gap-2"
-                      style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
-                      <MapPin className="w-3.5 h-3.5 text-forest-400" />
-                      <p className="text-white text-xs font-semibold">Live Rider Location</p>
-                      {riderLocs[order.id]
-                        ? <span className="ml-auto flex items-center gap-1 text-forest-400 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-forest-400 animate-pulse" />Live</span>
-                        : <span className="ml-auto text-forest-200/40 text-xs">Waiting for GPS…</span>}
+                {order.status === 'picked_up' && (() => {
+                  const rLoc   = riderLocs[order.id];
+                  const cLoc   = custLocs[order.id];
+                  const pts    = [rLoc, cLoc].filter(Boolean);
+                  const center = rLoc || cLoc || { lat: 5.0293, lng: 119.7731 };
+                  return (
+                    <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,.35)' }}>
+                      <div className="px-4 py-2.5 flex items-center gap-2 glass"
+                        style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+                        <MapPin className="w-3.5 h-3.5 text-rose-400" />
+                        <p className="text-white text-xs font-semibold">Live Rider Location</p>
+                        {rLoc
+                          ? <span className="ml-auto flex items-center gap-1 text-rose-400 text-xs"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />Live</span>
+                          : <span className="ml-auto text-forest-200/40 text-xs">Waiting for GPS…</span>}
+                      </div>
+                      <div style={{ height: 300 }}>
+                        <MapContainer
+                          key={`map-${order.id}`}
+                          center={[center.lat, center.lng]}
+                          zoom={14}
+                          style={{ height: '100%', width: '100%' }}
+                          scrollWheelZoom={false}
+                          zoomControl={false}>
+                          <TileLayer
+                            url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+                            attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+                          />
+                          <FitBounds points={pts} />
+                          {rLoc && cLoc && <RoutePolyline from={rLoc} to={cLoc} />}
+                          {rLoc && (
+                            <Marker position={[rLoc.lat, rLoc.lng]}
+                              icon={dotIcon(order.rider_name ? order.rider_name.split(' ')[0] : 'Rider', true)} />
+                          )}
+                          {cLoc && (
+                            <Marker position={[cLoc.lat, cLoc.lng]} icon={dotIcon('Home')} />
+                          )}
+                        </MapContainer>
+                      </div>
                     </div>
-                    <div style={{ height: 280 }}>
-                      {(() => {
-                        const rLoc = riderLocs[order.id];
-                        const cLoc = custLocs[order.id];
-                        const pts  = [rLoc, cLoc].filter(Boolean);
-                        const center = rLoc || cLoc || { lat: 5.0293, lng: 119.7731 };
-                        return (
-                          <MapContainer
-                            key={`map-${order.id}`}
-                            center={[center.lat, center.lng]}
-                            zoom={14}
-                            style={{ height: '100%', width: '100%' }}
-                            scrollWheelZoom={false}>
-                            <TileLayer
-                              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-                              attribution='&copy; OpenStreetMap contributors'
-                            />
-                            <FitBounds points={pts} />
-                            {rLoc && (
-                              <Marker position={[rLoc.lat, rLoc.lng]} icon={riderMapIcon}>
-                                <Popup><b>Rider</b><br />{order.rider_name || 'Your rider'}<br />On the way!</Popup>
-                              </Marker>
-                            )}
-                            {cLoc && (
-                              <Marker position={[cLoc.lat, cLoc.lng]} icon={homeIcon}>
-                                <Popup><b>Your delivery address</b><br />{order.delivery_address}</Popup>
-                              </Marker>
-                            )}
-                          </MapContainer>
-                        );
-                      })()}
-                    </div>
-                    <div className="px-4 py-2 flex gap-4 text-xs text-forest-200/50"
-                      style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
-                      <span>🏍️ Rider</span><span>🏠 Your home</span>
-                    </div>
-                  </div>
-                )}
+                  );
+                })()}
               </div>
             )}
 
