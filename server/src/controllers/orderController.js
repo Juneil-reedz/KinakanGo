@@ -183,6 +183,13 @@ async function updateStatus(req, res) {
     return res.status(400).json({ error: 'Proof of delivery is required' });
   }
 
+  const { rows: beforeRows } = await pool.query(
+    'SELECT status, rider_id, delivery_fee FROM orders WHERE id = $1',
+    [req.params.id]
+  );
+  if (!beforeRows.length) return res.status(404).json({ error: 'Order not found' });
+  const before = beforeRows[0];
+
   const { rows: updatedRows } = await pool.query(
     `UPDATE orders SET
        status           = $1,
@@ -203,11 +210,17 @@ async function updateStatus(req, res) {
 
   // When delivered, free the rider back to available
   if (status === 'delivered') {
-    const { rows } = await pool.query('SELECT rider_id FROM orders WHERE id = $1', [req.params.id]);
-    if (rows[0]?.rider_id) {
+    if (before.rider_id) {
       await pool.query(
-        'UPDATE rider_profiles SET is_available = true WHERE user_id = $1',
-        [rows[0].rider_id]
+        `INSERT INTO rider_profiles (user_id, is_available, total_deliveries, today_deliveries, total_earnings, today_earnings)
+         VALUES ($1, true, $2, $2, $3, $3)
+         ON CONFLICT (user_id) DO UPDATE SET
+           is_available = true,
+           total_deliveries = rider_profiles.total_deliveries + $2,
+           today_deliveries = rider_profiles.today_deliveries + $2,
+           total_earnings = rider_profiles.total_earnings + $3,
+           today_earnings = rider_profiles.today_earnings + $3`,
+        [before.rider_id, before.status === 'delivered' ? 0 : 1, before.status === 'delivered' ? 0 : Number(before.delivery_fee || 0)]
       ).catch(() => {});
     }
   }

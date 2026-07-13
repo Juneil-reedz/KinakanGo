@@ -13,9 +13,45 @@ const TYPE_ICON = {
   refund:  DollarSign,
   quality: UtensilsCrossed,
   payment: CreditCard,
+  payout:  CreditCard,
+  report:  Package,
   rider:   Bike,
   missing: Package,
 };
+
+const normalizeIssue = (issue) => ({
+  ...issue,
+  id: `issue-${issue.id}`,
+  backendId: issue.id,
+  source: 'issue',
+  orderId: issue.orderId || issue.order_id,
+  customerName: issue.customerName || issue.customer_name,
+  restaurantName: issue.restaurantName || issue.restaurant_name,
+  orderAmount: issue.orderAmount || issue.order_total,
+  requestedRefund: issue.requestedRefund || issue.refund_requested,
+  refundAmount: issue.refundAmount || issue.refund_approved,
+  refundNotes: issue.refundNotes || issue.resolution_notes,
+  title: issue.title || `${issue.type || 'Issue'} request`,
+  createdAt: issue.createdAt || (issue.created_at ? new Date(issue.created_at).toLocaleString() : ''),
+});
+
+const normalizeRiderRequest = (request) => ({
+  id: `rider-${request.id}`,
+  backendId: request.id,
+  source: 'riderRequest',
+  type: request.request_type,
+  priority: 'medium',
+  status: request.status,
+  title: request.request_type === 'payout' ? 'Rider payout request' : 'Rider report request',
+  description: request.details || '',
+  requestedRefund: request.amount,
+  riderName: request.rider_name,
+  riderEmail: request.rider_email,
+  riderPhone: request.rider_phone,
+  period: request.period,
+  refundNotes: request.resolution_notes,
+  createdAt: request.created_at ? new Date(request.created_at).toLocaleString() : '',
+});
 
 export default function AdminIssues() {
   const { addNotification } = useNotification();
@@ -32,8 +68,16 @@ export default function AdminIssues() {
     (async () => {
       try {
         setLoading(true);
-        const res = await adminApi.issues.list({});
-        setIssues(res.data || res || []);
+        const [issuesRes, riderRequestsRes] = await Promise.allSettled([
+          adminApi.issues.list({}),
+          adminApi.riderRequests.list(),
+        ]);
+        const issueRows = issuesRes.status === 'fulfilled' ? (issuesRes.value.data || issuesRes.value || []) : [];
+        const riderRows = riderRequestsRes.status === 'fulfilled' ? (riderRequestsRes.value.data || riderRequestsRes.value || []) : [];
+        setIssues([
+          ...riderRows.map(normalizeRiderRequest),
+          ...issueRows.map(normalizeIssue),
+        ]);
       } catch {
         addNotification("Failed to load issues", "error");
       } finally {
@@ -54,7 +98,7 @@ export default function AdminIssues() {
   const approveRefund = async () => {
     const amt = parseFloat(refundAmount);
     try {
-      await adminApi.issues.resolve(selected.id, { refundApproved: true, notes: refundNotes });
+      await adminApi.issues.resolve(selected.backendId, { refundApproved: true, notes: refundNotes });
       setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes } : i));
       addNotification(`Refund of ₱${amt.toFixed(2)} approved for ${selected.customerName}`, "success");
       close();
@@ -65,7 +109,7 @@ export default function AdminIssues() {
 
   const denyRefund = async () => {
     try {
-      await adminApi.issues.deny(selected.id, refundNotes);
+      await adminApi.issues.deny(selected.backendId, refundNotes);
       setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"denied", refundNotes } : i));
       addNotification("Refund request denied", "success");
       close();
@@ -75,16 +119,36 @@ export default function AdminIssues() {
   };
 
   const resolve = async (id) => {
+    const item = issues.find(i => i.id === id);
     try {
-      await adminApi.issues.resolve(id, { notes: "" });
+      if (item?.source === 'riderRequest') {
+        await adminApi.riderRequests.resolve(item.backendId, { notes: "" });
+      } else {
+        await adminApi.issues.resolve(item.backendId, { notes: "" });
+      }
       setIssues(prev => prev.map(i => i.id === id ? { ...i, status:"resolved" } : i));
-      addNotification("Issue marked as resolved", "success");
+      addNotification(item?.source === 'riderRequest' ? "Rider request marked as resolved" : "Issue marked as resolved", "success");
     } catch {
-      addNotification("Failed to resolve issue", "error");
+      addNotification("Failed to resolve request", "error");
     }
   };
 
-  const TYPES    = ["all","refund","quality","payment","rider"];
+  const deny = async (id) => {
+    const item = issues.find(i => i.id === id);
+    try {
+      if (item?.source === 'riderRequest') {
+        await adminApi.riderRequests.deny(item.backendId, "");
+      } else {
+        await adminApi.issues.deny(item.backendId, "");
+      }
+      setIssues(prev => prev.map(i => i.id === id ? { ...i, status:"denied" } : i));
+      addNotification("Request denied", "success");
+    } catch {
+      addNotification("Failed to deny request", "error");
+    }
+  };
+
+  const TYPES    = ["all","refund","quality","payment","payout","report","rider"];
   const STATUSES = ["all","pending","resolved","denied"];
 
   return (
@@ -184,9 +248,11 @@ export default function AdminIssues() {
 
                     <div className="grid grid-cols-1 md:grid-cols-2 gap-2 mt-2 text-xs">
                       <div>
-                        <p className="text-forest-200/40">Customer</p>
-                        <p className="text-forest-100/70">{issue.customerName}</p>
+                        <p className="text-forest-200/40">{issue.source === 'riderRequest' ? 'Requested By' : 'Customer'}</p>
+                        <p className="text-forest-100/70">{issue.source === 'riderRequest' ? issue.riderName : issue.customerName}</p>
                         {issue.customerEmail && <p className="text-forest-200/40">{issue.customerEmail}</p>}
+                        {issue.riderEmail && <p className="text-forest-200/40">{issue.riderEmail}</p>}
+                        {issue.riderPhone && <p className="text-forest-200/40">{issue.riderPhone}</p>}
                       </div>
                       {issue.orderId && (
                         <div>
@@ -207,11 +273,19 @@ export default function AdminIssues() {
                           <p className="text-forest-100/70">{issue.riderName}</p>
                         </div>
                       )}
+                      {issue.period && (
+                        <div>
+                          <p className="text-forest-200/40">Period</p>
+                          <p className="text-forest-100/70 capitalize">{issue.period}</p>
+                        </div>
+                      )}
                     </div>
 
                     {issue.requestedRefund && issue.status === "pending" && (
                       <div className="glass-orange rounded-xl px-3 py-2 mt-2">
-                        <p className="text-ember-200 text-xs font-semibold">Refund Requested: ₱{Number(issue.requestedRefund).toFixed(2)}</p>
+                        <p className="text-ember-200 text-xs font-semibold">
+                          {issue.source === 'riderRequest' ? 'Amount Requested' : 'Refund Requested'}: ₱{Number(issue.requestedRefund).toFixed(2)}
+                        </p>
                       </div>
                     )}
                     {issue.refundAmount && (
@@ -233,8 +307,14 @@ export default function AdminIssues() {
                           className="glass hover:glass-green transition-all text-forest-200 text-xs font-medium px-3 py-1.5 rounded-xl">
                           Mark Resolved
                         </button>
+                        {issue.source === 'riderRequest' && (
+                          <button onClick={() => deny(issue.id)}
+                            className="glass text-red-300 text-xs font-medium px-3 py-1.5 rounded-xl hover:glass transition-all">
+                            Deny
+                          </button>
+                        )}
                         <button className="glass text-forest-200/60 text-xs font-medium px-3 py-1.5 rounded-xl hover:glass transition-all">
-                          Contact Customer
+                          Contact {issue.source === 'riderRequest' ? 'Rider' : 'Customer'}
                         </button>
                       </div>
                     )}

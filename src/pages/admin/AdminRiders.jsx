@@ -2,7 +2,7 @@ import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
 import { usersApi } from "../../services/api";
 import { adminRequest } from "../../context/AdminContext";
-import { Bike, Search, Star, MapPin, Phone, Edit, Trash2, Eye, DollarSign, TrendingUp, Package, CheckCircle, Clock, Calendar, Truck, X, Check, ToggleLeft, ToggleRight } from "lucide-react";
+import { Bike, Search, Star, MapPin, Phone, Edit, Trash2, Eye, DollarSign, TrendingUp, Package, CheckCircle, Clock, Calendar, Truck, X, Check, Image as ImageIcon } from "lucide-react";
 
 const STATUS_CLS = {
   active:"glass-green text-forest-200",
@@ -25,6 +25,8 @@ export default function AdminRiders() {
   const [sortBy, setSortBy]           = useState("name");
   const [selected, setSelected]       = useState(null);
   const [modal, setModal]             = useState(null); // "view" | "edit" | "delete"
+  const [deliveries, setDeliveries]   = useState([]);
+  const [deliveriesLoading, setDeliveriesLoading] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -53,10 +55,23 @@ export default function AdminRiders() {
       return (a.name||"").localeCompare(b.name||"");
     });
 
-  const openView   = (r) => { setSelected(r); setModal("view"); };
+  const openView   = async (r) => {
+    setSelected(r);
+    setModal("view");
+    setDeliveries([]);
+    setDeliveriesLoading(true);
+    try {
+      const res = await adminRequest(`/riders/${r.id}/deliveries`);
+      setDeliveries(res.data || res || []);
+    } catch {
+      addNotification("Failed to load rider delivery details", "error");
+    } finally {
+      setDeliveriesLoading(false);
+    }
+  };
   const openEdit   = (r) => { setSelected(r); setModal("edit"); };
   const openDelete = (r) => { setSelected(r); setModal("delete"); };
-  const close      = ()  => { setModal(null); setSelected(null); };
+  const close      = ()  => { setModal(null); setSelected(null); setDeliveries([]); };
 
   const confirmDelete = async () => {
     try {
@@ -220,7 +235,7 @@ export default function AdminRiders() {
       {/* View Modal */}
       {modal === "view" && selected && (
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
-          <div className="glass rounded-3xl p-6 w-full max-w-sm my-4">
+          <div className="glass rounded-3xl p-6 w-full max-w-3xl my-4 max-h-[90vh] overflow-y-auto">
             <div className="flex items-center justify-between mb-5">
               <p className="text-white font-semibold">Rider Details</p>
               <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
@@ -253,6 +268,73 @@ export default function AdminRiders() {
                   <p className="text-white text-sm font-semibold capitalize">{value}</p>
                 </div>
               ))}
+            </div>
+
+            <div className="mt-5 glass-dark rounded-2xl p-4 border border-white/5">
+              <div className="flex items-center justify-between mb-3">
+                <p className="text-white font-semibold text-sm">Completed Delivery Details</p>
+                <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full">{deliveries.length}</span>
+              </div>
+              {deliveriesLoading ? (
+                <div className="space-y-2">
+                  {[1,2].map(i => <div key={i} className="glass rounded-xl h-24 animate-pulse" />)}
+                </div>
+              ) : deliveries.length === 0 ? (
+                <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+                  <Package className="w-8 h-8 text-forest-300/25 mx-auto mb-2" />
+                  <p className="text-forest-200/45 text-sm">No completed deliveries found</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {deliveries.map(order => (
+                    <div key={order.id} className="glass rounded-2xl p-4 space-y-3">
+                      <div className="flex items-start justify-between gap-3">
+                        <div>
+                          <p className="text-white font-semibold text-sm">Order #{order.id}</p>
+                          <p className="text-forest-200/45 text-xs flex items-center gap-1 mt-0.5">
+                            <Clock className="w-3 h-3" />
+                            {order.delivered_at ? new Date(order.delivered_at).toLocaleString('en-PH') : 'Delivered'}
+                          </p>
+                        </div>
+                        <div className="text-right">
+                          <p className="text-forest-300 font-heading font-bold">₱{Number(order.delivery_fee || 0).toFixed(2)}</p>
+                          <p className="text-forest-200/40 text-xs">delivery fee</p>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-2 sm:grid-cols-2 text-xs">
+                        <div className="glass rounded-xl p-3">
+                          <p className="text-forest-200/40 mb-1">Restaurant</p>
+                          <p className="text-white font-semibold">{order.restaurant_name || 'Restaurant'}</p>
+                          <p className="text-forest-200/50 mt-1">{order.restaurant_address || 'No address'}</p>
+                        </div>
+                        <div className="glass rounded-xl p-3">
+                          <p className="text-forest-200/40 mb-1">Customer</p>
+                          <p className="text-white font-semibold">{order.customer_name || 'Customer'}</p>
+                          <p className="text-forest-200/50 mt-1">{order.delivery_address || 'No address'}</p>
+                        </div>
+                      </div>
+
+                      <div>
+                        <div className="flex items-center gap-2 mb-2">
+                          <ImageIcon className="w-4 h-4 text-forest-300/70" />
+                          <p className="text-white font-semibold text-sm">Proof of Delivery</p>
+                        </div>
+                        {order.delivery_proof_image ? (
+                          <a href={order.delivery_proof_image} target="_blank" rel="noreferrer">
+                            <img src={order.delivery_proof_image} alt={`Proof for order ${order.id}`} className="w-full max-h-72 object-cover rounded-xl border border-white/10" />
+                          </a>
+                        ) : (
+                          <div className="rounded-xl border border-dashed border-white/10 p-5 text-center">
+                            <ImageIcon className="w-7 h-7 text-forest-300/25 mx-auto mb-2" />
+                            <p className="text-forest-200/45 text-sm">No proof image saved</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
           </div>
         </div>

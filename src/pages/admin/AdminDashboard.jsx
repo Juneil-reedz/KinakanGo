@@ -9,6 +9,22 @@ import {
 
 const PRIORITY_CLS = { high:"bg-red-500/20 text-red-300 border border-red-500/30", medium:"glass-orange text-ember-200", low:"glass-green text-forest-200" };
 
+const normalizeIssue = (issue) => ({
+  id: `issue-${issue.id}`,
+  priority: issue.priority,
+  title: issue.title || `${issue.type || 'Issue'} request`,
+  description: issue.description,
+  createdAt: issue.createdAt || (issue.created_at ? new Date(issue.created_at).toLocaleString() : ''),
+});
+
+const normalizeRiderRequest = (request) => ({
+  id: `rider-${request.id}`,
+  priority: 'medium',
+  title: request.request_type === 'payout' ? 'Rider payout request' : 'Rider report request',
+  description: request.details || `${request.rider_name} requested admin review`,
+  createdAt: request.created_at ? new Date(request.created_at).toLocaleString() : '',
+});
+
 export default function AdminDashboard() {
   const { admin } = useAdmin();
   const [stats, setStats]     = useState({ totalRestaurants:0, totalOrders:0, pendingApps:0, pendingIssues:0 });
@@ -19,22 +35,29 @@ export default function AdminDashboard() {
     (async () => {
       try {
         setLoading(true);
-        const [ordersRes, restaurantsRes, appsRes, issuesRes] = await Promise.allSettled([
+        const [ordersRes, restaurantsRes, appsRes, issuesRes, riderRequestsRes] = await Promise.allSettled([
           adminApi.orders.list({ limit: 1 }),
           adminApi.restaurants.list({ limit: 1 }),
           adminRequest('/upgrades?status=pending&limit=1'),
           adminApi.issues.list({ status: "pending", limit: 5 }),
+          adminApi.riderRequests.list(),
         ]);
+
+        const issueRows = issuesRes.status === "fulfilled" ? (issuesRes.value.data || []) : [];
+        const pendingRiderRows = riderRequestsRes.status === "fulfilled"
+          ? (riderRequestsRes.value.data || []).filter(r => r.status === 'pending')
+          : [];
 
         setStats({
           totalOrders:      ordersRes.status      === "fulfilled" ? (ordersRes.value.total      || 0) : 0,
           totalRestaurants: restaurantsRes.status === "fulfilled" ? (restaurantsRes.value.total  || 0) : 0,
           pendingApps:      appsRes.status        === "fulfilled" ? (appsRes.value.total         || 0) : 0,
-          pendingIssues:    issuesRes.status      === "fulfilled" ? (issuesRes.value.total        || 0) : 0,
+          pendingIssues:    (issuesRes.status === "fulfilled" ? (issuesRes.value.total || 0) : 0) + pendingRiderRows.length,
         });
-        if (issuesRes.status === "fulfilled") {
-          setIssues(issuesRes.value.data || []);
-        }
+        setIssues([
+          ...pendingRiderRows.map(normalizeRiderRequest),
+          ...issueRows.map(normalizeIssue),
+        ].slice(0, 5));
       } catch {
         // silently fail
       } finally {

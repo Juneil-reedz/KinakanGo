@@ -1,12 +1,15 @@
 import { useState, useEffect } from 'react';
 import { useRider, riderRequest } from '../../context/RiderContext';
+import { useNotification } from '../../context/NotificationContext';
 import { Banknote, Package, TrendingUp, Star, Clock, MapPin, Store, Download, CreditCard } from 'lucide-react';
 
 export default function RiderEarnings() {
   const { rider }          = useRider();
+  const { addNotification } = useNotification();
   const [trips, setTrips]  = useState([]);
   const [loading, setLoading] = useState(true);
   const [range, setRange]  = useState('week');
+  const [requesting, setRequesting] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -44,6 +47,34 @@ export default function RiderEarnings() {
     { label:'Acceptance',     value:'—', icon:TrendingUp, sub:'rate' },
     { label:'On-Time',        value:'—', icon:Clock,      sub:'rate' },
   ];
+
+  const sendAdminRequest = async (requestType) => {
+    if (requesting) return;
+    setRequesting(requestType);
+    try {
+      await riderRequest('/riders/admin-requests', {
+        method: 'POST',
+        body: JSON.stringify({
+          requestType,
+          amount: requestType === 'payout' ? totalEarned.toFixed(2) : null,
+          period: range,
+          details: requestType === 'payout'
+            ? `Payout request from ${rider?.name || 'Rider'} for ${deliveries} delivered trips.`
+            : `Earnings report request for ${range}: ${deliveries} delivered trips, ₱${totalEarned.toFixed(2)} estimated earnings.`,
+        }),
+      });
+      addNotification(
+        requestType === 'payout'
+          ? 'Payout request sent to admin'
+          : 'Report request sent to admin',
+        'success'
+      );
+    } catch (err) {
+      addNotification(err?.data?.error || 'Failed to send request to admin', 'error');
+    } finally {
+      setRequesting(null);
+    }
+  };
 
   return (
     <div className="space-y-5 pb-6 animate-fade-up">
@@ -187,11 +218,13 @@ export default function RiderEarnings() {
         <p className="text-white font-semibold mb-1">Payment & Reports</p>
         <p className="text-forest-200/50 text-sm mb-4">Request payout or download your earnings report.</p>
         <div className="flex gap-3 flex-wrap">
-          <button className="flex-1 btn-glow-orange text-white text-sm font-semibold py-3 rounded-xl flex items-center justify-center gap-2">
-            <CreditCard className="w-4 h-4" /> Request Payout
+          <button onClick={() => sendAdminRequest('payout')} disabled={requesting || totalEarned <= 0}
+            className="flex-1 btn-glow-orange text-white text-sm font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
+            <CreditCard className="w-4 h-4" /> {requesting === 'payout' ? 'Sending...' : 'Request Payout'}
           </button>
-          <button className="flex-1 glass hover:glass-green transition-all text-forest-100 text-sm font-medium py-3 rounded-xl flex items-center justify-center gap-2">
-            <Download className="w-4 h-4" /> Download PDF
+          <button onClick={() => sendAdminRequest('report')} disabled={requesting}
+            className="flex-1 glass hover:glass-green transition-all text-forest-100 text-sm font-medium py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
+            <Download className="w-4 h-4" /> {requesting === 'report' ? 'Sending...' : 'Request Report'}
           </button>
         </div>
       </div>

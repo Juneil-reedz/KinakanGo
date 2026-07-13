@@ -131,6 +131,11 @@ export const adminApi = {
     resolve: (id, d)       => adminRequest(`/issues/${id}/resolve`, { method: 'POST', body: JSON.stringify(d) }),
     deny:    (id, notes)   => adminRequest(`/issues/${id}/deny`, { method: 'POST', body: JSON.stringify({ notes }) }),
   },
+  riderRequests: {
+    list:    ()          => adminRequest('/riders/admin-requests'),
+    resolve: (id, d)    => adminRequest(`/riders/admin-requests/${id}/resolve`, { method: 'POST', body: JSON.stringify(d) }),
+    deny:    (id, notes) => adminRequest(`/riders/admin-requests/${id}/deny`, { method: 'POST', body: JSON.stringify({ notes }) }),
+  },
   promos: {
     list:   (p = {})  => adminRequest(`/promos?${new URLSearchParams(p)}`),
     create: (d)       => adminRequest(`/promos`, { method: 'POST', body: JSON.stringify(d) }),

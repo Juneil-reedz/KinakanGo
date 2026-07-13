@@ -229,6 +229,24 @@ CREATE TABLE issues (
 CREATE TRIGGER trg_issues_updated_at BEFORE UPDATE ON issues
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
 
+CREATE TABLE rider_admin_requests (
+  id               SERIAL PRIMARY KEY,
+  rider_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  request_type     VARCHAR(20) NOT NULL CHECK (request_type IN ('payout','report')),
+  amount           DECIMAL(10,2) DEFAULT NULL,
+  period           VARCHAR(20) DEFAULT NULL,
+  details          TEXT DEFAULT NULL,
+  status           VARCHAR(10) NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending','resolved','denied')),
+  resolution_notes TEXT DEFAULT NULL,
+  resolved_by      INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+  resolved_at      TIMESTAMPTZ DEFAULT NULL,
+  created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE TRIGGER trg_rider_admin_requests_updated_at BEFORE UPDATE ON rider_admin_requests
+  FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
 -- ─── REVIEWS ─────────────────────────────────────────────────────────────────
 
 CREATE TABLE reviews (

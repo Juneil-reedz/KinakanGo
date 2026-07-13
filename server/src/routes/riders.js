@@ -24,20 +24,107 @@ router.get('/me', async (req, res) => {
   }
 });
 
+router.post('/admin-requests', async (req, res) => {
+  try {
+    const { requestType, amount, period, details } = req.body;
+    if (!['payout', 'report'].includes(requestType)) {
+      return res.status(400).json({ error: 'requestType must be payout or report' });
+    }
+
+    const cleanAmount = amount === '' || amount == null ? null : Number(amount);
+    if (cleanAmount != null && (!Number.isFinite(cleanAmount) || cleanAmount <= 0)) {
+      return res.status(400).json({ error: 'amount must be greater than 0' });
+    }
+
+    const { rows } = await pool.query(
+      `INSERT INTO rider_admin_requests (rider_id, request_type, amount, period, details)
+       VALUES ($1, $2, $3, $4, $5)
+       RETURNING id, request_type, amount, period, details, status, created_at`,
+      [req.user.id, requestType, cleanAmount, period || null, details || null]
+    );
+    res.status(201).json(rows[0]);
+  } catch (err) {
+    console.error('rider admin request create error:', err);
+    res.status(500).json({ error: 'Failed to send request to admin' });
+  }
+});
+
+router.get('/admin-requests', requireRole('admin'), async (_req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT rar.id, rar.rider_id, rar.request_type, rar.amount, rar.period, rar.details,
+              rar.status, rar.resolution_notes, rar.created_at, rar.resolved_at,
+              u.name AS rider_name, u.email AS rider_email, u.phone AS rider_phone,
+              admin.name AS resolved_by_name
+       FROM rider_admin_requests rar
+       JOIN users u ON u.id = rar.rider_id
+       LEFT JOIN users admin ON admin.id = rar.resolved_by
+       ORDER BY rar.created_at DESC
+       LIMIT 100`
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (err) {
+    console.error('rider admin request list error:', err);
+    res.status(500).json({ error: 'Failed to load rider requests' });
+  }
+});
+
+router.post('/admin-requests/:id/resolve', requireRole('admin'), async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE rider_admin_requests
+       SET status = 'resolved', resolution_notes = $1, resolved_by = $2, resolved_at = NOW(), updated_at = NOW()
+       WHERE id = $3`,
+      [req.body.notes || null, req.user.id, req.params.id]
+    );
+    res.json({ message: 'Request resolved' });
+  } catch (err) {
+    console.error('rider admin request resolve error:', err);
+    res.status(500).json({ error: 'Failed to resolve rider request' });
+  }
+});
+
+router.post('/admin-requests/:id/deny', requireRole('admin'), async (req, res) => {
+  try {
+    await pool.query(
+      `UPDATE rider_admin_requests
+       SET status = 'denied', resolution_notes = $1, resolved_by = $2, resolved_at = NOW(), updated_at = NOW()
+       WHERE id = $3`,
+      [req.body.notes || null, req.user.id, req.params.id]
+    );
+    res.json({ message: 'Request denied' });
+  } catch (err) {
+    console.error('rider admin request deny error:', err);
+    res.status(500).json({ error: 'Failed to deny rider request' });
+  }
+});
+
 // List all approved riders — admin only
 router.get('/', requireRole('admin'), async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT DISTINCT u.id, u.name, u.email, u.phone, u.role,
-              u.avatar_url AS image, u.is_active, u.created_at,
-              ur.notes,
-              rp.is_available, rp.total_deliveries, rp.rating
-       FROM users u
-       JOIN upgrade_requests ur ON ur.user_id = u.id
-       LEFT JOIN rider_profiles rp ON rp.user_id = u.id
-       WHERE ur.status = 'approved'
-         AND (ur.plan ILIKE '%rider%' OR ur.notes ILIKE '%"role":"rider"%')
-       ORDER BY u.created_at DESC`
+               u.avatar_url AS image, u.is_active, u.created_at,
+               ur.notes,
+               rp.is_available, rp.rating,
+               COALESCE(stats.total_deliveries, rp.total_deliveries, 0) AS total_deliveries,
+               COALESCE(stats.completed_today, rp.today_deliveries, 0) AS completed_today,
+               COALESCE(stats.earnings, rp.total_earnings, 0) AS earnings
+        FROM users u
+        JOIN upgrade_requests ur ON ur.user_id = u.id
+        LEFT JOIN rider_profiles rp ON rp.user_id = u.id
+        LEFT JOIN (
+          SELECT rider_id,
+                 COUNT(*)::int AS total_deliveries,
+                 COUNT(*) FILTER (WHERE delivered_at::date = CURRENT_DATE)::int AS completed_today,
+                 COALESCE(SUM(delivery_fee), 0) AS earnings
+          FROM orders
+          WHERE status = 'delivered' AND rider_id IS NOT NULL
+          GROUP BY rider_id
+        ) stats ON stats.rider_id = u.id
+        WHERE ur.status = 'approved'
+          AND (ur.plan ILIKE '%rider%' OR ur.notes ILIKE '%"role":"rider"%')
+        ORDER BY u.created_at DESC`
     );
     const riders = rows.map(r => {
       let vehicleType = null, plateNumber = null;
@@ -46,12 +133,43 @@ router.get('/', requireRole('admin'), async (req, res) => {
         vehicleType = n?.vehicleType || null;
         plateNumber = n?.plateNumber || null;
       } catch {}
-      return { ...r, vehicleType, vehicleNumber: plateNumber, notes: undefined };
+      return {
+        ...r,
+        status: r.is_available ? 'active' : 'offline',
+        totalDeliveries: Number(r.total_deliveries || 0),
+        completedToday: Number(r.completed_today || 0),
+        earnings: Number(r.earnings || 0),
+        vehicleType,
+        vehicleNumber: plateNumber,
+        notes: undefined,
+      };
     });
     res.json({ data: riders, total: riders.length });
   } catch (err) {
     console.error('riders list error:', err);
     res.status(500).json({ error: 'Failed to load riders' });
+  }
+});
+
+router.get('/:id/deliveries', requireRole('admin'), async (req, res) => {
+  try {
+    const { rows } = await pool.query(
+      `SELECT o.id, o.status, o.total, o.delivery_fee, o.delivery_address,
+              o.delivered_at, o.created_at, o.delivery_proof_image,
+              r.name AS restaurant_name, r.address AS restaurant_address,
+              u.name AS customer_name, u.phone AS customer_phone
+       FROM orders o
+       JOIN restaurants r ON r.id = o.restaurant_id
+       JOIN users u ON u.id = o.customer_id
+       WHERE o.rider_id = $1 AND o.status = 'delivered'
+       ORDER BY o.delivered_at DESC NULLS LAST, o.created_at DESC
+       LIMIT 100`,
+      [req.params.id]
+    );
+    res.json({ data: rows, total: rows.length });
+  } catch (err) {
+    console.error('rider deliveries list error:', err);
+    res.status(500).json({ error: 'Failed to load rider deliveries' });
   }
 });
 

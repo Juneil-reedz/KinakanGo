@@ -62,6 +62,23 @@ pool.query(`
   )
 `).catch(err => console.warn('messages init warning:', err.message));
 
+pool.query(`
+  CREATE TABLE IF NOT EXISTS rider_admin_requests (
+    id               SERIAL PRIMARY KEY,
+    rider_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    request_type     VARCHAR(20) NOT NULL CHECK (request_type IN ('payout','report')),
+    amount           DECIMAL(10,2) DEFAULT NULL,
+    period           VARCHAR(20) DEFAULT NULL,
+    details          TEXT DEFAULT NULL,
+    status           VARCHAR(10) NOT NULL DEFAULT 'pending' CHECK (status IN ('pending','resolved','denied')),
+    resolution_notes TEXT DEFAULT NULL,
+    resolved_by      INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+    resolved_at      TIMESTAMPTZ DEFAULT NULL,
+    created_at       TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at       TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`).catch(err => console.warn('rider_admin_requests init warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');

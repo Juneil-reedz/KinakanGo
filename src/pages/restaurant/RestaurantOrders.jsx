@@ -12,6 +12,7 @@ const STATUS_STYLE = {
   pending:   { cls: 'glass-orange text-ember-200',        label: 'Pending'   },
   preparing: { cls: 'glass text-forest-100',              label: 'Preparing' },
   ready:     { cls: 'btn-glow-green text-white',          label: 'Ready'     },
+  picked_up: { cls: 'glass-orange text-ember-200',        label: 'Picked Up' },
   delivered: { cls: 'glass-green text-forest-200',        label: 'Delivered' },
   cancelled: { cls: 'bg-red-500/20 text-red-300',         label: 'Cancelled' },
 };
@@ -97,6 +98,7 @@ export default function RestaurantOrders() {
     { key: 'pending',   label: 'Pending' },
     { key: 'preparing', label: 'Preparing' },
     { key: 'ready',     label: 'Ready' },
+    { key: 'picked_up', label: 'Picked Up' },
     { key: 'delivered', label: 'Delivered' },
   ];
 
@@ -294,6 +296,31 @@ export default function RestaurantOrders() {
                   </div>
                 )}
 
+                {(detail.status === 'delivered' || detail.delivery_proof_image) && (
+                  <div className="glass rounded-2xl p-4">
+                    <div className="flex items-center gap-2 mb-3">
+                      <ImageIcon className="w-4 h-4 text-forest-300/70" />
+                      <p className="text-white font-semibold text-sm">Rider Proof of Delivery</p>
+                    </div>
+                    {detail.delivered_at && (
+                      <p className="text-forest-200/45 text-xs mb-2">
+                        Delivered {new Date(detail.delivered_at).toLocaleString('en-PH')}
+                      </p>
+                    )}
+                    {detail.delivery_proof_image ? (
+                      <a href={detail.delivery_proof_image} target="_blank" rel="noreferrer">
+                        <img src={detail.delivery_proof_image} alt={`Proof for order ${detail.id}`}
+                          className="w-full rounded-xl object-cover max-h-80 border border-white/10" />
+                      </a>
+                    ) : (
+                      <div className="rounded-xl border border-dashed border-white/10 p-6 text-center">
+                        <ImageIcon className="w-8 h-8 text-forest-300/25 mx-auto mb-2" />
+                        <p className="text-forest-200/45 text-sm">No proof image saved for this delivery</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+
                 {/* Items card */}
                 <div className="glass rounded-2xl p-4">
                   <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3">Items Ordered</p>
@@ -397,10 +424,10 @@ export default function RestaurantOrders() {
                       </button>
                     )}
                     {detail.status === 'ready' && (
-                      <button onClick={() => advance(detail.id, 'delivered', 'Order delivered!')}
-                        className="flex-1 btn-glow-orange text-white font-bold py-3 rounded-2xl">
-                        Mark as Delivered
-                      </button>
+                      <div className="flex-1 glass-orange rounded-2xl p-3 text-center">
+                        <p className="text-ember-100 text-sm font-semibold">Waiting for rider pickup and delivery proof</p>
+                        <p className="text-ember-200/70 text-xs mt-0.5">The rider must upload proof before marking this delivered.</p>
+                      </div>
                     )}
                   </div>
                 ) : (
