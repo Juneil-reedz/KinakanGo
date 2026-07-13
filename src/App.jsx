@@ -1,5 +1,5 @@
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import { AuthProvider } from './context/AuthContext';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { RestaurantProvider } from './context/RestaurantContext';
@@ -58,6 +58,21 @@ import AdminIssues from './pages/admin/AdminIssues';
 import AdminPromos from './pages/admin/AdminPromos';
 import AdminApplications from './pages/admin/AdminApplications';
 
+function RequireCustomer({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  const location = useLocation();
+
+  if (loading) {
+    return <div className="min-h-screen glass-dark" />;
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" replace state={{ from: location.pathname + location.search }} />;
+  }
+
+  return children;
+}
+
 function App() {
   return (
     <NotificationProvider>
@@ -79,16 +94,16 @@ function App() {
                   <Route path="/reset-password" element={<ResetPassword />} />
 
                   {/* Cart Route (No Header/Footer/BottomNav) */}
-                  <Route path="/cart" element={<Cart />} />
+                  <Route path="/cart" element={<RequireCustomer><Cart /></RequireCustomer>} />
 
                   {/* Checkout Route (No Header/Footer/BottomNav) */}
-                  <Route path="/checkout" element={<Checkout />} />
+                  <Route path="/checkout" element={<RequireCustomer><Checkout /></RequireCustomer>} />
 
                   {/* Food Detail Route (Full Screen) - MUST BE BEFORE CATCH-ALL */}
-                  <Route path="/food/:id" element={<FoodDetail />} />
+                  <Route path="/food/:id" element={<RequireCustomer><FoodDetail /></RequireCustomer>} />
 
                   {/* Customer Routes with Layout */}
-                  <Route path="/" element={<CustomerLayout />}>
+                  <Route path="/" element={<RequireCustomer><CustomerLayout /></RequireCustomer>}>
                     <Route index element={<Home />} />
                     <Route path="search" element={<Search />} />
                     <Route path="restaurants" element={<Restaurants />} />

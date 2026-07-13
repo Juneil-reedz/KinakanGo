@@ -26,13 +26,15 @@ export default function Favorites() {
       </div>
 
       {favorites.length === 0 ? (
-        <div className="glass rounded-3xl py-16 flex flex-col items-center gap-3">
-          <Heart className="w-16 h-16 text-forest-300/20" />
-          <p className="text-white font-semibold">No favorites yet</p>
-          <p className="text-forest-200/50 text-sm">Tap the heart on any food item to save it here.</p>
-          <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white text-sm px-5 py-2.5 rounded-xl mt-2">
-            Browse Food
-          </button>
+        <div className="min-h-[calc(100vh-15rem)] flex items-center">
+          <div className="glass rounded-3xl py-16 px-6 flex flex-col items-center gap-3 text-center w-full">
+            <Heart className="w-16 h-16 text-forest-300/20" />
+            <p className="text-white font-semibold">No favorites yet</p>
+            <p className="text-forest-200/50 text-sm">Tap the heart on any food item to save it here.</p>
+            <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white text-sm px-5 py-2.5 rounded-xl mt-2">
+              Browse Food
+            </button>
+          </div>
         </div>
       ) : (
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4">

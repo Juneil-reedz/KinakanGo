@@ -1,19 +1,15 @@
 import { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Utensils, Truck, Star, Zap } from 'lucide-react';
-
-const PHRASES = ['Tap it.', 'Get it.', 'Love it.'];
+import { ChevronRight, Clock, CreditCard, Heart, MapPin, ShoppingBag, Utensils } from 'lucide-react';
 
 export default function Welcome() {
   const navigate = useNavigate();
   const [show, setShow]       = useState(false);
-  const [phrase, setPhrase]   = useState(0);
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
     const t = setTimeout(() => setShow(true), 100);
-    const i = setInterval(() => setPhrase(p => (p+1) % PHRASES.length), 2200);
-    return () => { clearTimeout(t); clearInterval(i); };
+    return () => clearTimeout(t);
   }, []);
 
   const handleStart = () => {
@@ -22,68 +18,54 @@ export default function Welcome() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden flex items-center justify-center">
-      {/* Ambient orbs */}
-      <div className="orb w-[500px] h-[500px] bg-forest-600/25 top-[-15%] left-[-10%]" />
-      <div className="orb w-96 h-96 bg-ember-500/15 bottom-[-10%] right-[-5%]" />
-      <div className="orb w-64 h-64 bg-forest-400/10 top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2" />
+    <div className="fixed inset-0 overflow-hidden flex items-center justify-center bg-[#001207] px-5 py-8">
+      <div className="orb w-[28rem] h-[28rem] bg-forest-600/20 top-[-8rem] left-[-10rem]" />
+      <div className="orb w-80 h-80 bg-ember-500/10 bottom-[-5rem] right-[-6rem]" />
+      <div className="orb w-72 h-72 bg-forest-400/10 bottom-20 left-1/2 -translate-x-1/2" />
 
-      {/* Rotating ring */}
-      <div className="absolute inset-0 flex items-center justify-center pointer-events-none opacity-10">
-        <div className="w-[600px] h-[600px] rounded-full border-2 border-forest-300 animate-spin-slow" />
-        <div className="absolute w-[450px] h-[450px] rounded-full border border-ember-400" style={{animationDirection:'reverse',animation:'spin-slow 8s linear infinite'}} />
-      </div>
-
-      <div className={`relative z-10 max-w-sm w-full mx-auto px-6 transition-all duration-1000
+      <div className={`relative z-10 max-w-[21rem] w-full mx-auto transition-all duration-1000
         ${loading ? 'opacity-0 scale-95' : show ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
+        <div className="flex items-center justify-center gap-5 text-ember-400 mb-5">
+          <Utensils className="w-6 h-6" />
+          <ShoppingBag className="w-6 h-6" />
+          <Heart className="w-6 h-6" />
+        </div>
 
-        {/* Logo */}
-        <div className="flex flex-col items-center mb-8">
-          <div className="relative mb-4">
-            <div className="w-24 h-24 btn-glow-green rounded-3xl flex items-center justify-center shadow-2xl animate-breathe">
-              <Utensils className="w-12 h-12 text-white" />
-            </div>
-            {/* Pulse rings */}
-            <div className="absolute inset-0 rounded-3xl animate-pulse-ring" style={{background:'rgba(45,138,87,.4)'}} />
-            <div className="absolute inset-0 rounded-3xl animate-pulse-ring" style={{background:'rgba(45,138,87,.2)',animationDelay:'.6s'}} />
+        <div className="text-center mb-7">
+          <h1 className="text-2xl font-heading font-black text-white text-glow-green tracking-tight">Tap it. Get it.</h1>
+          <p className="text-forest-200 mt-2 text-sm">Bongao Taste</p>
+        </div>
+
+        <div className="rounded-[1.7rem] overflow-hidden shadow-2xl border border-ember-300/20 card-3d mb-7">
+          <img
+            src={`${import.meta.env.BASE_URL}assets/welcome-poster.png`}
+            alt="KinakanGo order now poster"
+            className="w-full h-auto block"
+          />
+        </div>
+
+        <div className="glass rounded-3xl p-4 grid grid-cols-3 gap-3 text-center mb-5">
+          <div className="flex flex-col items-center gap-2">
+            <Clock className="w-5 h-5 text-ember-400" />
+            <span className="text-forest-100 text-xs">30 min</span>
           </div>
-
-          <h1 className="text-4xl font-heading font-bold text-white text-glow-green tracking-tight">
-            KinakanGo
-          </h1>
-          <p className="text-forest-200 mt-1 text-sm tracking-widest uppercase">Bongao Taste</p>
+          <div className="flex flex-col items-center gap-2">
+            <MapPin className="w-5 h-5 text-ember-400" />
+            <span className="text-forest-100 text-xs">Track</span>
+          </div>
+          <div className="flex flex-col items-center gap-2">
+            <CreditCard className="w-5 h-5 text-ember-400" />
+            <span className="text-forest-100 text-xs">Easy Pay</span>
+          </div>
         </div>
 
-        {/* Animated phrase */}
-        <div className="glass rounded-2xl px-6 py-5 mb-6 text-center card-3d">
-          <p className="text-3xl font-heading font-bold text-white text-glow-orange mb-1 transition-all duration-500">
-            {PHRASES[phrase]}
-          </p>
-          <p className="text-forest-200/70 text-sm">Food delivery for Bongao, Tawi-Tawi</p>
-        </div>
-
-        {/* Feature pills */}
-        <div className="grid grid-cols-3 gap-3 mb-8">
-          {[
-            { icon: Truck, label: 'Fast Delivery', color: 'text-ember-400' },
-            { icon: Star,  label: 'Top Rated',     color: 'text-forest-300' },
-            { icon: Zap,   label: 'Easy Order',    color: 'text-ember-300' },
-          ].map(({ icon: Icon, label, color }) => (
-            <div key={label} className="glass rounded-xl p-3 flex flex-col items-center gap-1.5 card-3d">
-              <Icon className={`w-5 h-5 ${color}`} />
-              <span className="text-forest-100/70 text-xs text-center leading-tight">{label}</span>
-            </div>
-          ))}
-        </div>
-
-        {/* CTA */}
         <button onClick={handleStart}
-          className="w-full py-4 rounded-2xl btn-glow-orange text-white font-heading font-bold text-lg flex items-center justify-center gap-2 relative overflow-hidden">
+          className="w-full py-4 rounded-2xl btn-glow-orange text-white font-heading font-bold text-base flex items-center justify-center gap-2 relative overflow-hidden">
           <span className="relative z-10 flex items-center gap-2">
             {loading ? (
               <>
                 <div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" />
-                Loading…
+                Opening...
               </>
             ) : (
               <>Get Started <ChevronRight className="w-5 h-5" /></>
@@ -91,20 +73,7 @@ export default function Welcome() {
           </span>
         </button>
 
-        <div className="flex items-center gap-3 mt-4">
-          <button onClick={() => navigate('/login')}
-            className="flex-1 py-3 rounded-2xl glass text-forest-100 font-semibold text-sm hover:glass-green transition-all text-center">
-            Sign In
-          </button>
-          <button onClick={() => navigate('/register')}
-            className="flex-1 py-3 rounded-2xl glass text-forest-100 font-semibold text-sm hover:glass-green transition-all text-center">
-            Register
-          </button>
-        </div>
-
-        <p className="text-center text-forest-200/40 text-xs mt-6">
-          Serving Bongao, Tawi-Tawi 🇵🇭
-        </p>
+        <p className="text-center text-forest-200/35 text-xs mt-5">Serving Bongao, Tawi-Tawi</p>
       </div>
     </div>
   );

@@ -1,11 +1,12 @@
 import { useState } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Eye, EyeOff, Mail, Lock, Utensils, ChevronRight, ArrowLeft } from 'lucide-react';
 
 export default function Login() {
   const navigate = useNavigate();
+  const location = useLocation();
   const { login } = useAuth();
   const { addNotification } = useNotification();
   const [form, setForm]       = useState({ email:'', password:'' });
@@ -29,7 +30,7 @@ export default function Login() {
     try {
       await login(form.email, form.password);
       addNotification('Login successful! Welcome back! 🎉', 'success');
-      navigate('/welcome', { replace: true });
+      navigate(location.state?.from || '/welcome', { replace: true });
     } catch (err) {
       const msg = err?.data?.error || err?.message || 'Invalid email or password';
       setErrors({ password: msg });

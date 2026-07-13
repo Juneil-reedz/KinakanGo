@@ -13,18 +13,19 @@ export default function Cart() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen flex items-center justify-center px-4 relative">
+      <div className="min-h-screen px-4 py-12 relative animate-fade-up">
         <div className="orb w-72 h-72 bg-forest-600/15 top-1/4 left-1/4" />
-        <div className="glass rounded-3xl p-10 max-w-sm w-full text-center card-3d animate-fade-up">
-          <div className="w-20 h-20 glass rounded-3xl flex items-center justify-center mx-auto mb-4">
-            <ShoppingCart className="w-10 h-10 text-forest-300/40" />
+        <div className="max-w-3xl mx-auto space-y-6">
+          <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">My Cart</h1>
+          <div className="glass rounded-3xl py-16 px-6 flex flex-col items-center gap-3 text-center card-3d">
+            <ShoppingCart className="w-16 h-16 text-forest-300/20" />
+            <p className="text-white font-semibold">Your cart is empty</p>
+            <p className="text-forest-200/50 text-sm">Looks like you haven't added anything yet.</p>
+            <button onClick={() => navigate('/restaurants')}
+              className="btn-glow-orange text-white text-sm px-5 py-2.5 rounded-xl mt-2 font-bold">
+              Browse Food
+            </button>
           </div>
-          <h2 className="text-xl font-heading font-bold text-white mb-2">Your cart is empty</h2>
-          <p className="text-forest-200/50 text-sm mb-6">Looks like you haven't added anything yet.</p>
-          <button onClick={() => navigate('/restaurants')}
-            className="btn-glow-orange text-white font-bold px-8 py-3 rounded-xl">
-            Browse Food
-          </button>
         </div>
       </div>
     );
