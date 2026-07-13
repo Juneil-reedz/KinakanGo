@@ -5,7 +5,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { riderRequest } from '../../context/RiderContext';
 import {
   Banknote, Package, Bike, Clock, MapPin, ChevronRight, Store,
-  Check, X, TrendingUp, Wifi, WifiOff, MessageSquare
+  Check, X, TrendingUp, Wifi, WifiOff
 } from 'lucide-react';
 
 const STATS_DEF = [
@@ -33,7 +33,6 @@ export default function RiderDashboard() {
     todayEarnings: 0,
     todayDeliveries: 0,
   });
-  const [messages, setMessages] = useState([]);
   const pollRef = useRef(null);
 
   // On mount: upsert rider_profiles row so auto-assign can find this rider
@@ -46,10 +45,9 @@ export default function RiderDashboard() {
   const fetchOrders = async (silent = false) => {
     try {
       if (!silent) setLoading(true);
-      const [ordersRes, profileRes, messagesRes] = await Promise.allSettled([
+      const [ordersRes, profileRes] = await Promise.allSettled([
         riderRequest('/orders?rider_orders=true&limit=50'),
         riderRequest('/riders/me'),
-        riderRequest('/messages?box=inbox').catch(() => ({ data: [] })),
       ]);
       if (ordersRes.status === 'fulfilled') {
         const orders = ordersRes.value.data || ordersRes.value || [];
@@ -68,9 +66,6 @@ export default function RiderDashboard() {
           todayEarnings: Number(profile.today_earnings || 0),
           todayDeliveries: Number(profile.today_deliveries || 0),
         });
-      }
-      if (messagesRes.status === 'fulfilled') {
-        setMessages(messagesRes.value.data || []);
       }
     } catch {
       if (!silent) addNotification('Failed to load orders', 'error');
@@ -127,7 +122,9 @@ export default function RiderDashboard() {
       await riderRequest(`/orders/${id}/rider-response`, {
         method: 'PATCH', body: JSON.stringify({ accept: false }),
       });
-    } catch {}
+    } catch {
+      // Keep the delivery out of the rider queue even if reassignment already happened server-side.
+    }
     setPending(prev => prev.filter(o => o.id !== id));
     addNotification('Order declined. Another rider will be assigned.', 'success');
   };
@@ -178,10 +175,10 @@ export default function RiderDashboard() {
       <section className={`${mobileSection === 'overview' ? 'block' : 'hidden'} lg:block space-y-5`}>
         {/* Stats */}
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
-          {STATS_DEF.map(({ label, key, icon:Icon, fmt, color }) => (
+          {STATS_DEF.map(({ label, key, icon: StatIcon, fmt, color }) => ( // eslint-disable-line no-unused-vars
             <div key={key} className="glass card-3d rounded-2xl p-4">
               <div className={`w-9 h-9 ${color} rounded-xl flex items-center justify-center mb-3`}>
-                <Icon className="w-4 h-4 text-white" />
+                <StatIcon className="w-4 h-4 text-white" />
               </div>
               <p className="text-white font-heading font-bold text-xl">{fmt(stats[key])}</p>
               <p className="text-forest-200/50 text-xs mt-0.5">{label}</p>
@@ -198,19 +195,6 @@ export default function RiderDashboard() {
           <button className="glass hover:glass-orange transition-all rounded-xl py-2.5 flex items-center justify-center gap-2 text-forest-100 text-sm font-medium">
             <MapPin className="w-4 h-4" /> My Zone
           </button>
-        </div>
-
-        <div className="glass rounded-2xl p-4">
-          <div className="flex items-center justify-between mb-2">
-            <div className="flex items-center gap-2">
-              <MessageSquare className="w-4 h-4 text-forest-300" />
-              <p className="text-white font-semibold text-sm">Messages</p>
-            </div>
-            <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full">{messages.length}</span>
-          </div>
-          <p className="text-forest-200/60 text-sm line-clamp-2">
-            {messages[0] ? `${messages[0].sender_name}: ${messages[0].body}` : 'Messages from customers or restaurants will appear here.'}
-          </p>
         </div>
 
         {/* Offline notice */}

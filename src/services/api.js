@@ -130,6 +130,8 @@ export const favoritesApi = {
 export const messagesApi = {
   list: (box = 'inbox') => request(`/messages?${new URLSearchParams({ box })}`),
   create: (data) => request('/messages', { method: 'POST', body: JSON.stringify(data) }),
+  update: (id, data) => request(`/messages/${id}`, { method: 'PATCH', body: JSON.stringify(data) }),
+  remove: (id) => request(`/messages/${id}`, { method: 'DELETE' }),
   markRead: (id) => request(`/messages/${id}/read`, { method: 'PATCH' }),
 };
 

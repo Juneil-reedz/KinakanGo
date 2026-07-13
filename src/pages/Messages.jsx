@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Inbox, MessageSquare, Plus, Reply, Send, User, X } from 'lucide-react';
+import { Check, Inbox, MessageSquare, Pencil, Plus, Reply, Send, Trash2, User, X } from 'lucide-react';
 import { messagesApi } from '../services/api';
 
 export default function Messages() {
@@ -10,6 +10,8 @@ export default function Messages() {
   const [form, setForm] = useState({ to: '', subject: '', body: '' });
   const [reply, setReply] = useState('');
   const [sendingReply, setSendingReply] = useState(false);
+  const [editing, setEditing] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
 
   const conversationKey = (message) => {
     if (message.box === 'sent') return `user:${message.recipient_user_id || message.recipient_label}`;
@@ -121,6 +123,28 @@ export default function Messages() {
     }
   };
 
+  const startEdit = (message) => setEditing({ id: message.id, subject: message.subject || 'New message', body: message.body || '' });
+  const cancelEdit = () => setEditing(null);
+
+  const saveEdit = async (e) => {
+    e.preventDefault();
+    if (!editing?.body.trim() || savingEdit) return;
+    setSavingEdit(true);
+    try {
+      const saved = await messagesApi.update(editing.id, { subject: editing.subject, body: editing.body });
+      setMessages(prev => prev.map(message => message.id === editing.id ? { ...message, ...saved } : message));
+      setEditing(null);
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const deleteMessage = async (id) => {
+    if (!window.confirm('Delete this message?')) return;
+    await messagesApi.remove(id);
+    setMessages(prev => prev.filter(message => message.id !== id));
+  };
+
   return (
     <div className="h-full flex flex-col animate-fade-up space-y-4 pb-20 lg:pb-0">
       <div className="flex items-center justify-between gap-3">
@@ -199,10 +223,41 @@ export default function Messages() {
               <div className="flex-1 p-5 overflow-auto space-y-4">
                 {thread.map(message => (
                   <div key={message.id} className={`rounded-2xl p-4 border border-white/5 max-w-[85%] ${message.box === 'sent' ? 'ml-auto glass-green' : 'glass-dark'}`}>
-                    <p className="text-forest-100/80 text-sm leading-relaxed whitespace-pre-wrap">{message.body}</p>
-                    <p className="text-forest-200/35 text-xs mt-3">
-                      {message.box === 'sent' ? 'You' : (restaurantNameFrom(message) || message.sender_name || 'Sender')} · {new Date(message.created_at || message.createdAt).toLocaleString('en-PH')}
-                    </p>
+                    {editing?.id === message.id ? (
+                      <form onSubmit={saveEdit} className="space-y-3">
+                        <input value={editing.subject} onChange={e => setEditing(edit => ({ ...edit, subject: e.target.value }))}
+                          className="w-full input-glass py-2 text-sm" placeholder="Subject" />
+                        <textarea value={editing.body} onChange={e => setEditing(edit => ({ ...edit, body: e.target.value }))}
+                          rows={4} className="w-full input-glass py-2 text-sm resize-none" placeholder="Message" />
+                        <div className="flex justify-end gap-2">
+                          <button type="button" onClick={cancelEdit} className="glass text-forest-100 text-xs font-semibold px-3 py-2 rounded-lg">Cancel</button>
+                          <button type="submit" disabled={!editing.body.trim() || savingEdit}
+                            className="btn-glow-green text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50">
+                            <Check className="w-3.5 h-3.5" /> Save
+                          </button>
+                        </div>
+                      </form>
+                    ) : (
+                      <>
+                        <div className="flex items-start justify-between gap-3">
+                          <p className="text-forest-100/80 text-sm leading-relaxed whitespace-pre-wrap flex-1">{message.body}</p>
+                          <div className="flex items-center gap-1 flex-shrink-0">
+                            {message.box === 'sent' && (
+                              <button type="button" onClick={() => startEdit(message)} className="w-7 h-7 glass rounded-lg flex items-center justify-center text-forest-100 hover:glass-green" title="Edit message">
+                                <Pencil className="w-3.5 h-3.5" />
+                              </button>
+                            )}
+                            <button type="button" onClick={() => deleteMessage(message.id)} className="w-7 h-7 glass rounded-lg flex items-center justify-center text-forest-100 hover:glass-orange" title="Delete message">
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </button>
+                          </div>
+                        </div>
+                        <p className="text-forest-200/35 text-xs mt-3">
+                          {message.box === 'sent' ? 'You' : (restaurantNameFrom(message) || message.sender_name || 'Sender')} · {new Date(message.created_at || message.createdAt).toLocaleString('en-PH')}
+                          {message.updated_at && message.updated_at !== message.created_at ? ' · edited' : ''}
+                        </p>
+                      </>
+                    )}
                   </div>
                 ))}
               </div>

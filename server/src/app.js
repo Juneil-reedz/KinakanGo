@@ -58,9 +58,15 @@ pool.query(`
     subject           VARCHAR(160) NOT NULL DEFAULT 'New message',
     body              TEXT NOT NULL,
     is_read           BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    updated_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
   )
 `).catch(err => console.warn('messages init warning:', err.message));
+
+pool.query(`
+  ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+`).catch(err => console.warn('messages updated_at column warning:', err.message));
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS rider_admin_requests (

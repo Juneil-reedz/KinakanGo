@@ -6,6 +6,12 @@ router.use(authenticate);
 
 const normalizeSql = (value) => `regexp_replace(lower(${value}), '[^a-z0-9]', '', 'g')`;
 
+const restaurantRecipientSql = `EXISTS (
+  SELECT 1 FROM restaurants r
+  WHERE r.owner_id = $1
+    AND (${normalizeSql('r.name')} = ${normalizeSql('m.recipient_label')} OR r.name ILIKE m.recipient_label)
+)`;
+
 async function resolveRecipient(to) {
   const needle = String(to || '').trim();
   if (!needle) return { recipient_user_id: null, recipient_label: '' };
@@ -44,16 +50,12 @@ router.get('/', async (req, res) => {
       ? 'm.sender_id = $1'
       : `(
           m.recipient_user_id = $1 OR (
-            m.recipient_user_id IS NULL AND EXISTS (
-              SELECT 1 FROM restaurants r
-              WHERE r.owner_id = $1
-                AND (${normalizeSql('r.name')} = ${normalizeSql('m.recipient_label')} OR r.name ILIKE m.recipient_label)
-            )
+            m.recipient_user_id IS NULL AND ${restaurantRecipientSql}
           )
         )`;
     const { rows } = await pool.query(
       `SELECT m.id, m.sender_id, m.recipient_user_id, m.recipient_label,
-              m.subject, m.body, m.is_read, m.created_at,
+              m.subject, m.body, m.is_read, m.created_at, m.updated_at,
               sender.name AS sender_name, sender.email AS sender_email,
               sender_restaurant.name AS sender_restaurant_name,
               sender_restaurant.image_url AS sender_restaurant_image,
@@ -85,7 +87,7 @@ router.post('/', async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO messages (sender_id, recipient_user_id, recipient_label, subject, body)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING id, sender_id, recipient_user_id, recipient_label, subject, body, is_read, created_at`,
+       RETURNING id, sender_id, recipient_user_id, recipient_label, subject, body, is_read, created_at, updated_at`,
       [req.user.id, recipient.recipient_user_id, recipient.recipient_label, subject || 'New message', body]
     );
     const message = rows[0];
@@ -109,13 +111,52 @@ router.post('/', async (req, res) => {
 router.patch('/:id/read', async (req, res) => {
   try {
     await pool.query(
-      'UPDATE messages SET is_read = true WHERE id = $1 AND recipient_user_id = $2',
-      [req.params.id, req.user.id]
+      `UPDATE messages m
+       SET is_read = true
+       WHERE m.id = $2 AND (m.recipient_user_id = $1 OR (m.recipient_user_id IS NULL AND ${restaurantRecipientSql}))`,
+      [req.user.id, req.params.id]
     );
     res.json({ ok: true });
   } catch (err) {
     console.error('messages read error:', err);
     res.status(500).json({ error: 'Failed to update message' });
+  }
+});
+
+router.patch('/:id', async (req, res) => {
+  try {
+    const subject = String(req.body.subject || '').trim() || 'New message';
+    const body = String(req.body.body || '').trim();
+    if (!body) return res.status(400).json({ error: 'Message body is required' });
+
+    const { rows } = await pool.query(
+      `UPDATE messages
+       SET subject = $3, body = $4, updated_at = NOW()
+       WHERE id = $2 AND sender_id = $1
+       RETURNING id, sender_id, recipient_user_id, recipient_label, subject, body, is_read, created_at, updated_at`,
+      [req.user.id, req.params.id, subject, body]
+    );
+    if (!rows.length) return res.status(404).json({ error: 'Message not found or cannot be edited' });
+    res.json(rows[0]);
+  } catch (err) {
+    console.error('messages update error:', err);
+    res.status(500).json({ error: 'Failed to update message' });
+  }
+});
+
+router.delete('/:id', async (req, res) => {
+  try {
+    const { rowCount } = await pool.query(
+      `DELETE FROM messages m
+       WHERE m.id = $2
+         AND (m.sender_id = $1 OR m.recipient_user_id = $1 OR (m.recipient_user_id IS NULL AND ${restaurantRecipientSql}))`,
+      [req.user.id, req.params.id]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Message not found' });
+    res.json({ ok: true });
+  } catch (err) {
+    console.error('messages delete error:', err);
+    res.status(500).json({ error: 'Failed to delete message' });
   }
 });
 
