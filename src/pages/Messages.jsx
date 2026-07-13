@@ -156,7 +156,7 @@ export default function Messages() {
   };
 
   return (
-    <div className="h-full flex flex-col animate-fade-up space-y-3 sm:space-y-4 pb-20 lg:pb-0">
+    <div className={`h-full flex flex-col animate-fade-up space-y-3 sm:space-y-4 ${mobileThreadOpen ? 'pb-0' : 'pb-20'} lg:pb-0`}>
       <div className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} items-center justify-between gap-3`}>
         <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">Messages</h1>
         <button onClick={() => setShowComposer(true)}
@@ -165,7 +165,7 @@ export default function Messages() {
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-[calc(100vh-10rem)] lg:min-h-[calc(100vh-13rem)]">
+      <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-0 lg:min-h-[calc(100vh-13rem)]">
         <section className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col min-h-[calc(100vh-14rem)] lg:min-h-0`}>
           <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
             <div className="flex items-center gap-2">
@@ -215,7 +215,7 @@ export default function Messages() {
           )}
         </section>
 
-        <section className={`${mobileThreadOpen ? 'flex' : 'hidden lg:flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col min-h-[calc(100vh-8.5rem)] lg:min-h-0`}>
+        <section className={`${mobileThreadOpen ? 'flex' : 'hidden lg:flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col h-[calc(100vh-8.5rem)] min-h-0 lg:h-auto lg:min-h-0`}>
           {selectedConversation ? (
             <>
               <div className="p-4 sm:p-5 flex items-center gap-3" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
@@ -234,7 +234,7 @@ export default function Messages() {
                 </div>
               </div>
 
-              <div className="flex-1 p-3 sm:p-5 overflow-auto space-y-3 sm:space-y-4">
+              <div className="flex-1 min-h-0 p-3 sm:p-5 overflow-y-auto overscroll-contain space-y-3 sm:space-y-4 scrollbar-hide">
                 {thread.map(message => (
                   <div key={message.id} className={`rounded-3xl sm:rounded-2xl p-4 border border-white/5 max-w-[92%] sm:max-w-[85%] ${message.box === 'sent' ? 'ml-auto glass-green' : 'glass-dark'}`}>
                     {editing?.id === message.id ? (
