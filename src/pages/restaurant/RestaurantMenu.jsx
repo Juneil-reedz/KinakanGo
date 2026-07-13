@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useNotification } from '../../context/NotificationContext';
-import { useRestaurant } from '../../context/RestaurantContext';
-import { menuApi } from '../../services/api';
+import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check, ImagePlus, Tag } from 'lucide-react';
 
 function pickImage(onPick) {
@@ -79,7 +78,7 @@ export default function RestaurantMenu() {
     (async () => {
       try {
         setLoading(true);
-        const res = await menuApi.list(restaurantId);
+        const res = await restaurantRequest(`/restaurants/${restaurantId}/menu?includeClosed=true`);
         setItems(res.data || res || []);
       } catch {
         addNotification('Failed to load menu', 'error');
@@ -119,7 +118,7 @@ export default function RestaurantMenu() {
     const payload = { name:form.name, category:form.category, price:parseFloat(form.price), description:form.description||null, image:form.image||null, isVegetarian:form.isVegetarian, prepTimeMins:form.prepTime ? parseInt(form.prepTime) : null };
     try {
       if (modal === 'add') {
-        const created = await menuApi.create(restaurantId, payload);
+        const created = await restaurantRequest(`/restaurants/${restaurantId}/menu`, { method: 'POST', body: JSON.stringify(payload) });
         // Merge: backend row first, then override with local values so photo shows immediately
         setItems(prev => [...prev, {
           is_available: true,
@@ -131,7 +130,7 @@ export default function RestaurantMenu() {
         }]);
         addNotification(`${form.name} added!`, 'success');
       } else {
-        const updated = await menuApi.update(restaurantId, editItem.id, payload);
+        const updated = await restaurantRequest(`/restaurants/${restaurantId}/menu/${editItem.id}`, { method: 'PATCH', body: JSON.stringify(payload) });
         setItems(prev => prev.map(i => i.id === editItem.id
           ? { ...i, ...(updated || {}), image_url: updated?.image_url || payload.image || i.image_url, category_name: form.category, is_vegetarian: payload.isVegetarian, prep_time_mins: payload.prepTimeMins }
           : i));
@@ -147,7 +146,7 @@ export default function RestaurantMenu() {
     const item = items.find(i => i.id === id);
     const current = item.is_available ?? item.isAvailable ?? true;
     try {
-      await menuApi.update(restaurantId, id, { isAvailable: !current });
+      await restaurantRequest(`/restaurants/${restaurantId}/menu/${id}`, { method: 'PATCH', body: JSON.stringify({ isAvailable: !current }) });
       setItems(prev => prev.map(i => i.id === id ? { ...i, is_available: !current, isAvailable: !current } : i));
       addNotification(`${item.name} ${current ? 'disabled' : 'enabled'}`, 'success');
     } catch {
@@ -159,7 +158,7 @@ export default function RestaurantMenu() {
     const item = items.find(i => i.id === id);
     if (!confirm(`Delete ${item.name}?`)) return;
     try {
-      await menuApi.remove(restaurantId, id);
+      await restaurantRequest(`/restaurants/${restaurantId}/menu/${id}`, { method: 'DELETE' });
       setItems(prev => prev.filter(i => i.id !== id));
       addNotification('Item deleted.', 'success');
     } catch {

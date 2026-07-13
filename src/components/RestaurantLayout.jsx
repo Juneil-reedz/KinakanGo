@@ -2,11 +2,12 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
-import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home, LogOut } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home, LogOut, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react';
 
 const NAV = [
   { path:'/owner/dashboard', label:'Dashboard', icon:LayoutDashboard },
   { path:'/owner/orders',    label:'Orders',    icon:ShoppingBag },
+  { path:'/owner/messages',  label:'Messages',  icon:MessageSquare },
   { path:'/owner/menu',      label:'Menu',      icon:UtensilsCrossed },
   { path:'/owner/reports',   label:'Reports',   icon:BarChart3 },
   { path:'/owner/settings',  label:'Settings',  icon:Settings },
@@ -15,9 +16,10 @@ const NAV = [
 export default function RestaurantLayout({ children }) {
   const location = useLocation();
   const navigate  = useNavigate();
-  const { restaurant, isLoading, logout } = useRestaurant();
+  const { restaurant, isLoading, logout, updateRestaurant } = useRestaurant();
   const { addNotification } = useNotification();
   const [collapsed, setCollapsed] = useState(false);
+  const [savingStatus, setSavingStatus] = useState(false);
 
   useEffect(() => {
     if (!isLoading && !restaurant) navigate('/owner/login', { replace: true });
@@ -26,6 +28,20 @@ export default function RestaurantLayout({ children }) {
   const isActive = (p) => location.pathname === p;
 
   const handleLogout = () => { logout(); navigate('/owner/login'); };
+
+  const toggleOpen = async () => {
+    if (savingStatus) return;
+    const next = !(restaurant?.is_open ?? true);
+    setSavingStatus(true);
+    try {
+      await updateRestaurant({ isOpen: next });
+      addNotification(next ? 'Restaurant is now open' : 'Restaurant is now closed', 'success');
+    } catch {
+      addNotification('Failed to update restaurant status', 'error');
+    } finally {
+      setSavingStatus(false);
+    }
+  };
 
   if (isLoading || !restaurant) {
     return (
@@ -73,9 +89,18 @@ export default function RestaurantLayout({ children }) {
             {!collapsed && restaurant && (
               <div className="glass rounded-xl px-3 py-2.5 mb-2">
                 <p className="text-white text-xs font-semibold truncate">{restaurant.name}</p>
-                <p className="text-forest-200/50 text-xs truncate">{restaurant.email}</p>
+                <p className={`text-xs truncate ${(restaurant.is_open ?? true) ? 'text-forest-300' : 'text-red-300'}`}>
+                  {(restaurant.is_open ?? true) ? 'Open for orders' : 'Closed - hidden from customers'}
+                </p>
               </div>
             )}
+            <button onClick={toggleOpen} disabled={savingStatus} title={collapsed ? ((restaurant?.is_open ?? true) ? 'Close Restaurant' : 'Open Restaurant') : ''}
+              className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-sm transition-all disabled:opacity-60 ${collapsed ? 'justify-center' : ''} ${(restaurant?.is_open ?? true) ? 'glass-green text-forest-100' : 'bg-red-500/20 text-red-200 hover:bg-red-500/30'}`}>
+              {(restaurant?.is_open ?? true)
+                ? <ToggleRight className="w-4 h-4 flex-shrink-0" />
+                : <ToggleLeft className="w-4 h-4 flex-shrink-0" />}
+              {!collapsed && ((restaurant?.is_open ?? true) ? 'Open' : 'Closed')}
+            </button>
             <button onClick={() => navigate('/')} title={collapsed ? 'Customer Home' : ''}
               className={`flex items-center gap-2 w-full px-3 py-2.5 rounded-xl text-forest-200/50 hover:text-white hover:glass-green text-sm transition-all ${collapsed ? 'justify-center' : ''}`}>
               <Home className="w-4 h-4 flex-shrink-0" />{!collapsed && 'Customer Home'}
@@ -104,6 +129,11 @@ export default function RestaurantLayout({ children }) {
             <p className="text-forest-200/50 text-xs">Your recent activity</p>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={toggleOpen} disabled={savingStatus}
+              className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-60 ${(restaurant?.is_open ?? true) ? 'glass-green text-forest-100' : 'bg-red-500/20 text-red-200'}`}>
+              {(restaurant?.is_open ?? true) ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}
+              {(restaurant?.is_open ?? true) ? 'Open' : 'Closed'}
+            </button>
             <div className="w-9 h-9 btn-glow-orange rounded-xl flex items-center justify-center font-bold text-white text-sm">
               {restaurant?.name?.charAt(0) || 'R'}
             </div>

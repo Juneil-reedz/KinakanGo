@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { DollarSign, Package, TrendingUp, Users, BarChart2, ShoppingBag } from 'lucide-react';
-import { useRestaurant } from '../../context/RestaurantContext';
-import { request } from '../../services/api';
+import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 
 function groupByPeriod(orders, range) {
   const rows = [];
@@ -72,7 +71,7 @@ export default function RestaurantReports() {
   useEffect(() => {
     if (!restaurant?.id) return;
     setLoading(true);
-    request(`/orders?restaurant_id=${restaurant.id}&limit=1000`)
+    restaurantRequest(`/orders?${new URLSearchParams({ restaurant_id: restaurant.id, limit: 1000 })}`)
       .then(res => setOrders(res.data || res.orders || res || []))
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));

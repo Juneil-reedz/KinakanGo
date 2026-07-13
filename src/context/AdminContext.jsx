@@ -119,7 +119,7 @@ export const adminApi = {
     unban:  (id)     => adminRequest(`/users/${id}/unban`, { method: 'POST' }),
   },
   restaurants: {
-    list:    (p = {}) => adminRequest(`/restaurants?${new URLSearchParams(p)}`),
+    list:    (p = {}) => adminRequest(`/restaurants?${new URLSearchParams({ includeClosed: 'true', ...p })}`),
     approve: (id)     => adminRequest(`/restaurants/${id}/approve`, { method: 'POST' }),
     remove:  (id)     => adminRequest(`/restaurants/${id}`, { method: 'DELETE' }),
   },

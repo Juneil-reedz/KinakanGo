@@ -17,7 +17,7 @@ export default function AdminRestaurants() {
     try {
       setLoading(true);
       const res = await adminApi.restaurants.list({ limit: 50 });
-      setList(res.data || res || []);
+      setList((res.data || res || []).map(r => ({ ...r, isOpen: r.isOpen ?? r.is_open })));
     } catch {
       addNotification("Failed to load restaurants", "error");
     } finally {

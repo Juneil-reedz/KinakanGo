@@ -1,7 +1,7 @@
 const pool = require('../config/db');
 
 async function list(req, res) {
-  const { search, cuisine, isOpen, page = 1, limit = 20 } = req.query;
+  const { search, cuisine, isOpen, includeClosed, page = 1, limit = 20 } = req.query;
   const offset = (page - 1) * limit;
   const where  = ['is_approved = true'];
   const params = [];
@@ -12,6 +12,8 @@ async function list(req, res) {
   if (isOpen !== undefined) {
     where.push(`is_open = $${idx++}`);
     params.push(isOpen === 'true');
+  } else if (includeClosed !== 'true') {
+    where.push('is_open = true');
   }
 
   const { rows } = await pool.query(

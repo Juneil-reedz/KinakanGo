@@ -1,8 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
-import { useRestaurant } from '../../context/RestaurantContext';
+import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 import { useNotification } from '../../context/NotificationContext';
-import { ordersApi } from '../../services/api';
 import {
   Package, Search, MapPin, Clock, Check, X, AlertTriangle,
   User, Phone, Smartphone, ImageIcon, RefreshCw, ChevronRight, Bike,
@@ -37,7 +36,7 @@ export default function RestaurantOrders() {
     if (!restaurant?.id) return;
     try {
       if (!silent) setLoading(true);
-      const res = await ordersApi.list({ restaurant_id: restaurant.id, limit: 200 });
+      const res = await restaurantRequest(`/orders?${new URLSearchParams({ restaurant_id: restaurant.id, limit: 200 })}`);
       setOrders(res.data || res || []);
     } catch {
       if (!silent) addNotification('Failed to load orders', 'error');
@@ -57,7 +56,7 @@ export default function RestaurantOrders() {
     setDetail({ ...order, items: [] });
     setDetailLoading(true);
     try {
-      const full = await ordersApi.getOne(order.id);
+      const full = await restaurantRequest(`/orders/${order.id}`);
       // Merge so list-level fields (customer_name etc) fill in if getOne misses them
       setDetail(prev => ({ ...prev, ...full, items: full.items || [] }));
     } catch (err) {
@@ -71,7 +70,7 @@ export default function RestaurantOrders() {
 
   const advance = async (id, nextStatus, msg) => {
     try {
-      await ordersApi.updateStatus(id, nextStatus);
+      await restaurantRequest(`/orders/${id}/status`, { method: 'PATCH', body: JSON.stringify({ status: nextStatus }) });
       setOrders(prev => prev.map(o => o.id === id ? { ...o, status: nextStatus } : o));
       if (detail?.id === id) setDetail(d => ({ ...d, status: nextStatus }));
       addNotification(msg, 'success');
@@ -83,7 +82,7 @@ export default function RestaurantOrders() {
   const reject = async () => {
     if (!rejectReason.trim() || !detail) return;
     try {
-      await ordersApi.updateStatus(detail.id, 'cancelled', { cancelledReason: rejectReason });
+      await restaurantRequest(`/orders/${detail.id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'cancelled', cancelledReason: rejectReason }) });
       setOrders(prev => prev.map(o => o.id === detail.id ? { ...o, status: 'cancelled' } : o));
       setDetail(d => ({ ...d, status: 'cancelled' }));
       addNotification('Order rejected.', 'success');

@@ -2,7 +2,7 @@ const pool = require('../config/db');
 
 async function listAll(req, res) {
   const { category, limit = 20 } = req.query;
-  const where  = ['m.is_available = true', 'r.is_approved = true'];
+  const where  = ['m.is_available = true', 'r.is_approved = true', 'r.is_open = true'];
   const params = [];
   let   idx    = 1;
 
@@ -27,13 +27,16 @@ async function listAll(req, res) {
 async function listItems(req, res) {
   const restaurantId = parseInt(req.params.restaurantId);
   if (isNaN(restaurantId)) return res.status(400).json({ error: 'Invalid restaurant id' });
+  const includeClosed = req.query.includeClosed === 'true';
   const { rows } = await pool.query(
     `SELECT m.*, c.name AS category_name
      FROM menu_items m
+     JOIN restaurants r ON r.id = m.restaurant_id
      LEFT JOIN menu_categories c ON m.category_id = c.id
      WHERE m.restaurant_id = $1
+       AND ($2 = true OR r.is_open = true)
      ORDER BY c.sort_order, m.name`,
-    [restaurantId]
+    [restaurantId, includeClosed]
   );
   res.json(rows);
 }

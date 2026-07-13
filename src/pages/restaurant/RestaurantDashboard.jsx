@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
-import { useRestaurant } from '../../context/RestaurantContext';
-import { messagesApi, ordersApi } from '../../services/api';
+import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 import { DollarSign, Package, TrendingUp, ChefHat, ArrowRight, Clock, User, MessageSquare, MapPin, Store } from 'lucide-react';
 
 const STATUS_STYLE = {
@@ -21,9 +20,9 @@ export default function RestaurantDashboard() {
     (async () => {
       try {
         setLoading(true);
-        const res = await ordersApi.list({ limit: 5 });
+        const res = await restaurantRequest('/orders?limit=5');
         setOrders(res.data || res || []);
-        const inbox = await messagesApi.list('inbox').catch(() => null);
+        const inbox = await restaurantRequest('/messages?box=inbox').catch(() => null);
         setMessages(inbox?.data || []);
       } catch {
         // silently fail — dashboard is non-critical
@@ -72,7 +71,7 @@ export default function RestaurantDashboard() {
             Edit Profile
           </Link>
         </div>
-        <div className="glass rounded-3xl p-5">
+        <Link to="/owner/messages" className="glass rounded-3xl p-5 hover:glass-green transition-all">
           <div className="flex items-center justify-between mb-3">
             <div className="flex items-center gap-2">
               <MessageSquare className="w-4 h-4 text-forest-300" />
@@ -83,7 +82,7 @@ export default function RestaurantDashboard() {
           <p className="text-forest-200/60 text-sm line-clamp-2">
             {messages[0] ? `${messages[0].sender_name}: ${messages[0].body}` : 'No customer messages yet.'}
           </p>
-        </div>
+        </Link>
       </div>
 
       {/* Stat cards */}

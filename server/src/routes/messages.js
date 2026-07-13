@@ -4,6 +4,8 @@ const { authenticate } = require('../middleware/auth');
 
 router.use(authenticate);
 
+const normalizeSql = (value) => `regexp_replace(lower(${value}), '[^a-z0-9]', '', 'g')`;
+
 async function resolveRecipient(to) {
   const needle = String(to || '').trim();
   if (!needle) return { recipient_user_id: null, recipient_label: '' };
@@ -11,8 +13,8 @@ async function resolveRecipient(to) {
   const { rows: restaurants } = await pool.query(
     `SELECT owner_id AS user_id, name
      FROM restaurants
-     WHERE name ILIKE $1
-     ORDER BY CASE WHEN lower(name) = lower($2) THEN 0 ELSE 1 END
+     WHERE name ILIKE $1 OR ${normalizeSql('name')} = ${normalizeSql('$2')}
+     ORDER BY CASE WHEN lower(name) = lower($2) OR ${normalizeSql('name')} = ${normalizeSql('$2')} THEN 0 ELSE 1 END
      LIMIT 1`,
     [`%${needle}%`, needle]
   );
@@ -38,7 +40,17 @@ async function resolveRecipient(to) {
 router.get('/', async (req, res) => {
   try {
     const box = req.query.box === 'sent' ? 'sent' : 'inbox';
-    const where = box === 'sent' ? 'm.sender_id = $1' : 'm.recipient_user_id = $1';
+    const where = box === 'sent'
+      ? 'm.sender_id = $1'
+      : `(
+          m.recipient_user_id = $1 OR (
+            m.recipient_user_id IS NULL AND EXISTS (
+              SELECT 1 FROM restaurants r
+              WHERE r.owner_id = $1
+                AND (${normalizeSql('r.name')} = ${normalizeSql('m.recipient_label')} OR r.name ILIKE m.recipient_label)
+            )
+          )
+        )`;
     const { rows } = await pool.query(
       `SELECT m.id, m.sender_id, m.recipient_user_id, m.recipient_label,
               m.subject, m.body, m.is_read, m.created_at,
