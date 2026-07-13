@@ -18,15 +18,22 @@ export default function Messages() {
     return `user:${message.sender_id}`;
   };
 
+  const restaurantNameFrom = (message) => (
+    message.sender_restaurant_name ||
+    message.recipient_restaurant_name ||
+    (message.box === 'sent' ? message.recipient_label : null)
+  );
+
+  const restaurantImageFrom = (message) => message.sender_restaurant_image || message.recipient_restaurant_image || null;
+
   const conversations = Object.values(messages.reduce((acc, message) => {
     const key = conversationKey(message);
     if (!acc[key]) {
       acc[key] = {
         key,
-        name: message.box === 'sent'
-          ? (message.recipient_restaurant_name || message.recipient_label || message.to || 'Recipient')
-          : (message.sender_restaurant_name || message.sender_name || message.sender_email || 'Sender'),
+        name: 'Conversation',
         email: message.box === 'sent' ? null : message.sender_email,
+        image: null,
         messages: [],
       };
     }
@@ -35,6 +42,11 @@ export default function Messages() {
       !latest || new Date(item.created_at || item.createdAt) > new Date(latest.created_at || latest.createdAt) ? item : latest
     ), null);
     acc[key].unread = acc[key].messages.some(item => item.box === 'inbox' && !item.is_read);
+    acc[key].name = acc[key].messages.map(restaurantNameFrom).find(Boolean)
+      || acc[key].messages.map(item => item.box === 'sent' ? (item.recipient_label || item.to) : (item.sender_name || item.sender_email)).find(Boolean)
+      || 'Conversation';
+    acc[key].image = acc[key].messages.map(restaurantImageFrom).find(Boolean) || null;
+    acc[key].email = acc[key].messages.map(item => item.box === 'inbox' ? item.sender_email : null).find(Boolean) || acc[key].email;
     return acc;
   }, {})).sort((a, b) => new Date(b.latest.created_at || b.latest.createdAt) - new Date(a.latest.created_at || a.latest.createdAt));
 
@@ -155,13 +167,20 @@ export default function Messages() {
                 const latest = conversation.latest;
                 return (
                   <button key={conversation.key} onClick={() => openConversation(conversation)}
-                    className={`w-full p-4 text-left transition-all ${active ? 'glass-green' : 'hover:glass'}`}>
-                    <div className="flex items-start justify-between gap-3 mb-1">
-                      <p className="text-white text-sm font-semibold truncate">{conversation.name}</p>
-                      {conversation.unread && <span className="w-2 h-2 rounded-full bg-ember-400 flex-shrink-0 mt-1.5" />}
+                    className={`w-full p-4 text-left transition-all flex gap-3 ${active ? 'glass-green' : 'hover:glass'}`}>
+                    <div className="w-10 h-10 btn-glow-green rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                      {conversation.image
+                        ? <img src={conversation.image} alt={conversation.name} className="w-full h-full object-cover" />
+                        : <User className="w-4 h-4 text-white" />}
                     </div>
-                    <p className="text-forest-200/60 text-xs truncate">{latest.box === 'sent' ? 'You: ' : ''}{latest.body}</p>
-                    <p className="text-forest-200/35 text-xs mt-1">{new Date(latest.created_at || latest.createdAt).toLocaleString('en-PH')}</p>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-start justify-between gap-3 mb-1">
+                        <p className="text-white text-sm font-semibold truncate">{conversation.name}</p>
+                        {conversation.unread && <span className="w-2 h-2 rounded-full bg-ember-400 flex-shrink-0 mt-1.5" />}
+                      </div>
+                      <p className="text-forest-200/60 text-xs truncate">{latest.box === 'sent' ? 'You: ' : ''}{latest.body}</p>
+                      <p className="text-forest-200/35 text-xs mt-1">{new Date(latest.created_at || latest.createdAt).toLocaleString('en-PH')}</p>
+                    </div>
                   </button>
                 );
               })}
@@ -174,7 +193,9 @@ export default function Messages() {
             <>
               <div className="p-5 flex items-start gap-3" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
                 <div className="w-11 h-11 btn-glow-green rounded-2xl flex items-center justify-center flex-shrink-0">
-                  <User className="w-5 h-5 text-white" />
+                  {selectedConversation.image
+                    ? <img src={selectedConversation.image} alt={selectedConversation.name} className="w-full h-full rounded-2xl object-cover" />
+                    : <User className="w-5 h-5 text-white" />}
                 </div>
                 <div className="min-w-0">
                   <p className="text-white font-heading font-bold truncate">{selectedConversation.name}</p>
@@ -188,7 +209,7 @@ export default function Messages() {
                   <div key={message.id} className={`rounded-2xl p-4 border border-white/5 max-w-[85%] ${message.box === 'sent' ? 'ml-auto glass-green' : 'glass-dark'}`}>
                     <p className="text-forest-100/80 text-sm leading-relaxed whitespace-pre-wrap">{message.body}</p>
                     <p className="text-forest-200/35 text-xs mt-3">
-                      {message.box === 'sent' ? 'You' : (message.sender_name || 'Sender')} · {new Date(message.created_at || message.createdAt).toLocaleString('en-PH')}
+                      {message.box === 'sent' ? 'You' : (restaurantNameFrom(message) || message.sender_name || 'Sender')} · {new Date(message.created_at || message.createdAt).toLocaleString('en-PH')}
                     </p>
                   </div>
                 ))}
