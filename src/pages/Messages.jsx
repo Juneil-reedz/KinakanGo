@@ -2,8 +2,6 @@ import { useEffect, useState } from 'react';
 import { Inbox, MessageSquare, Plus, Reply, Send, User, X } from 'lucide-react';
 import { messagesApi } from '../services/api';
 
-const STORAGE_KEY = 'kkg_messages';
-
 export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [selectedKey, setSelectedKey] = useState(null);
@@ -67,8 +65,7 @@ export default function Messages() {
       setMessages(next);
       setSelectedKey(current => current || (next[0] ? conversationKey(next[0]) : null));
     } catch {
-      try { setMessages(JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]')); }
-      catch { setMessages([]); }
+      setMessages([]);
     } finally {
       setLoading(false);
     }
@@ -86,10 +83,6 @@ export default function Messages() {
   };
 
   useEffect(() => { loadMessages(); }, []);
-
-  useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-  }, [messages]);
 
   const createMessage = async (e) => {
     e.preventDefault();

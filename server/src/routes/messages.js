@@ -56,9 +56,9 @@ router.get('/', async (req, res) => {
               m.subject, m.body, m.is_read, m.created_at,
               sender.name AS sender_name, sender.email AS sender_email,
               sender_restaurant.name AS sender_restaurant_name,
-              sender_restaurant.image_url AS sender_restaurant_image,
+              CASE WHEN sender_restaurant.image_url LIKE 'data:%' THEN NULL ELSE sender_restaurant.image_url END AS sender_restaurant_image,
               recipient_restaurant.name AS recipient_restaurant_name,
-              recipient_restaurant.image_url AS recipient_restaurant_image
+              CASE WHEN recipient_restaurant.image_url LIKE 'data:%' THEN NULL ELSE recipient_restaurant.image_url END AS recipient_restaurant_image
        FROM messages m
        JOIN users sender ON sender.id = m.sender_id
        LEFT JOIN restaurants sender_restaurant ON sender_restaurant.owner_id = m.sender_id
@@ -89,9 +89,17 @@ router.post('/', async (req, res) => {
       [req.user.id, recipient.recipient_user_id, recipient.recipient_label, subject || 'New message', body]
     );
     const message = rows[0];
-    const { rows: senderRestaurants } = await pool.query('SELECT name, image_url FROM restaurants WHERE owner_id = $1 LIMIT 1', [req.user.id]);
+    const { rows: senderRestaurants } = await pool.query(
+      `SELECT name, CASE WHEN image_url LIKE 'data:%' THEN NULL ELSE image_url END AS image_url
+       FROM restaurants WHERE owner_id = $1 LIMIT 1`,
+      [req.user.id]
+    );
     const { rows: recipientRestaurants } = recipient.recipient_user_id
-      ? await pool.query('SELECT name, image_url FROM restaurants WHERE owner_id = $1 LIMIT 1', [recipient.recipient_user_id])
+      ? await pool.query(
+        `SELECT name, CASE WHEN image_url LIKE 'data:%' THEN NULL ELSE image_url END AS image_url
+         FROM restaurants WHERE owner_id = $1 LIMIT 1`,
+        [recipient.recipient_user_id]
+      )
       : { rows: [] };
     res.status(201).json({
       ...message,
