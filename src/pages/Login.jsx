@@ -30,7 +30,7 @@ export default function Login() {
     try {
       await login(form.email, form.password);
       addNotification('Login successful! Welcome back! 🎉', 'success');
-      navigate(location.state?.from || '/welcome', { replace: true });
+      navigate(location.state?.from && location.state.from !== '/' ? location.state.from : '/welcome', { replace: true });
     } catch (err) {
       const msg = err?.data?.error || err?.message || 'Invalid email or password';
       setErrors({ password: msg });

@@ -4,10 +4,38 @@ const BASE = import.meta.env.VITE_API_URL || '/api';
 const TOKEN_KEY   = 'kkg_access';
 const REFRESH_KEY = 'kkg_refresh';
 
+const isQuotaError = (err) => (
+  err?.name === 'QuotaExceededError' ||
+  err?.name === 'NS_ERROR_DOM_QUOTA_REACHED' ||
+  err?.code === 22 ||
+  err?.code === 1014
+);
+
+export function safeLocalSet(key, value) {
+  try {
+    localStorage.setItem(key, value);
+    return true;
+  } catch (err) {
+    if (!isQuotaError(err)) throw err;
+
+    ['cart', 'cartRestaurantId', 'kkg_favorites', 'favorites', 'kkg_menu_cache', 'kkg_search_cache'].forEach(item => {
+      localStorage.removeItem(item);
+    });
+
+    try {
+      localStorage.setItem(key, value);
+      return true;
+    } catch (retryErr) {
+      if (!isQuotaError(retryErr)) throw retryErr;
+      return false;
+    }
+  }
+}
+
 export const storage = {
   getAccess:      ()      => localStorage.getItem(TOKEN_KEY),
   getRefresh:     ()      => localStorage.getItem(REFRESH_KEY),
-  setTokens:      (a, r)  => { localStorage.setItem(TOKEN_KEY, a); if (r) localStorage.setItem(REFRESH_KEY, r); },
+  setTokens:      (a, r)  => { safeLocalSet(TOKEN_KEY, a); if (r) safeLocalSet(REFRESH_KEY, r); },
   clearTokens:    ()      => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(REFRESH_KEY); },
 };
 

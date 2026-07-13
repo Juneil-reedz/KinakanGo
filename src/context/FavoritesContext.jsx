@@ -1,5 +1,5 @@
 import { createContext, useContext, useEffect, useState } from 'react';
-import { favoritesApi, storage } from '../services/api';
+import { favoritesApi, safeLocalSet, storage } from '../services/api';
 import { useAuth } from './AuthContext';
 
 const STORAGE_KEY = 'kkg_favorites';
@@ -47,7 +47,7 @@ export function FavoritesProvider({ children }) {
   }, [user?.id]);
 
   useEffect(() => {
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(favorites));
+    safeLocalSet(STORAGE_KEY, JSON.stringify(favorites));
   }, [favorites]);
 
   const isFavorite = (id) => favorites.some(item => String(item.id) === String(id));

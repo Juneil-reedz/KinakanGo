@@ -1,11 +1,12 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, storage, usersApi } from '../services/api';
+import { authApi, safeLocalSet, storage, usersApi } from '../services/api';
 
 const AuthContext = createContext();
 
 const normalizeUser = (u) => {
   if (!u) return null;
-  return { ...u, avatar: u.avatar || u.avatarUrl || u.avatar_url || null };
+  const avatar = u.avatar || u.avatarUrl || u.avatar_url || null;
+  return { ...u, avatar: avatar?.startsWith?.('data:') ? null : avatar };
 };
 
 export const useAuth = () => {
@@ -39,7 +40,7 @@ export const AuthProvider = ({ children }) => {
   const persist = (u) => {
     const normalized = normalizeUser(u);
     setUser(normalized);
-    if (normalized) localStorage.setItem('kkg_user', JSON.stringify(normalized));
+    if (normalized) safeLocalSet('kkg_user', JSON.stringify(normalized));
     else   localStorage.removeItem('kkg_user');
   };
 

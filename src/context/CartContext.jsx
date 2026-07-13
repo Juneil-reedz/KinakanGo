@@ -1,4 +1,5 @@
 import { createContext, useContext, useState, useEffect } from 'react';
+import { safeLocalSet } from '../services/api';
 
 const CartContext = createContext();
 
@@ -28,9 +29,9 @@ export const CartProvider = ({ children }) => {
 
   // Save cart to localStorage whenever it changes
   useEffect(() => {
-    localStorage.setItem('cart', JSON.stringify(cartItems));
+    safeLocalSet('cart', JSON.stringify(cartItems));
     if (restaurantId) {
-      localStorage.setItem('cartRestaurantId', JSON.stringify(restaurantId));
+      safeLocalSet('cartRestaurantId', JSON.stringify(restaurantId));
     }
   }, [cartItems, restaurantId]);
 
