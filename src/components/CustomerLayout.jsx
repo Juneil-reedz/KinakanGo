@@ -7,7 +7,7 @@ import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
-  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike, Loader2
+  Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike, Loader2, LogOut
 } from 'lucide-react';
 import { restaurantsApi } from '../services/api';
 
@@ -23,7 +23,7 @@ const NAV = [
 export default function CustomerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, logout } = useAuth();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
   const { notifications, unreadCount, markAllRead, clearAll } = useNotification();
   const [collapsed, setCollapsed]       = useState(false);
@@ -69,6 +69,12 @@ export default function CustomerLayout() {
   const active = getActive();
 
   const handleNav = (path) => { navigate(path); setMobileOpen(false); };
+
+  const handleLogout = () => {
+    logout();
+    setMobileOpen(false);
+    navigate('/login');
+  };
 
   const handleUpdateQty = (id, delta) => {
     const item = cartItems.find(i => i.id === id);
@@ -194,6 +200,15 @@ export default function CustomerLayout() {
               </button>
             );
           })}
+          <button onClick={handleLogout} title={collapsed ? 'Logout' : ''}
+            className={`
+              w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'}
+              px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200
+              text-red-300/80 hover:text-white hover:glass-orange
+            `}>
+            <LogOut className="w-5 h-5 flex-shrink-0" />
+            {!collapsed && <span className="truncate">Logout</span>}
+          </button>
         </nav>
 
         {/* Upgrade / Dashboard card */}

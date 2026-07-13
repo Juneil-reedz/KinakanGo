@@ -1,6 +1,5 @@
 import { useState } from 'react';
-import { Bell, Lock, Globe, Moon, Shield, LogOut, HelpCircle, ChevronRight } from 'lucide-react';
-import { useAuth } from '../context/AuthContext';
+import { Bell, Lock, Moon, Shield, HelpCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 
 function Toggle({ value, onChange }) {
@@ -44,7 +43,6 @@ function ToggleRow({ label, desc, value, onChange }) {
 }
 
 export default function Settings() {
-  const { logout } = useAuth();
   const navigate   = useNavigate();
 
   const [s, setS] = useState({
@@ -54,8 +52,6 @@ export default function Settings() {
   });
 
   const toggle = (cat, key) => setS(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: !prev[cat][key] } }));
-
-  const handleLogout = () => { logout(); navigate('/login'); };
 
   return (
     <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
@@ -107,11 +103,6 @@ export default function Settings() {
             <ChevronRight className="w-4 h-4 text-forest-200/30 group-hover:text-forest-200 transition-colors" />
           </button>
         ))}
-        <button onClick={handleLogout}
-          className="w-full flex items-center gap-3 px-4 py-3 glass rounded-xl hover:glass-orange transition-all group mt-2">
-          <LogOut className="w-4 h-4 text-red-400" />
-          <span className="text-red-400 text-sm font-medium">Sign Out</span>
-        </button>
       </div>
 
       <p className="text-center text-forest-200/30 text-xs pb-2">KinakanGo v1.0.0 · Bongao, Tawi-Tawi 🇵🇭</p>
