@@ -24,8 +24,8 @@ export default function Messages() {
       acc[key] = {
         key,
         name: message.box === 'sent'
-          ? (message.recipient_label || message.to || 'Recipient')
-          : (message.sender_name || message.sender_email || 'Sender'),
+          ? (message.recipient_restaurant_name || message.recipient_label || message.to || 'Recipient')
+          : (message.sender_restaurant_name || message.sender_name || message.sender_email || 'Sender'),
         email: message.box === 'sent' ? null : message.sender_email,
         messages: [],
       };

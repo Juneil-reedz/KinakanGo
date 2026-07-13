@@ -54,9 +54,13 @@ router.get('/', async (req, res) => {
     const { rows } = await pool.query(
       `SELECT m.id, m.sender_id, m.recipient_user_id, m.recipient_label,
               m.subject, m.body, m.is_read, m.created_at,
-              sender.name AS sender_name, sender.email AS sender_email
+              sender.name AS sender_name, sender.email AS sender_email,
+              sender_restaurant.name AS sender_restaurant_name,
+              recipient_restaurant.name AS recipient_restaurant_name
        FROM messages m
        JOIN users sender ON sender.id = m.sender_id
+       LEFT JOIN restaurants sender_restaurant ON sender_restaurant.owner_id = m.sender_id
+       LEFT JOIN restaurants recipient_restaurant ON recipient_restaurant.owner_id = m.recipient_user_id
        WHERE ${where}
        ORDER BY m.created_at DESC
        LIMIT 50`,
@@ -79,10 +83,19 @@ router.post('/', async (req, res) => {
     const { rows } = await pool.query(
       `INSERT INTO messages (sender_id, recipient_user_id, recipient_label, subject, body)
        VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
+       RETURNING id, sender_id, recipient_user_id, recipient_label, subject, body, is_read, created_at`,
       [req.user.id, recipient.recipient_user_id, recipient.recipient_label, subject || 'New message', body]
     );
-    res.status(201).json(rows[0]);
+    const message = rows[0];
+    const { rows: senderRestaurants } = await pool.query('SELECT name FROM restaurants WHERE owner_id = $1 LIMIT 1', [req.user.id]);
+    const { rows: recipientRestaurants } = recipient.recipient_user_id
+      ? await pool.query('SELECT name FROM restaurants WHERE owner_id = $1 LIMIT 1', [recipient.recipient_user_id])
+      : { rows: [] };
+    res.status(201).json({
+      ...message,
+      sender_restaurant_name: senderRestaurants[0]?.name || null,
+      recipient_restaurant_name: recipientRestaurants[0]?.name || null,
+    });
   } catch (err) {
     console.error('messages create error:', err);
     res.status(500).json({ error: 'Failed to create message' });
