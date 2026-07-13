@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getFeaturedRestaurants, getAllMenuItems } from '../services/api';
+import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/api';
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
@@ -44,27 +44,40 @@ const PROMOS = [
   },
 ];
 
+const PROMO_STYLES = [
+  { bg: 'from-ember-700/80 to-ember-900/80', accent: '#f97316' },
+  { bg: 'from-forest-700/80 to-forest-900/80', accent: '#2d8a57' },
+  { bg: 'from-forest-600/80 to-ember-800/80', accent: '#3db870' },
+];
+
+const promoTitle = (promo) => {
+  const value = Number(promo.discountValue ?? promo.discount_value ?? promo.value ?? 0);
+  const type = promo.discountType || promo.discount_type || promo.type;
+  return type === 'fixed' ? `₱${value} Off` : `Get ${value}% Off`;
+};
+
 export default function Home() {
   const navigate = useNavigate();
   const { addToCart } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
   const [cat, setCat]               = useState('All');
   const [promo, setPromo]           = useState(0);
+  const [activePromos, setActivePromos] = useState([]);
   const [restaurants, setRestaurants] = useState([]);
   const [popularItems, setPopularItems] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
-    const t = setInterval(() => setPromo(p => (p + 1) % PROMOS.length), 4000);
-
     Promise.all([
       getFeaturedRestaurants(4).catch(() => []),
       getAllMenuItems({ limit: 10 }).catch(() => []),
       ordersApi.list({ limit: 5 }).catch(() => null),
-    ]).then(([rests, items, orders]) => {
+      promosApi.publicList().catch(() => null),
+    ]).then(([rests, items, orders, promos]) => {
       setRestaurants(Array.isArray(rests?.data) ? rests.data : Array.isArray(rests) ? rests : []);
       setPopularItems(Array.isArray(items) ? items : []);
+      setActivePromos(promos?.data || promos || []);
       const orderList = orders?.data ?? [];
       const unique = [];
       const seen = new Set();
@@ -76,9 +89,28 @@ export default function Home() {
       }
       setRecentOrders(unique.slice(0, 4));
     }).finally(() => setLoading(false));
-
-    return () => clearInterval(t);
   }, []);
+
+  const promoCards = activePromos.length
+    ? activePromos.map((item, index) => {
+        const style = PROMO_STYLES[index % PROMO_STYLES.length];
+        return {
+          id: item.id,
+          tag: item.code || 'Promo',
+          title: promoTitle(item),
+          sub: item.description || `Use code ${item.code}`,
+          ...style,
+        };
+      })
+    : PROMOS;
+
+  useEffect(() => {
+    const t = setInterval(() => setPromo(p => (p + 1) % promoCards.length), 4000);
+    return () => clearInterval(t);
+  }, [promoCards.length]);
+
+  const currentPromoIndex = promo % promoCards.length;
+  const currentPromo = promoCards[currentPromoIndex];
 
   const filteredFood = cat === 'All'
     ? popularItems
@@ -96,30 +128,25 @@ export default function Home() {
 
       {/* ── Promo carousel ─────────────────────────── */}
       <section>
-        <div className={`relative bg-gradient-to-br ${PROMOS[promo].bg} rounded-3xl p-5 md:p-7 overflow-hidden transition-all duration-700 card-3d`}
-          style={{ border: `1px solid ${PROMOS[promo].accent}30`, boxShadow: `0 8px 32px ${PROMOS[promo].accent}20` }}>
+        <div className={`relative bg-gradient-to-br ${currentPromo.bg} rounded-3xl p-5 md:p-7 overflow-hidden transition-all duration-700 card-3d`}
+          style={{ border: `1px solid ${currentPromo.accent}30`, boxShadow: `0 8px 32px ${currentPromo.accent}20` }}>
           <div className="orb w-48 h-48 opacity-30 -top-10 -right-10"
-            style={{ background: PROMOS[promo].accent }} />
+            style={{ background: currentPromo.accent }} />
           <div className="relative z-10 flex items-center justify-between">
             <div className="space-y-1.5">
               <span className="inline-block glass px-3 py-1 rounded-full text-xs text-white font-medium">
-                {PROMOS[promo].tag}
+                {currentPromo.tag}
               </span>
               <h2 className="text-2xl md:text-3xl font-heading font-bold text-white text-glow-orange">
-                {PROMOS[promo].title}
+                {currentPromo.title}
               </h2>
-              <p className="text-white/70 text-sm">{PROMOS[promo].sub}</p>
-              <button
-                onClick={() => navigate('/restaurants')}
-                className="mt-2 btn-glow-orange text-white text-sm font-semibold px-5 py-2.5 rounded-xl inline-flex items-center gap-2">
-                Order Now <ChevronRight className="w-4 h-4" />
-              </button>
+              <p className="text-white/70 text-sm">{currentPromo.sub}</p>
             </div>
           </div>
           <div className="absolute bottom-4 left-5 flex gap-1.5">
-            {PROMOS.map((_, i) => (
-              <button key={i} onClick={() => setPromo(i)}
-                className={`h-1.5 rounded-full transition-all ${i === promo ? 'w-6 bg-white' : 'w-1.5 bg-white/30'}`} />
+            {promoCards.map((item, i) => (
+              <button key={item.id || i} onClick={() => setPromo(i)}
+                className={`h-1.5 rounded-full transition-all ${i === currentPromoIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/30'}`} />
             ))}
           </div>
         </div>
@@ -130,7 +157,7 @@ export default function Home() {
         {[
           { icon: Truck,  label: 'Free Delivery', val: '₱500+',  color: 'text-ember-400' },
           { icon: Clock,  label: 'Avg. Delivery',  val: '30 min', color: 'text-forest-300' },
-          { icon: Tag,    label: 'Active Promos',  val: '12+',    color: 'text-ember-300' },
+          { icon: Tag,    label: 'Active Promos',  val: activePromos.length || '3+',    color: 'text-ember-300' },
         ].map(({ icon: Icon, label, val, color }) => (
           <div key={label} className="glass card-3d rounded-2xl p-3 flex flex-col items-center gap-1 text-center">
             <Icon className={`w-5 h-5 ${color}`} />

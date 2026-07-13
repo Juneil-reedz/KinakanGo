@@ -3,6 +3,7 @@ const ctrl   = require('../controllers/promoController');
 const { authenticate, requireRole } = require('../middleware/auth');
 
 router.post('/validate', authenticate, ctrl.validate);
+router.get('/public', ctrl.publicList);
 
 router.use(authenticate, requireRole('admin'));
 router.get('/',           ctrl.list);

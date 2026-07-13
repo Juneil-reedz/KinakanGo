@@ -186,6 +186,7 @@ export const issuesApi = {
 
 export const promosApi = {
   list:     (params = {}) => request(`/promos?${new URLSearchParams(params)}`),
+  publicList: ()          => request('/promos/public'),
   create:   (data)        => request('/promos',         { method: 'POST',   body: JSON.stringify(data) }),
   update:   (id, data)    => request(`/promos/${id}`,   { method: 'PATCH',  body: JSON.stringify(data) }),
   remove:   (id)          => request(`/promos/${id}`,   { method: 'DELETE' }),
