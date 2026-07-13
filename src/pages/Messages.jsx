@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { Check, Inbox, MessageSquare, Pencil, Plus, Reply, Send, Trash2, User, X } from 'lucide-react';
+import { ArrowLeft, Check, Inbox, MessageSquare, Pencil, Plus, Reply, Send, Trash2, User, X } from 'lucide-react';
 import { messagesApi } from '../services/api';
 
 export default function Messages() {
@@ -12,6 +12,7 @@ export default function Messages() {
   const [sendingReply, setSendingReply] = useState(false);
   const [editing, setEditing] = useState(null);
   const [savingEdit, setSavingEdit] = useState(false);
+  const [mobileThreadOpen, setMobileThreadOpen] = useState(false);
 
   const conversationKey = (message) => {
     if (message.box === 'sent') return `user:${message.recipient_user_id || message.recipient_label}`;
@@ -75,6 +76,7 @@ export default function Messages() {
 
   const openConversation = async (conversation) => {
     setSelectedKey(conversation.key);
+    setMobileThreadOpen(true);
     const unread = conversation.messages.filter(message => message.box === 'inbox' && !message.is_read);
     if (unread.length) {
       await Promise.all(unread.map(message => messagesApi.markRead(message.id).catch(() => null)));
@@ -98,8 +100,11 @@ export default function Messages() {
       const saved = await messagesApi.create({ to: form.to, subject: form.subject, body: form.body });
       setMessages(prev => [{ ...saved, box: 'sent' }, ...prev]);
       setSelectedKey(conversationKey({ ...saved, box: 'sent' }));
+      setMobileThreadOpen(true);
     } catch {
       setMessages(prev => [localMessage, ...prev]);
+      setSelectedKey(conversationKey(localMessage));
+      setMobileThreadOpen(true);
     }
     setForm({ to: '', subject: '', body: '' });
     setShowComposer(false);
@@ -145,18 +150,23 @@ export default function Messages() {
     setMessages(prev => prev.filter(message => message.id !== id));
   };
 
+  const closeMobileThread = () => {
+    setEditing(null);
+    setMobileThreadOpen(false);
+  };
+
   return (
-    <div className="h-full flex flex-col animate-fade-up space-y-4 pb-20 lg:pb-0">
-      <div className="flex items-center justify-between gap-3">
-        <h1 className="text-2xl font-heading font-bold text-white">Messages</h1>
+    <div className="h-full flex flex-col animate-fade-up space-y-3 sm:space-y-4 pb-20 lg:pb-0">
+      <div className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} items-center justify-between gap-3`}>
+        <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">Messages</h1>
         <button onClick={() => setShowComposer(true)}
-          className="btn-glow-orange text-white text-sm px-4 py-2.5 rounded-xl font-semibold flex items-center gap-1.5">
-          <Plus className="w-4 h-4" /> Create Message
+          className="btn-glow-orange text-white text-sm px-4 sm:px-4 py-3 sm:py-2.5 rounded-2xl sm:rounded-xl font-semibold flex items-center gap-1.5 whitespace-nowrap">
+          <Plus className="w-4 h-4" /> <span className="hidden min-[380px]:inline">Create Message</span><span className="min-[380px]:hidden">Create</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-[calc(100vh-13rem)]">
-        <section className="glass rounded-3xl overflow-hidden flex flex-col">
+      <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-[calc(100vh-10rem)] lg:min-h-[calc(100vh-13rem)]">
+        <section className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col min-h-[calc(100vh-14rem)] lg:min-h-0`}>
           <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
             <div className="flex items-center gap-2">
               <Inbox className="w-4 h-4 text-forest-300" />
@@ -184,8 +194,8 @@ export default function Messages() {
                 const latest = conversation.latest;
                 return (
                   <button key={conversation.key} onClick={() => openConversation(conversation)}
-                    className={`w-full p-4 text-left transition-all flex gap-3 ${active ? 'glass-green' : 'hover:glass'}`}>
-                    <div className="w-10 h-10 btn-glow-green rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
+                    className={`w-full p-4 sm:p-4 text-left transition-all flex gap-3 ${active ? 'glass-green' : 'hover:glass'}`}>
+                    <div className="w-12 h-12 sm:w-10 sm:h-10 btn-glow-green rounded-2xl sm:rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                       {conversation.image
                         ? <img src={conversation.image} alt={conversation.name} className="w-full h-full object-cover" />
                         : <User className="w-4 h-4 text-white" />}
@@ -195,8 +205,8 @@ export default function Messages() {
                         <p className="text-white text-sm font-semibold truncate">{conversation.name}</p>
                         {conversation.unread && <span className="w-2 h-2 rounded-full bg-ember-400 flex-shrink-0 mt-1.5" />}
                       </div>
-                      <p className="text-forest-200/60 text-xs truncate">{latest.box === 'sent' ? 'You: ' : ''}{latest.body}</p>
-                      <p className="text-forest-200/35 text-xs mt-1">{new Date(latest.created_at || latest.createdAt).toLocaleString('en-PH')}</p>
+                      <p className="text-forest-200/65 text-sm sm:text-xs truncate">{latest.box === 'sent' ? 'You: ' : ''}{latest.body}</p>
+                      <p className="text-forest-200/40 text-xs mt-1">{new Date(latest.created_at || latest.createdAt).toLocaleString('en-PH')}</p>
                     </div>
                   </button>
                 );
@@ -205,11 +215,15 @@ export default function Messages() {
           )}
         </section>
 
-        <section className="glass rounded-3xl overflow-hidden flex flex-col">
+        <section className={`${mobileThreadOpen ? 'flex' : 'hidden lg:flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col min-h-[calc(100vh-8.5rem)] lg:min-h-0`}>
           {selectedConversation ? (
             <>
-              <div className="p-5 flex items-start gap-3" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
-                <div className="w-11 h-11 btn-glow-green rounded-2xl flex items-center justify-center flex-shrink-0">
+              <div className="p-4 sm:p-5 flex items-center gap-3" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+                <button type="button" onClick={closeMobileThread}
+                  className="lg:hidden w-10 h-10 glass rounded-2xl flex items-center justify-center text-forest-100 flex-shrink-0">
+                  <ArrowLeft className="w-5 h-5" />
+                </button>
+                <div className="w-11 h-11 btn-glow-green rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                   {selectedConversation.image
                     ? <img src={selectedConversation.image} alt={selectedConversation.name} className="w-full h-full rounded-2xl object-cover" />
                     : <User className="w-5 h-5 text-white" />}
@@ -220,9 +234,9 @@ export default function Messages() {
                 </div>
               </div>
 
-              <div className="flex-1 p-5 overflow-auto space-y-4">
+              <div className="flex-1 p-3 sm:p-5 overflow-auto space-y-3 sm:space-y-4">
                 {thread.map(message => (
-                  <div key={message.id} className={`rounded-2xl p-4 border border-white/5 max-w-[85%] ${message.box === 'sent' ? 'ml-auto glass-green' : 'glass-dark'}`}>
+                  <div key={message.id} className={`rounded-3xl sm:rounded-2xl p-4 border border-white/5 max-w-[92%] sm:max-w-[85%] ${message.box === 'sent' ? 'ml-auto glass-green' : 'glass-dark'}`}>
                     {editing?.id === message.id ? (
                       <form onSubmit={saveEdit} className="space-y-3">
                         <input value={editing.subject} onChange={e => setEditing(edit => ({ ...edit, subject: e.target.value }))}
@@ -239,20 +253,20 @@ export default function Messages() {
                       </form>
                     ) : (
                       <>
-                        <div className="flex items-start justify-between gap-3">
+                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
                           <p className="text-forest-100/80 text-sm leading-relaxed whitespace-pre-wrap flex-1">{message.body}</p>
-                          <div className="flex items-center gap-1 flex-shrink-0">
+                          <div className="flex items-center justify-end gap-2 flex-shrink-0">
                             {message.box === 'sent' && (
-                              <button type="button" onClick={() => startEdit(message)} className="w-7 h-7 glass rounded-lg flex items-center justify-center text-forest-100 hover:glass-green" title="Edit message">
-                                <Pencil className="w-3.5 h-3.5" />
+                              <button type="button" onClick={() => startEdit(message)} className="w-9 h-9 sm:w-7 sm:h-7 glass rounded-xl sm:rounded-lg flex items-center justify-center text-forest-100 hover:glass-green" title="Edit message">
+                                <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                               </button>
                             )}
-                            <button type="button" onClick={() => deleteMessage(message.id)} className="w-7 h-7 glass rounded-lg flex items-center justify-center text-forest-100 hover:glass-orange" title="Delete message">
-                              <Trash2 className="w-3.5 h-3.5" />
+                            <button type="button" onClick={() => deleteMessage(message.id)} className="w-9 h-9 sm:w-7 sm:h-7 glass rounded-xl sm:rounded-lg flex items-center justify-center text-forest-100 hover:glass-orange" title="Delete message">
+                              <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
                             </button>
                           </div>
                         </div>
-                        <p className="text-forest-200/35 text-xs mt-3">
+                        <p className="text-forest-200/40 text-[11px] sm:text-xs mt-3 leading-relaxed">
                           {message.box === 'sent' ? 'You' : (restaurantNameFrom(message) || message.sender_name || 'Sender')} · {new Date(message.created_at || message.createdAt).toLocaleString('en-PH')}
                           {message.updated_at && message.updated_at !== message.created_at ? ' · edited' : ''}
                         </p>
@@ -268,9 +282,9 @@ export default function Messages() {
                 </div>
                 <textarea value={reply} onChange={e => setReply(e.target.value)} rows={4}
                   placeholder="Write your reply..."
-                  className="w-full input-glass py-3 text-sm resize-none" />
+                  className="w-full input-glass py-3 text-sm resize-none min-h-28 sm:min-h-0" />
                 <button type="submit" disabled={!reply.trim() || sendingReply}
-                  className="btn-glow-orange text-white text-sm font-bold px-4 py-2.5 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 ml-auto">
+                  className="w-full sm:w-auto btn-glow-orange text-white text-sm font-bold px-4 py-3 sm:py-2.5 rounded-2xl sm:rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 sm:ml-auto">
                   <Send className="w-4 h-4" /> {sendingReply ? 'Sending...' : 'Send Reply'}
                 </button>
               </form>
