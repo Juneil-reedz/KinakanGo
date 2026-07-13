@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
-import { DollarSign, Package, TrendingUp, ChefHat, ArrowRight, Clock, User, MessageSquare, MapPin, Store } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, ChefHat, Clock, User, MessageSquare, MapPin, Store } from 'lucide-react';
 
 const STATUS_STYLE = {
   pending:   'glass-orange text-ember-200',
@@ -110,9 +110,6 @@ export default function RestaurantDashboard() {
         <div className="lg:col-span-2 glass rounded-2xl overflow-hidden">
           <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
             <p className="text-white font-semibold">Recent Orders</p>
-            <Link to="/owner/orders" className="flex items-center gap-1 text-ember-400 hover:text-ember-300 text-xs font-medium transition-colors">
-              See All <ArrowRight className="w-3.5 h-3.5" />
-            </Link>
           </div>
           {loading ? (
             <div className="p-4 space-y-3">
@@ -127,19 +124,31 @@ export default function RestaurantDashboard() {
             <div className="divide-y divide-white/5">
               {recentOrders.slice(0, 3).map(order => {
                 const items = order.items || order.orderItems || [];
-                const customerName = order.customerName || order.customer?.name || 'Customer';
+                const customerName = order.customer_name || order.customerName || order.customer?.name || 'Customer';
                 const total = order.total || order.totalAmount || 0;
-                const firstItemName = items[0]?.name || items[0]?.menuItem?.name || 'Order';
+                const itemSummary = items.length > 0
+                  ? `${items.length} item${items.length > 1 ? 's' : ''}`
+                  : 'Order details';
+                const createdAt = order.created_at || order.createdAt;
                 return (
                   <div key={order.id} className="p-4 flex items-center gap-3 hover:glass transition-all">
                     <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
-                      {firstItemName.charAt(0)}
+                      #{order.id}
                     </div>
                     <div className="flex-1 min-w-0">
-                      <p className="text-white text-sm font-semibold truncate">{firstItemName}</p>
-                      <div className="flex items-center gap-2 mt-0.5">
-                        <User className="w-3 h-3 text-forest-300/50" />
-                        <p className="text-forest-200/50 text-xs truncate">{customerName}</p>
+                      <p className="text-white text-sm font-semibold truncate">Order #{order.id}</p>
+                      <div className="flex items-center gap-3 mt-1 flex-wrap">
+                        <span className="flex items-center gap-1 text-forest-200/55 text-xs truncate">
+                          <User className="w-3 h-3 text-forest-300/50" />{customerName}
+                        </span>
+                        <span className="flex items-center gap-1 text-forest-200/40 text-xs">
+                          <Package className="w-3 h-3" />{itemSummary}
+                        </span>
+                        {createdAt && (
+                          <span className="flex items-center gap-1 text-forest-200/40 text-xs">
+                            <Clock className="w-3 h-3" />{new Date(createdAt).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}
+                          </span>
+                        )}
                       </div>
                     </div>
                     <div className="text-right flex-shrink-0">
