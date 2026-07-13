@@ -36,11 +36,14 @@ export default function Welcome() {
           <p className="text-forest-200 mt-2 text-sm">Bongao Taste</p>
         </div>
 
-        <div className="rounded-[1.7rem] overflow-hidden shadow-2xl border border-ember-300/20 card-3d mb-7">
-          <img
-            src={`${import.meta.env.BASE_URL}assets/welcome-poster.png`}
-            alt="KinakanGo order now poster"
+        <div className="rounded-[1.7rem] overflow-hidden shadow-2xl border border-ember-300/20 card-3d mb-7 bg-black/20">
+          <video
+            src={`${import.meta.env.BASE_URL}assets/sidebar-video.mp4`}
             className="w-full h-auto block"
+            autoPlay
+            loop
+            muted
+            playsInline
           />
         </div>
 
