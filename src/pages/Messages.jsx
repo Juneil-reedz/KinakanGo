@@ -200,7 +200,6 @@ export default function Messages() {
                 <div className="min-w-0">
                   <p className="text-white font-heading font-bold truncate">{selectedConversation.name}</p>
                   <p className="text-forest-200/55 text-sm">Conversation</p>
-                  {selectedConversation.email && <p className="text-forest-200/35 text-xs">{selectedConversation.email}</p>}
                 </div>
               </div>
 
