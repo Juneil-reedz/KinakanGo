@@ -47,6 +47,20 @@ CREATE TABLE refresh_tokens (
   created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- ─── PASSWORD RESET TOKENS ───────────────────────────────────────────────────
+
+CREATE TABLE password_reset_tokens (
+  id         SERIAL PRIMARY KEY,
+  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  otp_code   VARCHAR(6)   NOT NULL,
+  token      VARCHAR(500) UNIQUE,
+  attempts   INT          NOT NULL DEFAULT 0,
+  verified   BOOLEAN      NOT NULL DEFAULT FALSE,
+  used       BOOLEAN      NOT NULL DEFAULT FALSE,
+  expires_at TIMESTAMPTZ  NOT NULL,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
 -- ─── RESTAURANTS ─────────────────────────────────────────────────────────────
 
 CREATE TABLE restaurants (

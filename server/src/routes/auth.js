@@ -27,6 +27,7 @@ router.post('/refresh',         ctrl.refresh);
 router.post('/logout',          ctrl.logout);
 router.get('/me',               authenticate, ctrl.me);
 router.post('/forgot-password', ctrl.forgotPassword);
+router.post('/verify-reset-otp', ctrl.verifyResetOtp);
 router.post('/reset-password',  ctrl.resetPassword);
 
 module.exports = router;

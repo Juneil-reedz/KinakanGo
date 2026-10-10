@@ -19,8 +19,8 @@ L.Icon.Default.mergeOptions({
 
 const ROUTE_COLOR = '#e11d48';
 const TRACKABLE_STATUSES = ['ready', 'picked_up'];
-const ORDER_LIVE_MS = 5000;
-const RIDER_LIVE_MS = 2000;
+const ORDER_LIVE_MS = 10000;
+const RIDER_LIVE_MS = 5000;
 
 const mapIcon = (label, emoji, color = ROUTE_COLOR, pulse = false) => L.divIcon({
   html: `<div style="display:flex;align-items:center;gap:8px;">
@@ -100,6 +100,7 @@ export default function OrderTracking() {
   const [lastLiveAt, setLastLiveAt] = useState(null);
   const pollLocRef = useRef(null);
   const ordersRef = useRef([]);
+  const detailsRef = useRef({}); // { [orderId]: { key, data } } — cached getOne results
 
   const fetchOrders = async (silent = false) => {
     if (!storage.getAccess()) { setLoading(false); return; }
@@ -111,10 +112,19 @@ export default function OrderTracking() {
       const active = list.filter(o => !['delivered','cancelled','refunded'].includes(o.status));
       const base   = active.length ? active : list.slice(0, 5);
 
-      const detailed = await Promise.allSettled(base.map(o => ordersApi.getOne(o.id)));
-      const merged = base.map((o, i) => {
-        const full = detailed[i].status === 'fulfilled' ? detailed[i].value : {};
-        return { ...o, ...full, items: full.items ?? [] };
+      // Only refetch an order's details when it's new or its status/rider changed;
+      // the list response already carries the fields that change while polling.
+      const detailKey = (o) => `${o.status}|${o.rider_id ?? ''}`;
+      const stale = base.filter(o => detailsRef.current[o.id]?.key !== detailKey(o));
+      const detailed = await Promise.allSettled(stale.map(o => ordersApi.getOne(o.id)));
+      stale.forEach((o, i) => {
+        if (detailed[i].status === 'fulfilled') {
+          detailsRef.current[o.id] = { key: detailKey(o), data: detailed[i].value };
+        }
+      });
+      const merged = base.map(o => {
+        const full = detailsRef.current[o.id]?.data ?? {};
+        return { ...full, ...o, items: full.items ?? [] };
       });
       ordersRef.current = merged;
       setOrders(merged);
@@ -181,16 +191,19 @@ export default function OrderTracking() {
     };
   }, []);
 
+  // Restart rider polling only when the set of trackable orders changes,
+  // not on every orders refresh.
+  const trackableKey = orders.filter(canTrackRider).map(o => o.id).join(',');
   useEffect(() => {
     clearInterval(pollLocRef.current);
-    if (orders.some(canTrackRider)) {
+    if (trackableKey) {
       fetchRiderLocations();
       pollLocRef.current = setInterval(() => {
         if (document.visibilityState === 'visible') fetchRiderLocations();
       }, RIDER_LIVE_MS);
     }
     return () => clearInterval(pollLocRef.current);
-  }, [orders]);
+  }, [trackableKey]);
 
   const getStatusIdx = (s) => STATUSES.findIndex(st => st.id === s);
   const displayStatus = (status) => {

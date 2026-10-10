@@ -10,6 +10,7 @@ import {
   Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike, Loader2, LogOut
 } from 'lucide-react';
 import { restaurantsApi } from '../services/api';
+import CustomerBottomNav from './CustomerBottomNav';
 
 const NAV = [
   { key: 'dashboard',    label: 'Dashboard',    icon: HomeIcon,        path: '/' },
@@ -451,33 +452,7 @@ export default function CustomerLayout() {
       </aside>
 
       {/* ── Mobile Bottom Nav ── */}
-      <nav className="fixed bottom-0 left-0 right-0 lg:hidden z-30 glass-dark"
-        style={{ borderTop: '1px solid rgba(255,255,255,.08)', boxShadow: '0 -4px 24px rgba(0,0,0,.4)' }}>
-        <div className="flex items-center justify-around px-2 py-2">
-          {[
-            { key:'dashboard',    icon:HomeIcon,      path:'/' },
-            { key:'food-order',   icon:ShoppingBag,   path:'/restaurants' },
-            { key:'cart',         icon:ShoppingCart,  path:'/cart', badge: cartItems.length },
-            { key:'favorite',     icon:Heart,         path:'/favorites' },
-            { key:'order-history',icon:Clock,         path:'/orders' },
-          ].map(({ key, icon: Icon, path, badge }) => {
-            const isAct = key === 'cart' ? location.pathname === '/cart' : active === key;
-            return (
-              <button key={key} onClick={() => navigate(path)}
-                className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 relative transition-all
-                  ${isAct ? 'text-ember-400' : 'text-forest-200/50 hover:text-forest-100'}`}>
-                <Icon className="w-5 h-5" />
-                {badge > 0 && (
-                  <span className="absolute top-1 right-1/2 translate-x-2 w-4 h-4 btn-glow-orange rounded-full text-white text-[9px] flex items-center justify-center font-bold">
-                    {badge}
-                  </span>
-                )}
-                {isAct && <div className="w-1 h-1 rounded-full bg-ember-400 mt-1" />}
-              </button>
-            );
-          })}
-        </div>
-      </nav>
+      <CustomerBottomNav />
     </div>
   );
 }

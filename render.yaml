@@ -20,3 +20,9 @@ services:
       # Your GitHub Pages URL
       - key: CLIENT_URL
         value: https://juneil-reedz.github.io
+      # Brevo — app.brevo.com → SMTP & API → API Keys
+      - key: BREVO_API_KEY
+        sync: false
+      # Must be a verified Brevo sender (Senders, Domains & Dedicated IPs → Senders)
+      - key: BREVO_SENDER_EMAIL
+        sync: false

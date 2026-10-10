@@ -95,6 +95,8 @@ export const authApi = {
   me: () => request('/auth/me'),
   forgotPassword: (email) =>
     request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
+  verifyResetOtp: (email, otp) =>
+    request('/auth/verify-reset-otp', { method: 'POST', body: JSON.stringify({ email, otp }) }),
   resetPassword: (token, password) =>
     request('/auth/reset-password',  { method: 'POST', body: JSON.stringify({ token, password }) }),
 };

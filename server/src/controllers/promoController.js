@@ -11,6 +11,7 @@ const mapPromo = (promo) => ({
   expiresAt: promo.expires_at,
   isActive: promo.is_active,
   status: promo.is_active ? 'active' : 'inactive',
+  ownerId: promo.owner_id,
 });
 
 const activeWhere = `is_active = true
@@ -40,6 +41,46 @@ async function publicList(_req, res) {
     `SELECT * FROM promo_codes WHERE ${activeWhere} ORDER BY created_at DESC LIMIT 10`
   );
   res.json({ data: rows.map(mapPromo) });
+}
+
+async function ensureRestaurantOwner(userId) {
+  const { rows } = await pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [userId]);
+  return rows[0] || null;
+}
+
+async function ownerList(req, res) {
+  const restaurant = await ensureRestaurantOwner(req.user.id);
+  if (!restaurant) return res.status(403).json({ error: 'Restaurant account required' });
+
+  const { rows } = await pool.query(
+    'SELECT * FROM promo_codes WHERE owner_id = $1 ORDER BY created_at DESC LIMIT 10',
+    [req.user.id]
+  );
+  res.json({ data: rows.map(mapPromo) });
+}
+
+async function ownerCreate(req, res) {
+  const restaurant = await ensureRestaurantOwner(req.user.id);
+  if (!restaurant) return res.status(403).json({ error: 'Restaurant account required' });
+
+  const discountType = req.body.discountType || (req.body.type === 'percentage' ? 'percent' : req.body.type) || 'percent';
+  const discountValue = req.body.discountValue ?? req.body.value;
+  const minOrder = req.body.minOrder || 0;
+  const maxUses = req.body.maxUses ?? req.body.usageLimit ?? null;
+  const startsAt = req.body.startsAt || req.body.startDate || null;
+  const expiresAt = req.body.expiresAt || req.body.endDate || null;
+  const code = String(req.body.code || '').trim().toUpperCase();
+  const { description } = req.body;
+
+  if (!code || !discountValue) return res.status(400).json({ error: 'Promo code and discount are required' });
+
+  const { rows } = await pool.query(
+    `INSERT INTO promo_codes
+       (code, description, discount_type, discount_value, min_order, max_uses, starts_at, expires_at, owner_id)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING *`,
+    [code, description || null, discountType, discountValue, minOrder || 0, maxUses || null, startsAt || null, expiresAt || null, req.user.id]
+  );
+  res.status(201).json(mapPromo(rows[0]));
 }
 
 async function create(req, res) {
@@ -108,4 +149,4 @@ async function validate(req, res) {
   res.json({ valid: true, discount, promo });
 }
 
-module.exports = { list, publicList, create, update, remove, validate };
+module.exports = { list, publicList, ownerList, ownerCreate, create, update, remove, validate };

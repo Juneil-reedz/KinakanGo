@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
-import { DollarSign, Package, TrendingUp, ChefHat, Clock, User, MessageSquare, MapPin, Store } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, ChefHat, Clock, User, MessageSquare, MapPin, Store, Ticket, Plus, X } from 'lucide-react';
+import { useNotification } from '../../context/NotificationContext';
 
 const STATUS_STYLE = {
   pending:   'glass-orange text-ember-200',
@@ -12,9 +13,14 @@ const STATUS_STYLE = {
 
 export default function RestaurantDashboard() {
   const { restaurant }            = useRestaurant();
+  const { addNotification }       = useNotification();
   const [recentOrders, setOrders] = useState([]);
   const [messages, setMessages]   = useState([]);
+  const [promos, setPromos]       = useState([]);
   const [loading, setLoading]     = useState(true);
+  const [showPromoForm, setShowPromoForm] = useState(false);
+  const [savingPromo, setSavingPromo] = useState(false);
+  const [promoForm, setPromoForm] = useState({ code: '', discountValue: '', description: '', expiresAt: '' });
 
   useEffect(() => {
     (async () => {
@@ -24,6 +30,8 @@ export default function RestaurantDashboard() {
         setOrders(res.data || res || []);
         const inbox = await restaurantRequest('/messages?box=inbox').catch(() => null);
         setMessages(inbox?.data || []);
+        const promoRes = await restaurantRequest('/promos/owner').catch(() => null);
+        setPromos(promoRes?.data || []);
       } catch {
         // silently fail — dashboard is non-critical
       } finally {
@@ -36,6 +44,32 @@ export default function RestaurantDashboard() {
   const todayOrders = recentOrders.length;
   const totalSales  = recentOrders.reduce((s, o) => s + Number(o.total || o.totalAmount || 0), 0);
   const pendingCount = recentOrders.filter(o => o.status === 'pending').length;
+
+  const createPromo = async (e) => {
+    e.preventDefault();
+    if (!promoForm.code.trim() || !promoForm.discountValue) return;
+    setSavingPromo(true);
+    try {
+      const saved = await restaurantRequest('/promos/owner', {
+        method: 'POST',
+        body: JSON.stringify({
+          code: promoForm.code.trim().toUpperCase(),
+          discountType: 'percent',
+          discountValue: Number(promoForm.discountValue),
+          description: promoForm.description || `${promoForm.discountValue}% off at ${restaurant?.name || 'this restaurant'}`,
+          expiresAt: promoForm.expiresAt || null,
+        }),
+      });
+      setPromos(prev => [saved, ...prev]);
+      setPromoForm({ code: '', discountValue: '', description: '', expiresAt: '' });
+      setShowPromoForm(false);
+      addNotification('Promo created and shown on the customer dashboard', 'success');
+    } catch (err) {
+      addNotification(err?.data?.error || 'Failed to create promo', 'error');
+    } finally {
+      setSavingPromo(false);
+    }
+  };
 
   const STAT_CARDS = [
     { label:'Recent Orders',   value:todayOrders,                icon:Package,    color:'btn-glow-green',  trend:'+8%'  },
@@ -210,6 +244,51 @@ export default function RestaurantDashboard() {
                 </button>
               </Link>
             ))}
+          </div>
+
+          <div className="glass rounded-2xl p-4">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <Ticket className="w-4 h-4 text-ember-400" />
+                <p className="text-white font-semibold">Promos</p>
+              </div>
+              <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full">{promos.length}</span>
+            </div>
+
+            {promos[0] ? (
+              <div className="glass-green rounded-xl p-3 mb-3">
+                <p className="text-white font-mono font-bold text-sm">{promos[0].code}</p>
+                <p className="text-forest-200/60 text-xs mt-1 line-clamp-2">{promos[0].description || `${promos[0].discountValue}% off`}</p>
+              </div>
+            ) : (
+              <p className="text-forest-200/55 text-sm mb-3">No promos yet. Create one to show it on the customer dashboard promo card.</p>
+            )}
+
+            {showPromoForm ? (
+              <form onSubmit={createPromo} className="space-y-2">
+                <input value={promoForm.code} onChange={e => setPromoForm(f => ({ ...f, code: e.target.value.toUpperCase() }))}
+                  placeholder="Code e.g. FOOD20" className="w-full input-glass py-2 text-sm font-mono" />
+                <input type="number" min="1" max="100" value={promoForm.discountValue} onChange={e => setPromoForm(f => ({ ...f, discountValue: e.target.value }))}
+                  placeholder="Discount %" className="w-full input-glass py-2 text-sm" />
+                <input value={promoForm.description} onChange={e => setPromoForm(f => ({ ...f, description: e.target.value }))}
+                  placeholder="Short description" className="w-full input-glass py-2 text-sm" />
+                <input type="date" value={promoForm.expiresAt} onChange={e => setPromoForm(f => ({ ...f, expiresAt: e.target.value }))}
+                  className="w-full input-glass py-2 text-sm" />
+                <div className="flex gap-2 pt-1">
+                  <button type="button" onClick={() => setShowPromoForm(false)} className="flex-1 glass text-forest-100 text-xs font-semibold py-2 rounded-xl flex items-center justify-center gap-1">
+                    <X className="w-3.5 h-3.5" /> Cancel
+                  </button>
+                  <button type="submit" disabled={!promoForm.code.trim() || !promoForm.discountValue || savingPromo}
+                    className="flex-1 btn-glow-green text-white text-xs font-bold py-2 rounded-xl disabled:opacity-50">
+                    {savingPromo ? 'Saving...' : 'Create'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <button onClick={() => setShowPromoForm(true)} className="w-full btn-glow-orange text-white text-sm font-semibold py-2.5 rounded-xl flex items-center justify-center gap-2">
+                <Plus className="w-4 h-4" /> Add Promo
+              </button>
+            )}
           </div>
         </div>
       </div>

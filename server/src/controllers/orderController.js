@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 // Finds a random rider who is online (is_available = true) and not currently
 // on an active delivery, then assigns them to the order.
@@ -135,7 +136,8 @@ async function listOrders(req, res) {
     `SELECT o.id, o.restaurant_id, o.status, o.total, o.subtotal, o.delivery_fee, o.tax,
             o.payment_method, o.payment_status,
             o.created_at, o.delivered_at, o.delivery_address, NULL AS delivery_proof_image, o.rider_id,
-            r.name AS restaurant_name, r.image_url AS restaurant_image, r.address AS restaurant_address,
+            r.name AS restaurant_name, ${imageUrlSql('r', 'restaurants')} AS restaurant_image,
+            r.address AS restaurant_address,
             u.name  AS customer_name,
             ru.name  AS rider_name,
             ru.phone AS rider_phone
@@ -146,14 +148,24 @@ async function listOrders(req, res) {
      ${cond} ORDER BY o.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, parseInt(limit), offset]
   );
+  rows.forEach(r => resolveImageUrls(req, r, ['restaurant_image']));
   res.json({ data: rows, page: parseInt(page), limit: parseInt(limit) });
+}
+
+// Only the order's customer, assigned rider, restaurant owner, or an admin may view it.
+// Expects `order` to carry customer_id, rider_id and restaurant_owner_id.
+function canAccessOrder(user, order) {
+  return user.role === 'admin'
+    || order.customer_id === user.id
+    || order.rider_id === user.id
+    || order.restaurant_owner_id === user.id;
 }
 
 async function getOrder(req, res) {
   const { rows } = await pool.query(
     `SELECT o.*,
-            r.name  AS restaurant_name, r.image_url AS restaurant_image,
-            r.address AS restaurant_address, r.phone AS restaurant_phone,
+            r.name  AS restaurant_name, ${imageUrlSql('r', 'restaurants')} AS restaurant_image,
+            r.address AS restaurant_address, r.phone AS restaurant_phone, r.owner_id AS restaurant_owner_id,
             u.name  AS customer_name, u.phone AS customer_phone,
             ru.name  AS rider_name,   ru.phone AS rider_phone
      FROM orders o
@@ -164,15 +176,27 @@ async function getOrder(req, res) {
     [req.params.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'Order not found' });
+  const order = rows[0];
+  if (!canAccessOrder(req.user, order)) return res.status(404).json({ error: 'Order not found' });
+
+  // Proof images are large base64 blobs; customers never display them, and the
+  // tracking page refetches this endpoint, so don't ship them to customers.
+  if (req.user.role === 'customer') {
+    delete order.proof_image;
+    delete order.delivery_proof_image;
+  }
+  delete order.restaurant_owner_id;
+  resolveImageUrls(req, order, ['restaurant_image']);
 
   const { rows: items } = await pool.query(
-    `SELECT oi.*, mi.image_url
+    `SELECT oi.*, ${imageUrlSql('mi', 'menu-items')} AS image_url
      FROM order_items oi
      LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
      WHERE oi.order_id = $1`,
     [req.params.id]
   );
-  res.json({ ...rows[0], items });
+  items.forEach(i => resolveImageUrls(req, i, ['image_url']));
+  res.json({ ...order, items });
 }
 
 async function updateStatus(req, res) {
@@ -265,4 +289,4 @@ async function assignRider(req, res) {
   res.json({ message: 'Rider assigned' });
 }
 
-module.exports = { placeOrder, listOrders, getOrder, updateStatus, assignRider, riderResponse, autoAssignRider };
+module.exports = { placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };

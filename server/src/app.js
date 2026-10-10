@@ -69,6 +69,11 @@ pool.query(`
 `).catch(err => console.warn('messages updated_at column warning:', err.message));
 
 pool.query(`
+  ALTER TABLE promo_codes
+    ADD COLUMN IF NOT EXISTS owner_id INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL
+`).catch(err => console.warn('promo_codes owner_id column warning:', err.message));
+
+pool.query(`
   CREATE TABLE IF NOT EXISTS rider_admin_requests (
     id               SERIAL PRIMARY KEY,
     rider_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -97,8 +102,12 @@ const upgradeRoutes = require('./routes/upgrades');
 const riderRoutes   = require('./routes/riders');
 const favoriteRoutes = require('./routes/favorites');
 const messageRoutes = require('./routes/messages');
+const imageRoutes   = require('./routes/images');
 
 const app = express();
+
+// Render terminates TLS at its proxy; trust it so req.protocol reports https
+app.set('trust proxy', 1);
 
 app.use(helmet());
 app.use(cors({
@@ -123,6 +132,7 @@ app.use('/api/upgrades',     upgradeRoutes);
 app.use('/api/riders',       riderRoutes);
 app.use('/api/favorites',    favoriteRoutes);
 app.use('/api/messages',     messageRoutes);
+app.use('/api/images',       imageRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

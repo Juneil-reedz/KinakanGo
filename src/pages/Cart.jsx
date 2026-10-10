@@ -1,6 +1,7 @@
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Minus, Plus, X, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight } from 'lucide-react';
+import CustomerBottomNav from '../components/CustomerBottomNav';
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -13,7 +14,7 @@ export default function Cart() {
 
   if (cartItems.length === 0) {
     return (
-      <div className="min-h-screen px-4 py-12 relative animate-fade-up">
+      <div className="min-h-screen px-4 pt-12 pb-28 lg:pb-12 relative animate-fade-up">
         <div className="orb w-72 h-72 bg-forest-600/15 top-1/4 left-1/4" />
         <div className="max-w-3xl mx-auto space-y-6">
           <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">My Cart</h1>
@@ -27,6 +28,7 @@ export default function Cart() {
             </button>
           </div>
         </div>
+        <CustomerBottomNav />
       </div>
     );
   }
@@ -49,7 +51,7 @@ export default function Cart() {
         </button>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-4 pb-40">
+      <div className="max-w-2xl mx-auto p-4 space-y-4 pb-72 lg:pb-60">
         {/* Restaurant label */}
         <div className="glass-green rounded-2xl px-4 py-3 flex items-center gap-2">
           <span className="text-lg">🏪</span>
@@ -101,7 +103,8 @@ export default function Cart() {
       </div>
 
       {/* Fixed bottom summary */}
-      <div className="fixed bottom-0 left-0 right-0 glass-dark p-4 z-20"
+      <div className="fixed bottom-0 left-0 right-0 z-20">
+      <div className="glass-dark p-4"
         style={{ borderTop:'1px solid rgba(255,255,255,.08)', boxShadow:'0 -8px 32px rgba(0,0,0,.4)' }}>
         <div className="max-w-2xl mx-auto space-y-2 mb-4">
           {[
@@ -125,6 +128,8 @@ export default function Cart() {
           className="w-full max-w-2xl mx-auto block py-4 btn-glow-orange text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2">
           Proceed to Checkout <ChevronRight className="w-5 h-5" />
         </button>
+      </div>
+      <CustomerBottomNav fixed={false} />
       </div>
     </div>
   );

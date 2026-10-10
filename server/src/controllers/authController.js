@@ -1,10 +1,28 @@
 const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
-const { Resend } = require('resend');
 const pool   = require('../config/db');
 
-const resend = new Resend(process.env.RESEND_API_KEY);
+async function sendEmail({ to, subject, html }) {
+  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
+    method: 'POST',
+    headers: {
+      'api-key':      process.env.BREVO_API_KEY,
+      'Content-Type': 'application/json',
+      'Accept':       'application/json',
+    },
+    body: JSON.stringify({
+      sender:      { name: 'KinakanGo', email: process.env.BREVO_SENDER_EMAIL },
+      to:          [{ email: to }],
+      subject,
+      htmlContent: html,
+    }),
+  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => '');
+    throw new Error(`Brevo send failed (${res.status}): ${body}`);
+  }
+}
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL = '7d';
@@ -140,44 +158,85 @@ async function me(req, res) {
   res.json({ ...u, has_restaurant: rRows2.length > 0, has_rider_profile: rpRows2.length > 0 });
 }
 
+const OTP_TTL_MS   = 10 * 60 * 1000; // 10 minutes to enter the code
+const RESET_TTL_MS = 15 * 60 * 1000; // 15 minutes to submit the new password after verifying
+const MAX_ATTEMPTS = 5;
+
 async function forgotPassword(req, res) {
   const { email } = req.body;
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
   const { rows } = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
   // Always return success to prevent email enumeration
-  if (!rows.length) return res.json({ message: 'If that email exists, a reset link was sent.' });
+  if (!rows.length) return res.json({ message: 'If that email exists, a code was sent.' });
 
-  const user  = rows[0];
-  const token = crypto.randomBytes(32).toString('hex');
-  const expires = new Date(Date.now() + 60 * 60 * 1000); // 1 hour
+  const user = rows[0];
+  const otp  = crypto.randomInt(100000, 1000000).toString();
+  const expires = new Date(Date.now() + OTP_TTL_MS);
 
+  // Invalidate any codes still pending for this user before issuing a new one
   await pool.query(
-    'INSERT INTO password_reset_tokens (user_id, token, expires_at) VALUES ($1, $2, $3)',
-    [user.id, token, expires]
+    'DELETE FROM password_reset_tokens WHERE user_id = $1 AND used = false',
+    [user.id]
+  );
+  await pool.query(
+    'INSERT INTO password_reset_tokens (user_id, otp_code, expires_at) VALUES ($1, $2, $3)',
+    [user.id, otp, expires]
   );
 
-  const resetUrl = `${process.env.CLIENT_URL}/reset-password?token=${token}`;
-
-  await resend.emails.send({
-    from: 'KinakanGo <onboarding@resend.dev>',
+  await sendEmail({
     to: email,
-    subject: 'Reset your KinakanGo password',
+    subject: 'Your KinakanGo password reset code',
     html: `
       <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px">
         <h2 style="color:#1a1a1a">Reset your password</h2>
         <p>Hi ${user.name},</p>
-        <p>Click the button below to reset your password. This link expires in <strong>1 hour</strong>.</p>
-        <a href="${resetUrl}"
-           style="display:inline-block;margin:16px 0;padding:12px 24px;background:#e8540a;color:#fff;border-radius:8px;text-decoration:none;font-weight:bold">
-          Reset Password
-        </a>
+        <p>Your password reset code is:</p>
+        <p style="font-size:32px;font-weight:bold;letter-spacing:6px;color:#e8540a;margin:16px 0">${otp}</p>
+        <p>This code expires in <strong>10 minutes</strong>.</p>
         <p style="color:#666;font-size:13px">If you didn't request this, you can safely ignore this email.</p>
       </div>
     `,
   });
 
-  res.json({ message: 'If that email exists, a reset link was sent.' });
+  res.json({ message: 'If that email exists, a code was sent.' });
+}
+
+async function verifyResetOtp(req, res) {
+  const { email, otp } = req.body;
+  if (!email || !otp) return res.status(400).json({ error: 'Email and code are required' });
+
+  const { rows: users } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+  if (!users.length) return res.status(400).json({ error: 'Invalid or expired code' });
+  const userId = users[0].id;
+
+  const { rows } = await pool.query(
+    `SELECT * FROM password_reset_tokens
+     WHERE user_id = $1 AND verified = false AND used = false AND expires_at > NOW()
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  if (!rows.length) return res.status(400).json({ error: 'Invalid or expired code' });
+
+  const row = rows[0];
+  if (row.attempts >= MAX_ATTEMPTS) {
+    return res.status(400).json({ error: 'Too many attempts. Please request a new code.' });
+  }
+
+  if (row.otp_code !== otp) {
+    await pool.query('UPDATE password_reset_tokens SET attempts = attempts + 1 WHERE id = $1', [row.id]);
+    const left = MAX_ATTEMPTS - (row.attempts + 1);
+    return res.status(400).json({ error: `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.` });
+  }
+
+  const resetToken = crypto.randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + RESET_TTL_MS);
+  await pool.query(
+    'UPDATE password_reset_tokens SET verified = true, token = $1, expires_at = $2 WHERE id = $3',
+    [resetToken, expires, row.id]
+  );
+
+  res.json({ resetToken });
 }
 
 async function resetPassword(req, res) {
@@ -186,10 +245,10 @@ async function resetPassword(req, res) {
   if (password.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
 
   const { rows } = await pool.query(
-    'SELECT * FROM password_reset_tokens WHERE token = $1 AND expires_at > NOW() AND used = false',
+    'SELECT * FROM password_reset_tokens WHERE token = $1 AND verified = true AND used = false AND expires_at > NOW()',
     [token]
   );
-  if (!rows.length) return res.status(400).json({ error: 'Reset link is invalid or has expired' });
+  if (!rows.length) return res.status(400).json({ error: 'Reset session is invalid or has expired' });
 
   const resetRow = rows[0];
   const hash = await bcrypt.hash(password, 12);
@@ -201,4 +260,4 @@ async function resetPassword(req, res) {
   res.json({ message: 'Password reset successfully. Please log in.' });
 }
 
-module.exports = { register, login, refresh, logout, me, forgotPassword, resetPassword };
+module.exports = { register, login, refresh, logout, me, forgotPassword, verifyResetOtp, resetPassword };

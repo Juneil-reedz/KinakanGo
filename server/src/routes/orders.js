@@ -18,17 +18,20 @@ router.get('/:id/rider-location', async (req, res) => {
   try {
     const { rows } = await pool.query(
       `SELECT rp.current_lat AS lat, rp.current_lng AS lng, rp.location_updated_at AS updated_at,
-              u.name AS rider_name
+              u.name AS rider_name,
+              o.customer_id, o.rider_id, r.owner_id AS restaurant_owner_id
        FROM orders o
+       JOIN restaurants r ON r.id = o.restaurant_id
        JOIN rider_profiles rp ON rp.user_id = o.rider_id
        JOIN users u ON u.id = o.rider_id
        WHERE o.id = $1`,
       [req.params.id]
     );
-    if (!rows.length || rows[0].lat == null) {
+    if (!rows.length || rows[0].lat == null || !ctrl.canAccessOrder(req.user, rows[0])) {
       return res.status(404).json({ error: 'Location not available yet' });
     }
-    res.json(rows[0]);
+    const { lat, lng, updated_at, rider_name } = rows[0];
+    res.json({ lat, lng, updated_at, rider_name });
   } catch (err) {
     console.error('rider-location error:', err);
     res.status(500).json({ error: 'Failed to get rider location' });
