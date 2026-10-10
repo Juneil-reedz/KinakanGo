@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
-  Check, Crown, Zap, ChevronRight, X, Upload,
+  Check, Crown, User, ChevronRight, X, Upload,
   Clock, CheckCircle, XCircle, Store, Bike, FileText,
   ShieldCheck, ArrowRight, RefreshCw
 } from 'lucide-react';
@@ -11,27 +11,27 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { useRider } from '../context/RiderContext';
 import { request, authApi } from '../services/api';
 
+// Basic is the free customer account (shown for comparison); Premium unlocks a role
 const PLANS = [
+  {
+    id: 'basic', name: 'Basic', price: 0, period: 'month', current: true,
+    icon: User, iconClass: 'glass', color: 'from-forest-700 to-forest-800',
+    tagline: 'Regular customer account',
+    features: [
+      'Order food from any restaurant', 'Live order tracking',
+      'Saved addresses & favorites', 'Order history & receipts',
+    ],
+  },
   {
     id: 'premium', name: 'Premium', price: 299, period: 'month',
     icon: Crown, iconClass: 'btn-glow-orange', color: 'from-ember-600 to-ember-700',
     popular: true,
-    tagline: 'Become a Restaurant Owner OR a Rider',
+    tagline: 'Host your own restaurant OR deliver as a Rider',
     features: [
-      'All Basic features', 'Priority customer support',
-      'Exclusive discounts & promos', 'Free delivery on orders above ₱300',
-      'Choose: Restaurant Owner OR Rider role',
+      'Everything in Basic',
+      'Choose: Restaurant Owner (host your restaurant in the app) OR Rider',
       'Full dashboard for your chosen role', 'Earnings & analytics',
-    ],
-  },
-  {
-    id: 'business', name: 'Business Pro', price: 999, period: 'month',
-    icon: Zap, iconClass: 'btn-glow-green', color: 'from-forest-500 to-forest-600',
-    tagline: 'Restaurant Owner AND Rider — both roles',
-    features: [
-      'All Premium features', 'Both Restaurant Owner AND Rider roles',
-      'Multiple restaurant management', '24/7 Priority support & account manager',
-      'Advanced analytics & reports', 'Commission discounts', 'API access',
+      'Priority customer support', 'Exclusive discounts & promos',
     ],
   },
 ];
@@ -630,9 +630,10 @@ export default function AccountUpgrade() {
           const Icon = p.icon;
           const isSel = selectedPlan === p.id;
           return (
-            <div key={p.id} onClick={() => setPlan(p.id)}
-              className={`relative glass card-3d rounded-3xl overflow-hidden cursor-pointer transition-all duration-300
-                ${isSel ? 'ring-2 ring-forest-400 scale-[1.02]' : 'hover:glass-green'}`}>
+            <div key={p.id} onClick={() => !p.current && setPlan(p.id)}
+              className={`relative glass card-3d rounded-3xl overflow-hidden transition-all duration-300
+                ${p.current ? 'cursor-default opacity-90' : 'cursor-pointer'}
+                ${isSel ? 'ring-2 ring-forest-400 scale-[1.02]' : p.current ? '' : 'hover:glass-green'}`}>
               {p.popular && (
                 <div className="absolute top-3 right-3 btn-glow-orange text-white text-xs px-2.5 py-1 rounded-full font-bold">POPULAR</div>
               )}
@@ -643,8 +644,8 @@ export default function AccountUpgrade() {
                 <p className="text-white font-heading font-bold text-xl">{p.name}</p>
                 <p className="text-white/60 text-xs mt-0.5">{p.tagline}</p>
                 <div className="flex items-end gap-1 mt-2">
-                  <span className="text-white font-heading font-bold text-4xl">₱{p.price}</span>
-                  <span className="text-white/70 text-sm mb-1">/{p.period}</span>
+                  <span className="text-white font-heading font-bold text-4xl">{p.price ? `₱${p.price}` : 'Free'}</span>
+                  {p.price > 0 && <span className="text-white/70 text-sm mb-1">/{p.period}</span>}
                 </div>
               </div>
               <div className="p-5">
@@ -659,8 +660,8 @@ export default function AccountUpgrade() {
                   ))}
                 </ul>
                 <div className={`w-full py-2.5 rounded-xl text-sm font-semibold text-center transition-all
-                  ${isSel ? 'btn-glow-orange text-white' : 'glass text-forest-200/70'}`}>
-                  {isSel ? '✓ Selected' : 'Select Plan'}
+                  ${isSel ? 'btn-glow-orange text-white' : p.current ? 'glass-green text-forest-200' : 'glass text-forest-200/70'}`}>
+                  {p.current ? 'Your current plan' : isSel ? '✓ Selected' : 'Select Plan'}
                 </div>
               </div>
             </div>
@@ -679,7 +680,7 @@ export default function AccountUpgrade() {
         <p className="text-white font-semibold mb-4">How it works</p>
         <div className="space-y-3">
           {[
-            { n:'1', t:'Choose a plan',           d:'Premium or Business Pro' },
+            { n:'1', t:'Choose Premium',          d:'₱299/month to host a restaurant or deliver as a Rider' },
             { n:'2', t:'Pick your role',           d:'Restaurant Owner or Delivery Rider' },
             { n:'3', t:'Submit requirements',      d:'Fill in details and upload required documents' },
             { n:'4', t:'Admin reviews (1–24 hrs)', d:'We verify your documents and information' },

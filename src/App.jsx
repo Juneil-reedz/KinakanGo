@@ -38,6 +38,10 @@ import Settings from './pages/Settings';
 import ChangePassword from './pages/ChangePassword';
 import NotFound from './pages/NotFound';
 import Notifications from './pages/Notifications';
+import { NotificationFeedProvider } from './context/NotificationFeed';
+import { request } from './services/api';
+import { restaurantRequest } from './context/RestaurantContext';
+import { riderRequest } from './context/RiderContext';
 import CustomerService from './pages/CustomerService';
 import AccountUpgrade from './pages/AccountUpgrade';
 import RestaurantOwnerApplication from './pages/RestaurantOwnerApplication';
@@ -108,6 +112,20 @@ function AdminGuest({ children }) {
   return <GuestOnly isAuthed={!!admin} loading={isLoading} to="/admin/dashboard">{children}</GuestOnly>;
 }
 
+// Server notifications for each part of the app (enabled only while signed in there)
+function CustomerFeed({ children }) {
+  const { isAuthenticated } = useAuth();
+  return <NotificationFeedProvider request={request} audience="customer" enabled={isAuthenticated}>{children}</NotificationFeedProvider>;
+}
+function OwnerFeed({ children }) {
+  const { restaurant } = useRestaurant();
+  return <NotificationFeedProvider request={restaurantRequest} audience="restaurant" enabled={!!restaurant}>{children}</NotificationFeedProvider>;
+}
+function RiderFeed({ children }) {
+  const { rider } = useRider();
+  return <NotificationFeedProvider request={riderRequest} audience="rider" enabled={!!rider}>{children}</NotificationFeedProvider>;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -139,7 +157,7 @@ function App() {
                   <Route path="/food/:id" element={<RequireCustomer><FoodDetail /></RequireCustomer>} />
 
                   {/* Customer Routes with Layout */}
-                  <Route path="/" element={<RequireCustomer><CustomerLayout /></RequireCustomer>}>
+                  <Route path="/" element={<RequireCustomer><CustomerFeed><CustomerLayout /></CustomerFeed></RequireCustomer>}>
                     <Route index element={<Home />} />
                     <Route path="search" element={<Search />} />
                     <Route path="restaurants" element={<Restaurants />} />
@@ -166,8 +184,10 @@ function App() {
                   <Route
                     path="/owner/*"
                     element={
+                      <OwnerFeed>
                       <RestaurantLayout>
                         <Routes>
+                          <Route path="notifications" element={<Notifications />} />
                           <Route path="dashboard" element={<RestaurantDashboard />} />
                           <Route path="orders" element={<RestaurantOrders />} />
                           <Route path="messages" element={<RestaurantMessages />} />
@@ -178,6 +198,7 @@ function App() {
                           <Route path="*" element={<NotFound homePath="/owner/dashboard" homeLabel="Dashboard" />} />
                         </Routes>
                       </RestaurantLayout>
+                      </OwnerFeed>
                     }
                   />
 
@@ -186,8 +207,10 @@ function App() {
                   <Route
                     path="/rider/*"
                     element={
+                      <RiderFeed>
                       <RiderLayout>
                         <Routes>
+                          <Route path="notifications" element={<Notifications />} />
                           <Route path="dashboard" element={<RiderDashboard />} />
                           <Route path="delivery/:orderId" element={<RiderDelivery />} />
                           <Route path="earnings" element={<RiderEarnings />} />
@@ -196,6 +219,7 @@ function App() {
                           <Route path="*" element={<NotFound homePath="/rider/dashboard" homeLabel="Dashboard" />} />
                         </Routes>
                       </RiderLayout>
+                      </RiderFeed>
                     }
                   />
 

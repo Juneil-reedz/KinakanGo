@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { notify } = require('../utils/notify');
 
 async function submit(req, res) {
   const { orderId, type, priority, description, refundRequested } = req.body;
@@ -55,6 +56,12 @@ async function resolve(req, res) {
       );
     }
   }
+  const { rows: issue } = await pool.query('SELECT customer_id, order_id FROM issues WHERE id = $1', [req.params.id]);
+  if (issue[0]) await notify(issue[0].customer_id, {
+    audience: 'customer', type: 'success', link: '/customer-service',
+    title: refundApproved ? `Refund approved for order #${issue[0].order_id}` : `Your report about order #${issue[0].order_id} was resolved`,
+    message: notes || null,
+  });
   res.json({ message: 'Resolved' });
 }
 
@@ -65,6 +72,12 @@ async function deny(req, res) {
      WHERE id = $3`,
     [notes || null, req.user.id, req.params.id]
   );
+  const { rows: issue } = await pool.query('SELECT customer_id, order_id FROM issues WHERE id = $1', [req.params.id]);
+  if (issue[0]) await notify(issue[0].customer_id, {
+    audience: 'customer', type: 'error', link: '/customer-service',
+    title: `Your report about order #${issue[0].order_id} was declined`,
+    message: notes || null,
+  });
   res.json({ message: 'Denied' });
 }
 

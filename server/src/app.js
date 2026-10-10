@@ -68,6 +68,35 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 `).catch(err => console.warn('messages updated_at column warning:', err.message));
 
+// In-app notifications (see utils/notify.js); index runs after the table exists
+pool.query(`
+  CREATE TABLE IF NOT EXISTS notifications (
+    id         SERIAL PRIMARY KEY,
+    user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    audience   VARCHAR(12)  NOT NULL DEFAULT 'customer',
+    type       VARCHAR(12)  NOT NULL DEFAULT 'info',
+    title      VARCHAR(160) NOT NULL,
+    message    TEXT         DEFAULT NULL,
+    link       VARCHAR(200) DEFAULT NULL,
+    is_read    BOOLEAN      NOT NULL DEFAULT FALSE,
+    created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+  )
+`).then(() => pool.query(`
+  -- An older, unused notifications table may already exist: bring it to this layout
+  ALTER TABLE notifications
+    ADD COLUMN IF NOT EXISTS audience VARCHAR(12)  NOT NULL DEFAULT 'customer',
+    ADD COLUMN IF NOT EXISTS message  TEXT         DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS link     VARCHAR(200) DEFAULT NULL
+`)).then(() => pool.query(`
+  DO $$ BEGIN
+    IF EXISTS (SELECT 1 FROM information_schema.columns WHERE table_name = 'notifications' AND column_name = 'body') THEN
+      ALTER TABLE notifications ALTER COLUMN body DROP NOT NULL;
+    END IF;
+  END $$
+`)).then(() => pool.query(
+  'CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id, audience, created_at DESC)'
+)).catch(err => console.warn('notifications init warning:', err.message));
+
 // Codes emailed to the account holder to approve an order (see orderController)
 pool.query(`
   CREATE TABLE IF NOT EXISTS order_verifications (
@@ -127,6 +156,7 @@ const favoriteRoutes = require('./routes/favorites');
 const messageRoutes = require('./routes/messages');
 const imageRoutes   = require('./routes/images');
 const addressRoutes = require('./routes/addresses');
+const notificationRoutes = require('./routes/notifications');
 
 const app = express();
 
@@ -158,6 +188,7 @@ app.use('/api/favorites',    favoriteRoutes);
 app.use('/api/messages',     messageRoutes);
 app.use('/api/images',       imageRoutes);
 app.use('/api/addresses',    addressRoutes);
+app.use('/api/notifications', notificationRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

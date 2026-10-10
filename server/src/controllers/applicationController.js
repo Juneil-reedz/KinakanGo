@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { notify } = require('../utils/notify');
 
 async function submit(req, res) {
   const { type, data } = req.body;
@@ -64,6 +65,11 @@ async function approve(req, res) {
     await pool.query('UPDATE users SET role = $1 WHERE id = $2', ['restaurant_owner', app.user_id]);
   }
 
+  await notify(app.user_id, {
+    audience: 'customer', type: 'success', link: '/profile',
+    title: `Your ${app.type === 'rider' ? 'rider' : 'restaurant'} application was approved`,
+    message: app.type === 'rider' ? 'You can now open the Rider Dashboard.' : 'You can now open your Restaurant Dashboard.',
+  });
   res.json({ message: 'Approved' });
 }
 
@@ -73,6 +79,12 @@ async function reject(req, res) {
     'UPDATE applications SET status = $1, reject_reason = $2, reviewed_by = $3, reviewed_at = NOW() WHERE id = $4',
     ['rejected', reason || null, req.user.id, req.params.id]
   );
+  const { rows } = await pool.query('SELECT user_id, type FROM applications WHERE id = $1', [req.params.id]);
+  if (rows[0]) await notify(rows[0].user_id, {
+    audience: 'customer', type: 'error', link: '/profile',
+    title: `Your ${rows[0].type === 'rider' ? 'rider' : 'restaurant'} application was not approved`,
+    message: reason ? `Reason: ${reason}` : null,
+  });
   res.json({ message: 'Rejected' });
 }
 

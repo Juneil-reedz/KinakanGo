@@ -4,7 +4,6 @@ import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useRider } from '../context/RiderContext';
-import { useNotification } from '../context/NotificationContext';
 import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
   Settings, Search, Bell, ShoppingCart, Menu,
@@ -14,12 +13,15 @@ import {
 
 import CustomerBottomNav from './CustomerBottomNav';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
+import { useNotificationFeed } from '../context/NotificationFeed';
 
 const NAV = [
   { key: 'dashboard',    label: 'Dashboard',    icon: HomeIcon,        path: '/' },
   { key: 'food-order',   label: 'Food Order',   icon: ShoppingBag,     path: '/restaurants' },
   { key: 'favorite',     label: 'Favorites',    icon: Heart,           path: '/favorites' },
   { key: 'message',      label: 'Messages',     icon: MessageCircle,   path: '/messages' },
+  { key: 'notification', label: 'Notifications', icon: Bell,           path: '/notifications' },
   { key: 'order-history',label: 'Orders',       icon: Clock,           path: '/orders' },
   { key: 'setting',      label: 'Settings',     icon: Settings,        path: '/settings' },
 ];
@@ -31,7 +33,6 @@ export default function CustomerLayout() {
   const { enterFromCustomer: enterRestaurant } = useRestaurant();
   const { enterFromCustomer: enterRider } = useRider();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
-  const { unreadCount } = useNotification();
   const [collapsed, setCollapsed]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [searchQuery, setSearchQuery]   = useState('');
@@ -83,22 +84,13 @@ export default function CustomerLayout() {
     if (p === '/messages') return 'message';
     if (p === '/orders' || p.startsWith('/order-')) return 'order-history';
     if (p === '/settings' || p === '/change-password') return 'setting';
+    if (p === '/notifications') return 'notification';
     return null;
   };
   const navKey = getNavKey();
 
-  const bellButton = (
-    <button onClick={() => navigate('/notifications')} aria-label={`Notifications${unreadCount ? ` (${unreadCount} new)` : ''}`}
-      className={`relative w-9 h-9 rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all
-        ${location.pathname === '/notifications' ? 'glass-green' : 'glass'}`}>
-      <Bell className="w-5 h-5" />
-      {unreadCount > 0 && (
-        <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
-          {unreadCount > 9 ? '9+' : unreadCount}
-        </span>
-      )}
-    </button>
-  );
+  const bellButton = <NotificationBell to="/notifications" />;
+  const { unread: unreadNotifications = 0 } = useNotificationFeed() || {};
 
   const handleNav = (path) => { navigate(path); setMobileOpen(false); };
 
@@ -168,8 +160,9 @@ export default function CustomerLayout() {
             const isActive = navKey === key;
             return (
               <button key={key} onClick={() => handleNav(path)} title={collapsed ? label : ''}
+                aria-label={key === 'notification' && unreadNotifications > 0 ? `${label} (${unreadNotifications} new)` : label}
                 className={`
-                  w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'}
+                  relative w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'}
                   px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200
                   ${isActive
                     ? 'btn-glow-orange text-white shadow-lg'
@@ -177,7 +170,13 @@ export default function CustomerLayout() {
                 `}>
                 <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : ''}`} />
                 {!collapsed && <span className="truncate">{label}</span>}
-                {!collapsed && isActive && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/80" />}
+                {key === 'notification' && unreadNotifications > 0 && (
+                  <span className={`${collapsed ? 'absolute top-1 right-1' : 'ml-auto'} min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center
+                    ${isActive ? 'bg-white/90 text-ember-700' : 'btn-glow-orange text-white'}`}>
+                    {unreadNotifications > 9 ? '9+' : unreadNotifications}
+                  </span>
+                )}
+                {!collapsed && isActive && !(key === 'notification' && unreadNotifications > 0) && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/80" />}
               </button>
             );
           })}

@@ -1,9 +1,9 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useRider } from '../context/RiderContext';
-import { useNotification } from '../context/NotificationContext';
 import { LayoutDashboard, DollarSign, Bike, Star, LogOut, Menu, X, History } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
+import NotificationBell from './NotificationBell';
 
 const NAV = [
   { path:'/rider/dashboard', label:'Dashboard', icon:LayoutDashboard },
@@ -118,7 +118,10 @@ export default function RiderLayout({ children }) {
             </button>
             <p className="text-white font-semibold">{NAV.find(n => isActive(n.path))?.label || 'Rider'}</p>
           </div>
-          <ThemeToggle />
+          <div className="flex items-center gap-2">
+            <ThemeToggle />
+            <NotificationBell to="/rider/notifications" />
+          </div>
         </header>
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>

@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { notify } = require('../utils/notify');
 const pool   = require('../config/db');
 const { authenticate, requireRole } = require('../middleware/auth');
 
@@ -71,12 +72,18 @@ router.get('/admin-requests', requireRole('admin'), async (_req, res) => {
 
 router.post('/admin-requests/:id/resolve', requireRole('admin'), async (req, res) => {
   try {
-    await pool.query(
+    const updated = await pool.query(
       `UPDATE rider_admin_requests
        SET status = 'resolved', resolution_notes = $1, resolved_by = $2, resolved_at = NOW(), updated_at = NOW()
-       WHERE id = $3`,
+       WHERE id = $3
+       RETURNING rider_id, request_type`,
       [req.body.notes || null, req.user.id, req.params.id]
     );
+    const r = updated.rows[0];
+    if (r) await notify(r.rider_id, {
+      audience: 'rider', type: 'success', link: '/rider/earnings',
+      title: `${r.request_type === 'payout' ? 'Payout' : 'Report'} request resolved`, message: req.body.notes || null,
+    });
     res.json({ message: 'Request resolved' });
   } catch (err) {
     console.error('rider admin request resolve error:', err);
@@ -86,12 +93,18 @@ router.post('/admin-requests/:id/resolve', requireRole('admin'), async (req, res
 
 router.post('/admin-requests/:id/deny', requireRole('admin'), async (req, res) => {
   try {
-    await pool.query(
+    const updated = await pool.query(
       `UPDATE rider_admin_requests
        SET status = 'denied', resolution_notes = $1, resolved_by = $2, resolved_at = NOW(), updated_at = NOW()
-       WHERE id = $3`,
+       WHERE id = $3
+       RETURNING rider_id, request_type`,
       [req.body.notes || null, req.user.id, req.params.id]
     );
+    const r = updated.rows[0];
+    if (r) await notify(r.rider_id, {
+      audience: 'rider', type: 'error', link: '/rider/earnings',
+      title: `${r.request_type === 'payout' ? 'Payout' : 'Report'} request denied`, message: req.body.notes || null,
+    });
     res.json({ message: 'Request denied' });
   } catch (err) {
     console.error('rider admin request deny error:', err);

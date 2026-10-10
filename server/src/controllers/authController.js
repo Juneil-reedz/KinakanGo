@@ -3,6 +3,7 @@ const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool   = require('../config/db');
 const { sendEmail } = require('../utils/email');
+const { notify } = require('../utils/notify');
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 
@@ -240,6 +241,10 @@ async function changePassword(req, res) {
     'DELETE FROM refresh_tokens WHERE user_id = $1 AND token IS DISTINCT FROM $2',
     [req.user.id, refreshToken || null]
   );
+  await notify(req.user.id, {
+    audience: 'customer', type: 'warning', link: '/settings',
+    title: 'Your password was changed', message: "If this wasn't you, reset your password right away.",
+  });
   res.json({ message: 'Password changed' });
 }
 
@@ -261,6 +266,10 @@ async function resetPassword(req, res) {
   await pool.query('UPDATE password_reset_tokens SET used = true WHERE id = $1', [resetRow.id]);
   await pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [resetRow.user_id]);
 
+  await notify(resetRow.user_id, {
+    audience: 'customer', type: 'warning', link: '/settings',
+    title: 'Your password was reset', message: "All devices were signed out. If this wasn't you, reset your password again.",
+  });
   res.json({ message: 'Password reset successfully. Please log in.' });
 }
 

@@ -1,4 +1,5 @@
 const router = require('express').Router();
+const { notify } = require('../utils/notify');
 const pool = require('../config/db');
 const { authenticate } = require('../middleware/auth');
 
@@ -25,7 +26,7 @@ async function resolveRecipient(to) {
     [`%${needle}%`, needle]
   );
   if (restaurants.length) {
-    return { recipient_user_id: restaurants[0].user_id, recipient_label: restaurants[0].name };
+    return { recipient_user_id: restaurants[0].user_id, recipient_label: restaurants[0].name, isRestaurant: true };
   }
 
   const { rows: users } = await pool.query(
@@ -95,6 +96,15 @@ router.post('/', async (req, res) => {
     const { rows: recipientRestaurants } = recipient.recipient_user_id
       ? await pool.query('SELECT name, image_url FROM restaurants WHERE owner_id = $1 LIMIT 1', [recipient.recipient_user_id])
       : { rows: [] };
+    // Messages to a restaurant show up in that owner's panel; others in the customer app
+    if (recipient.recipient_user_id && recipient.recipient_user_id !== req.user.id) {
+      const from = senderRestaurants[0]?.name || req.user.name || 'Someone';
+      await notify(recipient.recipient_user_id, {
+        audience: recipient.isRestaurant ? 'restaurant' : 'customer', type: 'info',
+        link: recipient.isRestaurant ? '/owner/messages' : '/messages',
+        title: `New message from ${from}`, message: subject && subject !== 'New message' ? subject : String(body).slice(0, 120),
+      });
+    }
     res.status(201).json({
       ...message,
       sender_restaurant_name: senderRestaurants[0]?.name || null,

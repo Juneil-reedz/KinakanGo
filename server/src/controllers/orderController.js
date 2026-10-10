@@ -1,6 +1,50 @@
 const crypto = require('crypto');
 const pool = require('../config/db');
 const { sendEmail } = require('../utils/email');
+const { notify } = require('../utils/notify');
+
+// Who may set which order status (admins may set any)
+const RESTAURANT_STATUSES = ['accepted', 'preparing', 'ready', 'cancelled'];
+const RIDER_STATUSES      = ['picked_up', 'delivered'];
+const FINAL_STATUSES      = ['delivered', 'cancelled', 'refunded'];
+
+// What the customer is told at each status change
+const STATUS_NOTICE = {
+  accepted:  { type: 'success', title: 'Order accepted',            message: (o) => `${o.restaurant_name} accepted your order.` },
+  preparing: { type: 'info',    title: 'Your food is being prepared', message: (o) => `${o.restaurant_name} is cooking your order.` },
+  ready:     { type: 'info',    title: 'Order ready for pickup',    message: () => 'Your order is ready and waiting for a rider.' },
+  picked_up: { type: 'info',    title: 'Rider on the way',          message: (o) => `${o.rider_name || 'Your rider'} picked up your order and is heading to you.` },
+  delivered: { type: 'success', title: 'Order delivered',           message: () => 'Enjoy your meal! Let us know if anything was wrong.' },
+  cancelled: { type: 'error',   title: 'Order cancelled',           message: (o, reason) => reason ? `Reason: ${reason}` : `${o.restaurant_name} cancelled your order.` },
+};
+
+// Tell the people involved in an order that its status changed
+async function notifyOrderStatus(orderId, status, reason) {
+  try {
+    const { rows } = await pool.query(
+      `SELECT o.id, o.customer_id, o.rider_id, r.owner_id, r.name AS restaurant_name, ru.name AS rider_name
+       FROM orders o JOIN restaurants r ON r.id = o.restaurant_id
+       LEFT JOIN users ru ON ru.id = o.rider_id WHERE o.id = $1`,
+      [orderId]
+    );
+    const o = rows[0];
+    const notice = o && STATUS_NOTICE[status];
+    if (!notice) return;
+    await notify(o.customer_id, {
+      audience: 'customer', type: notice.type, link: '/orders',
+      title: `${notice.title} · #${o.id}`, message: notice.message(o, reason),
+    });
+    if (status === 'picked_up' || status === 'delivered') {
+      await notify(o.owner_id, {
+        audience: 'restaurant', type: 'info', link: '/owner/orders',
+        title: status === 'delivered' ? `Order #${o.id} delivered` : `Order #${o.id} picked up`,
+        message: o.rider_name ? `Rider: ${o.rider_name}` : null,
+      });
+    }
+  } catch (err) {
+    console.warn('notifyOrderStatus failed:', err.message);
+  }
+}
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 // Finds a random rider who is online (is_available = true) and not currently
@@ -26,6 +70,10 @@ async function autoAssignRider(orderId) {
     const riderId = rows[0].user_id;
     await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, orderId]);
     console.log(`autoAssignRider: assigned rider ${riderId} to order ${orderId}`);
+    await notify(riderId, {
+      audience: 'rider', type: 'warning', link: '/rider/dashboard',
+      title: `New delivery request · #${orderId}`, message: 'An order is ready for pickup. Accept or decline it in your dashboard.',
+    });
     return riderId;
   } catch (err) {
     console.error('autoAssignRider error:', err.message);
@@ -240,6 +288,18 @@ async function placeOrder(req, res) {
     }
     await client.query('COMMIT');
     res.status(201).json({ id: orderId, orderId, total });
+
+    // After responding: tell the customer and the restaurant
+    const { rows: rest } = await pool.query('SELECT owner_id, name FROM restaurants WHERE id = $1', [restaurantId]);
+    const count = items.reduce((n, i) => n + Number(i.quantity), 0);
+    await notify(customerId, {
+      audience: 'customer', type: 'success', link: '/orders',
+      title: `Order placed · #${orderId}`, message: `We sent your order to ${rest[0]?.name || 'the restaurant'}. We'll update you as it progresses.`,
+    });
+    await notify(rest[0]?.owner_id, {
+      audience: 'restaurant', type: 'warning', link: '/owner/orders',
+      title: `New order · #${orderId}`, message: `${count} item${count === 1 ? '' : 's'} · ₱${Number(total).toFixed(2)} · ${paymentMethod || 'cash'}`,
+    });
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
@@ -350,11 +410,28 @@ async function updateStatus(req, res) {
   }
 
   const { rows: beforeRows } = await pool.query(
-    'SELECT status, rider_id, delivery_fee FROM orders WHERE id = $1',
+    `SELECT o.status, o.rider_id, o.delivery_fee, r.owner_id
+     FROM orders o JOIN restaurants r ON r.id = o.restaurant_id WHERE o.id = $1`,
     [req.params.id]
   );
   if (!beforeRows.length) return res.status(404).json({ error: 'Order not found' });
   const before = beforeRows[0];
+
+  // Only the people handling this order may change its status:
+  // its restaurant (kitchen steps / cancel), its assigned rider (pickup / delivery), or an admin
+  const isAdmin = req.user.role === 'admin';
+  const isOwner = before.owner_id === req.user.id;
+  const isRider = before.rider_id != null && before.rider_id === req.user.id;
+  const allowedFor = [
+    ...(isOwner ? RESTAURANT_STATUSES : []),
+    ...(isRider ? RIDER_STATUSES : []),
+  ];
+  if (!isAdmin && !allowedFor.includes(status)) {
+    return res.status(403).json({ error: 'You are not allowed to change this order' });
+  }
+  if (!isAdmin && FINAL_STATUSES.includes(before.status)) {
+    return res.status(409).json({ error: `This order is already ${before.status}` });
+  }
 
   const { rows: updatedRows } = await pool.query(
     `UPDATE orders SET
@@ -367,6 +444,8 @@ async function updateStatus(req, res) {
     [status, status, cancelledReason || null, status, deliveryProof || null, req.params.id]
   );
   if (!updatedRows.length) return res.status(404).json({ error: 'Order not found' });
+
+  await notifyOrderStatus(req.params.id, status, cancelledReason);
 
   // When order is ready for pickup, auto-assign an available rider
   if (status === 'ready') {
@@ -416,6 +495,7 @@ async function riderResponse(req, res) {
       'UPDATE rider_profiles SET is_available = false WHERE user_id = $1',
       [riderId]
     ).catch(() => {});
+    await notifyOrderStatus(orderId, 'picked_up');
     return res.json({ message: 'Order accepted', status: 'picked_up' });
   } else {
     // Rider rejected — clear assignment and try next rider
@@ -428,7 +508,11 @@ async function riderResponse(req, res) {
 async function assignRider(req, res) {
   const { riderId } = req.body;
   await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, req.params.id]);
+  await notify(riderId, {
+    audience: 'rider', type: 'warning', link: '/rider/dashboard',
+    title: `New delivery request · #${req.params.id}`, message: 'An admin assigned you this order. Accept or decline it in your dashboard.',
+  });
   res.json({ message: 'Rider assigned' });
 }
 
-module.exports = { requestOrderCode, placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };
+module.exports = { notifyOrderStatus, requestOrderCode, placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };

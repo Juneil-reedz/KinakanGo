@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { notify } = require('../utils/notify');
 
 async function submitRequest(req, res) {
   const { plan, amount, payment_method, reference_number, proof_image, notes } = req.body;
@@ -104,6 +105,11 @@ async function approveRequest(req, res) {
     }
 
     await client.query('COMMIT');
+    await notify(upgradeReq.user_id, {
+      audience: 'customer', type: 'success', link: '/upgrade',
+      title: `Upgrade approved: you're now a ${role === 'rider' ? 'Rider' : 'Restaurant Owner'}`,
+      message: admin_note || (role === 'rider' ? 'Open the Rider Dashboard to start accepting deliveries.' : 'Open your Restaurant Dashboard to set up your menu.'),
+    });
     res.json({ message: `Request approved. User upgraded to ${role}.` });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -119,10 +125,14 @@ async function rejectRequest(req, res) {
 
   const { rows } = await pool.query(
     `UPDATE upgrade_requests SET status='rejected', admin_note=$1, reviewed_by=$2, reviewed_at=NOW()
-     WHERE id=$3 AND status='pending' RETURNING id`,
+     WHERE id=$3 AND status='pending' RETURNING id, user_id`,
     [admin_note || null, req.user.id, id]
   );
   if (!rows.length) return res.status(404).json({ error: 'Request not found or already reviewed' });
+  await notify(rows[0].user_id, {
+    audience: 'customer', type: 'error', link: '/upgrade',
+    title: 'Your upgrade request was not approved', message: admin_note ? `Note: ${admin_note}` : null,
+  });
   res.json({ message: 'Request rejected.' });
 }
 

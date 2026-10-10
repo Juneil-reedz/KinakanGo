@@ -51,6 +51,21 @@ CREATE TABLE refresh_tokens (
   created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+
+CREATE TABLE notifications (
+  id         SERIAL PRIMARY KEY,
+  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  audience   VARCHAR(12)  NOT NULL DEFAULT 'customer',
+  type       VARCHAR(12)  NOT NULL DEFAULT 'info',
+  title      VARCHAR(160) NOT NULL,
+  message    TEXT         DEFAULT NULL,
+  link       VARCHAR(200) DEFAULT NULL,
+  is_read    BOOLEAN      NOT NULL DEFAULT FALSE,
+  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+CREATE INDEX notifications_user_idx ON notifications (user_id, audience, created_at DESC);
+
 -- ─── ORDER VERIFICATION CODES ────────────────────────────────────────────────
 
 CREATE TABLE order_verifications (
