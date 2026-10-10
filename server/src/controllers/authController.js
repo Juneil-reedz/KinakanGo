@@ -2,28 +2,9 @@ const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool   = require('../config/db');
+const { sendEmail } = require('../utils/email');
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
-async function sendEmail({ to, subject, html }) {
-  const res = await fetch('https://api.brevo.com/v3/smtp/email', {
-    method: 'POST',
-    headers: {
-      'api-key':      process.env.BREVO_API_KEY,
-      'Content-Type': 'application/json',
-      'Accept':       'application/json',
-    },
-    body: JSON.stringify({
-      sender:      { name: 'KinakanGo', email: process.env.BREVO_SENDER_EMAIL },
-      to:          [{ email: to }],
-      subject,
-      htmlContent: html,
-    }),
-  });
-  if (!res.ok) {
-    const body = await res.text().catch(() => '');
-    throw new Error(`Brevo send failed (${res.status}): ${body}`);
-  }
-}
 
 const ACCESS_TTL = '15m';
 const REFRESH_TTL = '7d';

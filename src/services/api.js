@@ -173,6 +173,8 @@ export const menuApi = {
 // ── Orders ────────────────────────────────────────────────────────────────────
 
 export const ordersApi = {
+  // Emails the account holder a code approving this cart; place() must include it as verificationCode
+  requestCode:  (data)           => request('/orders/verification',  { method: 'POST',  body: JSON.stringify(data) }),
   place:        (data)           => request('/orders',               { method: 'POST',  body: JSON.stringify(data) }),
   list:         (params = {})    => request(`/orders?${new URLSearchParams(params)}`),
   getOne:       (id)             => request(`/orders/${id}`),

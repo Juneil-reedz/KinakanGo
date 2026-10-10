@@ -4,6 +4,7 @@ const { authenticate, requireRole } = require('../middleware/auth');
 
 router.use(authenticate);
 
+router.post('/verification',         requireRole('customer'), ctrl.requestOrderCode);
 router.post('/',                     requireRole('customer'), ctrl.placeOrder);
 router.get('/',                      ctrl.listOrders);
 router.get('/:id',                   ctrl.getOrder);

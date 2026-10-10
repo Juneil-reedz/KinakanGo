@@ -51,6 +51,19 @@ CREATE TABLE refresh_tokens (
   created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- ─── ORDER VERIFICATION CODES ────────────────────────────────────────────────
+
+CREATE TABLE order_verifications (
+  id         SERIAL PRIMARY KEY,
+  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  code       VARCHAR(6)  NOT NULL,
+  cart_hash  VARCHAR(64) NOT NULL,
+  attempts   INT         NOT NULL DEFAULT 0,
+  used       BOOLEAN     NOT NULL DEFAULT FALSE,
+  expires_at TIMESTAMPTZ NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
 -- ─── PASSWORD RESET TOKENS ───────────────────────────────────────────────────
 
 CREATE TABLE password_reset_tokens (

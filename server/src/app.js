@@ -68,6 +68,20 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 `).catch(err => console.warn('messages updated_at column warning:', err.message));
 
+// Codes emailed to the account holder to approve an order (see orderController)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS order_verifications (
+    id         SERIAL PRIMARY KEY,
+    user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    code       VARCHAR(6)  NOT NULL,
+    cart_hash  VARCHAR(64) NOT NULL,
+    attempts   INT         NOT NULL DEFAULT 0,
+    used       BOOLEAN     NOT NULL DEFAULT FALSE,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`).catch(err => console.warn('order_verifications init warning:', err.message));
+
 // Saved addresses also keep city / province / ZIP / delivery notes
 pool.query(`
   ALTER TABLE customer_addresses

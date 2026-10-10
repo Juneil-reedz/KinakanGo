@@ -3,8 +3,8 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { createOrder, restaurantsApi } from '../services/api';
-import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone } from 'lucide-react';
+import { createOrder, restaurantsApi, ordersApi } from '../services/api';
+import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone, ShieldCheck } from 'lucide-react';
 import useGoBack from '../hooks/useGoBack';
 
 function pickImage(onPick) {
@@ -103,25 +103,71 @@ export default function Checkout() {
     return Object.keys(e).length === 0;
   };
 
-  const processOrder = async () => {
+  const orderItems = () => cartItems.map(i => ({ menuItemId: i.id, quantity: i.quantity }));
+
+  // Order approval: a code is emailed to the account holder before the order is placed
+  const [verify, setVerify] = useState(null); // { sentTo } while the code dialog is open
+  const [code, setCode]           = useState('');
+  const [codeError, setCodeError] = useState('');
+  const [sending, setSending]     = useState(false);
+  const [resendIn, setResendIn]   = useState(0);
+
+  useEffect(() => {
+    if (resendIn <= 0) return;
+    const t = setTimeout(() => setResendIn(s => s - 1), 1000);
+    return () => clearTimeout(t);
+  }, [resendIn]);
+
+  const sendCode = async () => {
+    setSending(true);
+    setCodeError('');
+    try {
+      const res = await ordersApi.requestCode({ restaurantId, items: orderItems() });
+      setVerify({ sentTo: res.sentTo });
+      setCode('');
+      setResendIn(res.resendAfter || 60);
+      return true;
+    } catch (err) {
+      const msg = err?.data?.error || 'Could not send the verification code. Please try again.';
+      if (err?.data?.retryAfter) {
+        // A code was sent moments ago — reopen the dialog to enter it
+        setVerify(v => v || { sentTo: 'your email' });
+        setResendIn(err.data.retryAfter);
+      }
+      verify || err?.data?.retryAfter ? setCodeError(msg) : addNotification(msg, 'error');
+      return false;
+    } finally {
+      setSending(false);
+    }
+  };
+
+  const processOrder = async (verificationCode) => {
     setSubmitting(true);
-    addNotification('Processing your order…', 'info');
     try {
       const orderData = {
         restaurantId,
-        items: cartItems.map(i => ({ menuItemId: i.id, quantity: i.quantity })),
+        items: orderItems(),
         deliveryAddress: `${form.address}${form.apartmentUnit ? ', ' + form.apartmentUnit : ''}, ${form.city} ${form.zipCode}`,
         specialInstructions: form.deliveryInstructions || null,
         paymentMethod: form.paymentMethod,
         proofImage: form.proofImage || null,
         contactInfo: { name: form.fullName, email: form.email, phone: form.phone },
+        verificationCode,
       };
       const order = await createOrder(orderData);
+      setVerify(null);
       addNotification('Order placed successfully!', 'success');
       clearCart();
       setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state: { orderData }, replace: true }), 1200);
-    } catch {
-      addNotification('Failed to place order. Please try again.', 'error');
+    } catch (err) {
+      const kind = err?.data?.code;
+      if (['INVALID_CODE', 'CODE_EXPIRED', 'CART_CHANGED', 'VERIFICATION_REQUIRED'].includes(kind)) {
+        setCodeError(err.data.error);
+        if (kind !== 'INVALID_CODE') setResendIn(0); // let them request a new code right away
+      } else {
+        setVerify(null);
+        addNotification('Failed to place order. Please try again.', 'error');
+      }
       setSubmitting(false);
     }
   };
@@ -129,7 +175,13 @@ export default function Checkout() {
   const handleSubmit = async (e) => {
     e.preventDefault();
     if (!validate()) return;
-    await processOrder();
+    await sendCode();
+  };
+
+  const handleConfirmCode = async (e) => {
+    e.preventDefault();
+    if (!/^\d{6}$/.test(code)) { setCodeError('Enter the 6-digit code'); return; }
+    await processOrder(code);
   };
 
   if (cartItems.length === 0) return (
@@ -357,16 +409,56 @@ export default function Checkout() {
               </div>
             </div>
 
-            <button type="submit" disabled={submitting}
+            <button type="submit" disabled={submitting || sending}
               className={`w-full py-4 rounded-2xl font-heading font-bold text-base flex items-center justify-center gap-2 transition-all
-                ${submitting ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
-              {submitting
-                ? <><div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Placing Order…</>
+                ${submitting || sending ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+              {submitting || sending
+                ? <><div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> {sending ? 'Sending code…' : 'Placing Order…'}</>
                 : <>Place Order <ChevronRight className="w-5 h-5" /></>}
             </button>
           </div>
         </div>
       </form>
+      {/* Order approval code dialog */}
+      {verify && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
+          style={{ background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)' }}>
+          <form onSubmit={handleConfirmCode} role="dialog" aria-modal="true" aria-labelledby="verify-title"
+            className="glass w-full max-w-sm rounded-3xl p-6 animate-fade-up" style={{ background: 'var(--panel-bg)' }}>
+            <div className="w-14 h-14 btn-glow-green rounded-2xl flex items-center justify-center mx-auto mb-4">
+              <ShieldCheck className="w-7 h-7 text-white" />
+            </div>
+            <h2 id="verify-title" className="text-white font-heading font-bold text-xl text-center">Confirm your order</h2>
+            <p className="text-forest-200/60 text-sm text-center mt-1 mb-5">
+              We sent a 6-digit code with the order details to <span className="text-ember-400 font-semibold">{verify.sentTo}</span>.
+              Ask the account holder for it to place this order.
+            </p>
+
+            <input type="text" inputMode="numeric" autoComplete="one-time-code" maxLength={6} autoFocus
+              value={code} placeholder="123456" aria-label="Verification code"
+              onChange={e => { setCode(e.target.value.replace(/\D/g, '').slice(0, 6)); setCodeError(''); }}
+              className={`w-full input-glass px-4 py-3 text-center text-lg tracking-[0.5em] ${codeError ? 'border-red-500/50' : ''}`} />
+            {codeError && <p className="text-red-400 text-xs mt-2 text-center">{codeError}</p>}
+
+            <button type="submit" disabled={submitting}
+              className={`w-full mt-4 py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all
+                ${submitting ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+              {submitting
+                ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Placing order…</>
+                : <>Confirm &amp; Place Order — ₱{total.toFixed(2)}</>}
+            </button>
+
+            <div className="flex items-center justify-between mt-4 text-xs">
+              <button type="button" onClick={() => { setVerify(null); setCodeError(''); }} disabled={submitting}
+                className="text-forest-200/60 hover:text-forest-100">Cancel</button>
+              <button type="button" onClick={sendCode} disabled={resendIn > 0 || sending || submitting}
+                className="text-ember-400 hover:text-ember-300 font-medium disabled:text-forest-200/40">
+                {sending ? 'Sending…' : resendIn > 0 ? `Resend code in ${resendIn}s` : 'Resend code'}
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }

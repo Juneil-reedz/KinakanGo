@@ -1,4 +1,6 @@
+const crypto = require('crypto');
 const pool = require('../config/db');
+const { sendEmail } = require('../utils/email');
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 // Finds a random rider who is online (is_available = true) and not currently
@@ -31,9 +33,149 @@ async function autoAssignRider(orderId) {
   }
 }
 
+// ── Order verification ───────────────────────────────────────────────────────
+// Before an order is placed, a 6-digit code is emailed to the account's email
+// address with a summary of the order, so the account holder (e.g. a parent)
+// approves every order. The code only works for that exact cart.
+
+const ORDER_CODE_TTL_MS      = 10 * 60 * 1000;
+const ORDER_CODE_MAX_TRIES   = 5;
+const ORDER_CODE_RESEND_MS   = 60 * 1000;
+
+// Same restaurant + same items/quantities => same fingerprint
+function cartFingerprint(restaurantId, items) {
+  const lines = (items || [])
+    .map(i => `${parseInt(i.menuItemId)}x${parseInt(i.quantity)}`)
+    .sort()
+    .join(',');
+  return crypto.createHash('sha256').update(`${parseInt(restaurantId)}|${lines}`).digest('hex');
+}
+
+const maskEmail = (email) => {
+  const [name, domain] = String(email).split('@');
+  if (!domain) return email;
+  return `${name.slice(0, 2)}${'*'.repeat(Math.min(6, Math.max(1, name.length - 2)))}@${domain}`;
+};
+
+const escapeHtml = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+async function requestOrderCode(req, res) {
+  const { restaurantId, items } = req.body;
+  if (!restaurantId || !Array.isArray(items) || !items.length) {
+    return res.status(400).json({ error: 'Your cart is empty' });
+  }
+
+  const { rows: recent } = await pool.query(
+    `SELECT created_at FROM order_verifications
+     WHERE user_id = $1 AND created_at > NOW() - ($2 || ' milliseconds')::interval
+     ORDER BY created_at DESC LIMIT 1`,
+    [req.user.id, ORDER_CODE_RESEND_MS]
+  );
+  if (recent.length) {
+    const wait = Math.ceil((ORDER_CODE_RESEND_MS - (Date.now() - new Date(recent[0].created_at).getTime())) / 1000);
+    return res.status(429).json({ error: `Please wait ${wait}s before requesting another code`, retryAfter: wait });
+  }
+
+  // Price the cart the same way placeOrder does, for the summary in the email
+  const ids = items.map(i => parseInt(i.menuItemId));
+  const { rows: menuRows } = await pool.query(
+    `SELECT m.id, m.name, m.price, r.name AS restaurant_name, r.delivery_fee
+     FROM menu_items m JOIN restaurants r ON r.id = m.restaurant_id
+     WHERE m.id = ANY($1::int[]) AND m.restaurant_id = $2`,
+    [ids, parseInt(restaurantId)]
+  );
+  if (menuRows.length !== new Set(ids).size) {
+    return res.status(400).json({ error: 'One or more items are unavailable' });
+  }
+  const byId = Object.fromEntries(menuRows.map(r => [r.id, r]));
+  const subtotal = items.reduce((s, i) => s + Number(byId[parseInt(i.menuItemId)].price) * parseInt(i.quantity), 0);
+  const deliveryFee = Number(menuRows[0].delivery_fee || 0);
+  const estTotal = subtotal + deliveryFee + subtotal * 0.08;
+
+  const { rows: users } = await pool.query('SELECT name, email FROM users WHERE id = $1', [req.user.id]);
+  const user = users[0];
+  if (!user?.email) return res.status(400).json({ error: 'Your account has no email address' });
+
+  const code = crypto.randomInt(100000, 1000000).toString();
+  await pool.query('DELETE FROM order_verifications WHERE user_id = $1 AND used = false', [req.user.id]);
+  const { rows: inserted } = await pool.query(
+    `INSERT INTO order_verifications (user_id, code, cart_hash, expires_at)
+     VALUES ($1, $2, $3, $4) RETURNING id`,
+    [req.user.id, code, cartFingerprint(restaurantId, items), new Date(Date.now() + ORDER_CODE_TTL_MS)]
+  );
+
+  const peso = (n) => `&#8369;${Number(n).toFixed(2)}`;
+  const itemRows = items.map(i => {
+    const m = byId[parseInt(i.menuItemId)];
+    return `<tr><td style="padding:4px 0">${escapeHtml(m.name)} &times; ${parseInt(i.quantity)}</td>
+            <td style="padding:4px 0;text-align:right">${peso(Number(m.price) * parseInt(i.quantity))}</td></tr>`;
+  }).join('');
+
+  try {
+    await sendEmail({
+      to: user.email,
+      subject: `Your KinakanGo order code: ${code}`,
+      html: `
+        <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:24px;color:#1a1a1a">
+          <h2 style="margin:0 0 8px">Confirm this order</h2>
+          <p>Hi ${escapeHtml(user.name)}, someone is placing an order on your KinakanGo account.
+             Share this code only if you approve it:</p>
+          <p style="font-size:32px;font-weight:bold;letter-spacing:6px;color:#e8540a;margin:16px 0">${code}</p>
+          <p style="margin:0 0 4px"><strong>${escapeHtml(menuRows[0].restaurant_name)}</strong></p>
+          <table style="width:100%;border-collapse:collapse;font-size:14px">${itemRows}
+            <tr><td style="padding:8px 0 0;border-top:1px solid #ddd"><strong>Estimated total</strong></td>
+                <td style="padding:8px 0 0;border-top:1px solid #ddd;text-align:right"><strong>${peso(estTotal)}</strong></td></tr>
+          </table>
+          <p style="color:#666;font-size:13px;margin-top:16px">The code expires in 10 minutes and only works for this exact order.
+             If you didn't expect this, don't share the code &mdash; no order will be placed without it.</p>
+        </div>`,
+    });
+  } catch (err) {
+    console.error('order code email failed:', err.message);
+    await pool.query('DELETE FROM order_verifications WHERE id = $1', [inserted[0].id]);
+    return res.status(503).json({ error: "Couldn't send the verification email. Please try again in a moment." });
+  }
+
+  res.json({ sentTo: maskEmail(user.email), expiresInMinutes: ORDER_CODE_TTL_MS / 60000, resendAfter: ORDER_CODE_RESEND_MS / 1000 });
+}
+
+// Checks the code for this cart and marks it used. Returns null if OK,
+// otherwise { status, body } to send back.
+async function consumeOrderCode(userId, restaurantId, items, code) {
+  if (!code) return { status: 400, body: { error: 'Enter the verification code sent to your email', code: 'VERIFICATION_REQUIRED' } };
+
+  const { rows } = await pool.query(
+    `SELECT * FROM order_verifications
+     WHERE user_id = $1 AND used = false AND expires_at > NOW()
+     ORDER BY created_at DESC LIMIT 1`,
+    [userId]
+  );
+  const row = rows[0];
+  if (!row) return { status: 400, body: { error: 'Code expired. Please request a new one.', code: 'CODE_EXPIRED' } };
+  if (row.cart_hash !== cartFingerprint(restaurantId, items)) {
+    return { status: 400, body: { error: 'Your cart changed. Please request a new code.', code: 'CART_CHANGED' } };
+  }
+  if (row.attempts >= ORDER_CODE_MAX_TRIES) {
+    return { status: 400, body: { error: 'Too many wrong attempts. Please request a new code.', code: 'CODE_EXPIRED' } };
+  }
+  if (row.code !== String(code).trim()) {
+    await pool.query('UPDATE order_verifications SET attempts = attempts + 1 WHERE id = $1', [row.id]);
+    const left = ORDER_CODE_MAX_TRIES - row.attempts - 1;
+    return { status: 400, body: { error: `Incorrect code. ${left} attempt${left === 1 ? '' : 's'} left.`, code: 'INVALID_CODE' } };
+  }
+  // Atomic: a code can only ever place one order
+  const { rowCount } = await pool.query('UPDATE order_verifications SET used = true WHERE id = $1 AND used = false', [row.id]);
+  if (!rowCount) return { status: 400, body: { error: 'This code was already used.', code: 'CODE_EXPIRED' } };
+  return null;
+}
+
 async function placeOrder(req, res) {
   const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage, contactInfo } = req.body;
   const customerId = req.user.id;
+
+  // Every order must be approved with the code emailed to the account holder
+  const verifyFail = await consumeOrderCode(customerId, restaurantId, items, req.body.verificationCode);
+  if (verifyFail) return res.status(verifyFail.status).json(verifyFail.body);
 
   // Persist phone number to user profile so it shows on orders
   if (contactInfo?.phone) {
@@ -289,4 +431,4 @@ async function assignRider(req, res) {
   res.json({ message: 'Rider assigned' });
 }
 
-module.exports = { placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };
+module.exports = { requestOrderCode, placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };
