@@ -142,7 +142,7 @@ export default function RestaurantDashboard() {
 
         {/* Recent orders — 2 cols */}
         <div className="lg:col-span-2 glass rounded-2xl overflow-hidden">
-          <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
             <p className="text-white font-semibold">Recent Orders</p>
           </div>
           {loading ? (
@@ -196,7 +196,7 @@ export default function RestaurantDashboard() {
               })}
             </div>
           )}
-          <div className="p-4" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+          <div className="p-4" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
             <Link to="/owner/orders">
               <button className="w-full btn-glow-orange text-white text-sm font-semibold py-2.5 rounded-xl">
                 View All Orders
@@ -212,7 +212,7 @@ export default function RestaurantDashboard() {
             <p className="text-white font-semibold mb-4">Pending Orders</p>
             <div className="relative inline-flex items-center justify-center w-28 h-28 mx-auto mb-3">
               <svg className="w-28 h-28 -rotate-90" viewBox="0 0 100 100">
-                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(255,255,255,.06)" strokeWidth="10" />
+                <circle cx="50" cy="50" r="40" fill="none" stroke="rgba(var(--fg-rgb),.06)" strokeWidth="10" />
                 <circle cx="50" cy="50" r="40" fill="none" stroke="url(#grad)" strokeWidth="10"
                   strokeDasharray="251" strokeDashoffset={251 - (todayOrders > 0 ? (pendingCount / todayOrders) * 251 : 0)} strokeLinecap="round" />
                 <defs>

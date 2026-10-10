@@ -3,6 +3,7 @@ import { useState } from 'react';
 import { useRider } from '../context/RiderContext';
 import { useNotification } from '../context/NotificationContext';
 import { LayoutDashboard, DollarSign, Bike, Star, LogOut, Menu, X, History } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 const NAV = [
   { path:'/rider/dashboard', label:'Dashboard', icon:LayoutDashboard },
@@ -65,7 +66,7 @@ export default function RiderLayout({ children }) {
         ))}
       </nav>
 
-      <div className={`mt-auto pt-4 space-y-1 ${mobile ? 'block' : 'hidden lg:block'}`} style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+      <div className={`mt-auto pt-4 space-y-1 ${mobile ? 'block' : 'hidden lg:block'}`} style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
         {rider && (
           <div className="glass rounded-xl px-3 py-2.5 mb-2">
             <p className="text-white text-xs font-semibold truncate">{rider.name}</p>
@@ -85,28 +86,29 @@ export default function RiderLayout({ children }) {
       {mobileOpen && <button aria-label="Close menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/60 z-40 lg:hidden" />}
 
       <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark transform transition-transform duration-300 lg:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ borderRight:'1px solid rgba(255,255,255,.07)' }}>
+        style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <SidebarContent mobile />
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block lg:w-64 glass-dark flex-shrink-0" style={{ borderRight:'1px solid rgba(255,255,255,.07)' }}>
+      <aside className="hidden lg:block lg:w-64 glass-dark flex-shrink-0" style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <SidebarContent />
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="glass-dark px-5 py-3 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <header className="glass-dark px-5 py-3 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
               <Menu className="w-4 h-4" />
             </button>
             <p className="text-white font-semibold">{NAV.find(n => isActive(n.path))?.label || 'Rider'}</p>
           </div>
+          <ThemeToggle />
         </header>
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
           {NAV.map(({ path, label, icon:Icon }) => (
             <button key={path} onClick={() => goTo(path)}
               className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
@@ -115,7 +117,7 @@ export default function RiderLayout({ children }) {
             </button>
           ))}
         </nav>
-        <footer className="hidden lg:block glass-dark px-5 py-3 text-center text-forest-200/40 text-xs" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+        <footer className="hidden lg:block glass-dark px-5 py-3 text-center text-forest-200/40 text-xs" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
           © 2024 KinakanGo Rider Portal
         </footer>
       </div>

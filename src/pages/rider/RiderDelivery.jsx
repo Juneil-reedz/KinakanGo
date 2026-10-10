@@ -321,7 +321,7 @@ export default function RiderDelivery() {
       {/* Live map */}
       <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,.35)' }}>
         <div className="px-4 py-3 flex items-center justify-between glass"
-          style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+          style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
           <p className="text-white font-semibold text-sm">
             {atRest ? 'Route to Restaurant' : "Route to Customer's Home"}
           </p>
@@ -415,7 +415,7 @@ export default function RiderDelivery() {
               </div>
             ))}
           </div>
-          <div className="mt-3 pt-3 flex items-center justify-between" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+          <div className="mt-3 pt-3 flex items-center justify-between" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.07)' }}>
             <p className="text-forest-300 text-sm font-semibold">Your Delivery Fee</p>
             <p className="text-forest-300 font-heading font-bold text-lg">₱{Number(order?.delivery_fee || 0).toFixed(2)}</p>
           </div>

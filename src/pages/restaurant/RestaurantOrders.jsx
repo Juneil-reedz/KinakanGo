@@ -231,7 +231,7 @@ export default function RestaurantOrders() {
 
               {/* Modal header */}
               <div className="p-5 flex items-center justify-between"
-                style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+                style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
                 <div className="flex items-center gap-3">
                   <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm">
                     #{detail.id}
@@ -334,7 +334,7 @@ export default function RestaurantOrders() {
                     <div className="space-y-2">
                       {(detail.items || []).map((item, i) => (
                         <div key={i} className="flex items-center gap-3 py-2"
-                          style={{ borderBottom: i < detail.items.length - 1 ? '1px solid rgba(255,255,255,.06)' : 'none' }}>
+                          style={{ borderBottom: i < detail.items.length - 1 ? '1px solid rgba(var(--fg-rgb),.06)' : 'none' }}>
                           <div className="w-12 h-12 glass rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
                             {item.image_url
                               ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover" />
@@ -384,7 +384,7 @@ export default function RestaurantOrders() {
                     </div>
                   )}
 
-                  <div className="space-y-1.5" style={{ borderTop: '1px solid rgba(255,255,255,.07)', paddingTop: '0.75rem' }}>
+                  <div className="space-y-1.5" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.07)', paddingTop: '0.75rem' }}>
                     {[
                       ['Subtotal',  detail.subtotal],
                       ['Delivery',  detail.delivery_fee],
@@ -394,7 +394,7 @@ export default function RestaurantOrders() {
                         <span>{l}</span><span>₱{Number(v).toFixed(2)}</span>
                       </div>
                     ))}
-                    <div className="flex justify-between items-center pt-1" style={{ borderTop: '1px solid rgba(255,255,255,.07)' }}>
+                    <div className="flex justify-between items-center pt-1" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.07)' }}>
                       <span className="text-white font-bold">Total</span>
                       <span className="text-ember-400 font-heading font-bold text-lg">₱{Number(detail.total).toFixed(2)}</span>
                     </div>

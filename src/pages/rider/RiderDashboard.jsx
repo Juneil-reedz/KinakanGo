@@ -208,7 +208,7 @@ export default function RiderDashboard() {
 
       {/* Orders */}
       <section className={`${mobileSection === 'orders' ? 'block' : 'hidden'} lg:block glass rounded-3xl overflow-hidden`}>
-        <div className="flex" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div className="flex" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           {FILTERS.map(f => (
             <button key={f.key} onClick={() => setFilter(f.key)}
               className={`flex-1 py-3 text-sm font-semibold transition-all

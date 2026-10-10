@@ -6,6 +6,10 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kinakan Go - Food Delivery</title>
     <script>
+      // Apply the saved theme before first paint so light mode doesn't flash dark
+      try { if (localStorage.getItem('kkg_theme') === 'light') document.documentElement.classList.add('light'); } catch (e) {}
+    </script>
+    <script>
       // Restore path after SPA redirect from 404.html
       (function () {
         var redirect = sessionStorage.getItem('spa_redirect');

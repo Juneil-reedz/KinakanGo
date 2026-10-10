@@ -142,7 +142,7 @@ export default function FoodDetail() {
 
       {/* Fixed bottom CTA */}
       <div className="fixed bottom-0 left-0 right-0 glass-dark p-4 z-20"
-        style={{ borderTop:'1px solid rgba(255,255,255,.08)' }}>
+        style={{ borderTop:'1px solid rgba(var(--fg-rgb),.08)' }}>
         <div className="max-w-2xl mx-auto">
           <button onClick={handleAdd}
             className="w-full py-4 btn-glow-orange text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2">

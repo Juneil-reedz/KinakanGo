@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Bell, Lock, Moon, Shield, HelpCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { useTheme } from '../context/ThemeContext';
 
 function Toggle({ value, onChange }) {
   return (
@@ -44,11 +45,12 @@ function ToggleRow({ label, desc, value, onChange }) {
 
 export default function Settings() {
   const navigate   = useNavigate();
+  const { isLight, toggleTheme } = useTheme();
 
   const [s, setS] = useState({
     notifications: { orderUpdates:true, promotions:true, newRestaurants:false, newsletter:false },
     privacy:       { shareData:false, saveHistory:true },
-    appearance:    { darkMode:true, language:'en' },
+    appearance:    { language:'en' },
   });
 
   const toggle = (cat, key) => setS(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: !prev[cat][key] } }));
@@ -73,7 +75,7 @@ export default function Settings() {
 
       {/* Appearance */}
       <Section title="Appearance" desc="Customize how the app looks" icon={Moon} iconColor="glass">
-        <ToggleRow label="Dark Mode" desc="Use the dark theme" value={s.appearance.darkMode} onChange={() => toggle('appearance','darkMode')} />
+        <ToggleRow label="Dark Mode" desc="Use the dark theme" value={!isLight} onChange={toggleTheme} />
         <div className="flex items-center justify-between">
           <div>
             <p className="text-forest-100 text-sm font-medium">Language</p>

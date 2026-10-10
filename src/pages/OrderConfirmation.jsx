@@ -53,7 +53,7 @@ export default function OrderConfirmation() {
             { label:'Total',      val:`₱${Number(order.total).toFixed(2)}`,   icon:null     },
           ].map(({ label, val, icon:Icon }) => (
             <div key={label} className="flex items-center justify-between py-1.5"
-              style={{ borderBottom:'1px solid rgba(255,255,255,.05)' }}>
+              style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.05)' }}>
               <span className="text-forest-200/60 text-sm flex items-center gap-2">
                 {Icon && <Icon className="w-4 h-4 text-forest-300/50" />}{label}
               </span>

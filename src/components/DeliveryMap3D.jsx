@@ -407,7 +407,7 @@ export default function DeliveryMap3D({
         }}>
           <div style={{
             width: 44, height: 44,
-            border: '3px solid rgba(255,255,255,.15)',
+            border: '3px solid rgba(var(--fg-rgb),.15)',
             borderTopColor: mode === 'rider' ? '#10b981' : '#f59e0b',
             borderRadius: '50%',
             animation: 'spin3d 0.9s linear infinite',
@@ -455,7 +455,7 @@ export default function DeliveryMap3D({
           position: 'absolute', bottom: 14, left: 14, right: 14, zIndex: 10,
           background: 'rgba(10,18,32,.82)', backdropFilter: 'blur(14px)',
           borderRadius: 14, padding: '10px 14px',
-          border: '1px solid rgba(255,255,255,.08)',
+          border: '1px solid rgba(var(--fg-rgb),.08)',
           color: 'white', boxShadow: '0 8px 32px rgba(0,0,0,.4)',
           pointerEvents: 'none',
         }}>
@@ -463,7 +463,7 @@ export default function DeliveryMap3D({
             <span style={{ fontSize: '.72rem', color: '#94a3b8' }}>🍽️ Restaurant</span>
             <span style={{ fontSize: '.72rem', color: '#94a3b8' }}>🏠 Your Home</span>
           </div>
-          <div style={{ height: 7, borderRadius: 4, background: 'rgba(255,255,255,.1)', overflow: 'hidden' }}>
+          <div style={{ height: 7, borderRadius: 4, background: 'rgba(var(--fg-rgb),.1)', overflow: 'hidden' }}>
             <div style={{
               height: '100%', borderRadius: 4,
               width: `${progress}%`,
@@ -539,7 +539,7 @@ export default function DeliveryMap3D({
         right: 14, zIndex: 10, pointerEvents: 'none',
         background: 'rgba(10,18,32,.75)', backdropFilter: 'blur(12px)',
         borderRadius: 12, padding: '8px 12px',
-        border: '1px solid rgba(255,255,255,.08)',
+        border: '1px solid rgba(var(--fg-rgb),.08)',
         color: 'white', fontSize: '.68rem',
       }}>
         {restaurantLocation && <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 5 }}>

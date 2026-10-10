@@ -283,7 +283,7 @@ export default function AdminPromos() {
               )}
 
               {/* Actions */}
-              <div className="flex gap-2 pt-3" style={{ borderTop:"1px solid rgba(255,255,255,.07)" }}>
+              <div className="flex gap-2 pt-3" style={{ borderTop:"1px solid rgba(var(--fg-rgb),.07)" }}>
                 <button onClick={() => openEdit(promo)} className="flex-1 glass hover:glass-green transition-all text-forest-200/80 text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1.5">
                   <Edit className="w-3.5 h-3.5" /> Edit
                 </button>

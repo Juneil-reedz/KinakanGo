@@ -181,7 +181,7 @@ export default function RestaurantReports() {
 
       {/* Top selling items */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+        <div className="p-4" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
           <p className="text-white font-semibold">Top Selling Items</p>
           <p className="text-forest-200/40 text-xs mt-0.5">Based on all completed orders</p>
         </div>

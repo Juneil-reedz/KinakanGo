@@ -45,7 +45,7 @@ export default function RiderHistory() {
       </div>
 
       <div className="glass rounded-3xl overflow-hidden">
-        <div className="p-4" style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+        <div className="p-4" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
           <p className="text-white font-semibold">Completed Deliveries</p>
         </div>
 

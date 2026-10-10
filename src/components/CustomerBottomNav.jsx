@@ -26,7 +26,7 @@ export default function CustomerBottomNav({ fixed = true }) {
 
   return (
     <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-30' : ''} lg:hidden glass-dark`}
-      style={{ borderTop: '1px solid rgba(255,255,255,.08)', boxShadow: '0 -4px 24px rgba(0,0,0,.4)' }}>
+      style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)', boxShadow: '0 -4px 24px rgba(0,0,0,.4)' }}>
       <div className="flex items-center justify-around px-2 py-2">
         {ITEMS.map(({ key, icon: Icon, path }) => {
           const isAct = key === activeKey;

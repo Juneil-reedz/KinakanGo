@@ -121,7 +121,7 @@ export default function Checkout() {
 
       {/* Header */}
       <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3 mb-4"
-        style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+        style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
         <Link to="/cart" className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
           <ArrowLeft className="w-4 h-4" />
         </Link>

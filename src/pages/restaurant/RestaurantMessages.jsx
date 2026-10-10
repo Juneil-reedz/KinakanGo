@@ -138,7 +138,7 @@ export default function RestaurantMessages() {
   return (
     <div className="h-full min-h-[calc(100vh-9rem)] grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 animate-fade-up">
       <section className="glass rounded-3xl overflow-hidden flex flex-col min-h-[28rem]">
-        <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <div className="flex items-center gap-2">
             <Inbox className="w-4 h-4 text-forest-300" />
             <p className="text-white font-semibold">Inbox</p>
@@ -180,7 +180,7 @@ export default function RestaurantMessages() {
       <section className="glass rounded-3xl overflow-hidden flex flex-col min-h-[28rem]">
         {selectedConversation ? (
           <>
-            <div className="p-5" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+            <div className="p-5" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
               <div className="flex items-start gap-3">
                 <div className="w-11 h-11 btn-glow-green rounded-2xl flex items-center justify-center flex-shrink-0">
                   <User className="w-5 h-5 text-white" />
@@ -235,7 +235,7 @@ export default function RestaurantMessages() {
               ))}
             </div>
 
-            <form onSubmit={sendReply} className="p-4 space-y-3" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+            <form onSubmit={sendReply} className="p-4 space-y-3" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
               <div className="flex items-center gap-2 text-forest-200/60 text-xs font-semibold uppercase tracking-wide">
                 <Reply className="w-3.5 h-3.5" /> Reply to {selectedConversation.name || 'customer'}
               </div>

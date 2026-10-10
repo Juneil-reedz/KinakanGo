@@ -62,6 +62,158 @@
   --radius-3xl:  2rem;
 }
 
+/* ─── Theme tokens ──────────────────────────────────────────────────
+   Dark is the default. Light mode (html.light) remaps the palette so the
+   existing utility classes flip automatically: `text-white` and the pale
+   forest/ember shades become dark ink, and translucent `bg-white/x` /
+   `border-white/x` become dark tints.
+
+   "Dark scopes" keep the dark-mode palette for their subtree — anything that
+   sits on a strong colour or a photo (glow buttons, red badges, green
+   gradient banners, image overlays, or any element with `.keep-dark`). */
+:root,
+.keep-dark,
+.btn-glow-green, .btn-glow-teal, .btn-glow-orange, .category-pill.active,
+.bg-red-500, .bg-red-600, .bg-rose-500, .bg-forest-500, .bg-forest-600,
+[class*="from-forest-"], [class*="from-ember-"], [class*="from-red-"],
+:has(> [class*="from-black"]) {
+  --app-bg: radial-gradient(ellipse at 10% 0%,  rgba(0,94,26,.30) 0%, transparent 55%),
+            radial-gradient(ellipse at 90% 100%, rgba(46,40,166,.20) 0%, transparent 55%),
+            radial-gradient(ellipse at 50% 50%,  rgba(7,172,162,.08) 0%, transparent 60%),
+            linear-gradient(160deg, #021a09 0%, #010e05 60%, #050418 100%);
+  --app-text: #e8f5ee;
+  --fg-rgb: 255,255,255;            /* for inline rgba(var(--fg-rgb), a) borders */
+
+  --glass-base-bg:     rgba(255,255,255,.06);  --glass-base-border:   1px solid rgba(255,255,255,.12);
+  --glass-green-bg:    rgba(0,94,26,.18);      --glass-green-border:  1px solid rgba(46,186,87,.22);
+  --glass-orange-bg:   rgba(255,195,67,.14);   --glass-orange-border: 1px solid rgba(255,195,67,.28);
+  --glass-dark-bg:     rgba(1,14,5,.65);       --glass-dark-border:   1px solid rgba(255,255,255,.08);
+  --glass-teal-bg:     rgba(7,172,162,.14);    --glass-teal-border:   1px solid rgba(7,172,162,.25);
+  --glass-blue-bg:     rgba(46,40,166,.18);    --glass-blue-border:   1px solid rgba(46,40,166,.30);
+
+  --input-bg: rgba(255,255,255,.07);
+  --input-border: rgba(255,255,255,.12);
+  --input-placeholder: rgba(176,239,190,.40);
+  --panel-bg: #061a10;               /* opaque popover panels */
+}
+
+/* Inside a dark scope, put back the palette that light mode remaps */
+:root.light :is(
+  .keep-dark,
+  .btn-glow-green, .btn-glow-teal, .btn-glow-orange, .category-pill.active,
+  .bg-red-500, .bg-red-600, .bg-rose-500, .bg-forest-500, .bg-forest-600,
+  [class*="from-forest-"], [class*="from-ember-"], [class*="from-red-"],
+  :has(> [class*="from-black"])
+) {
+  color-scheme: dark;
+  --color-white: #fff;
+  --color-forest-50: #e5f9ea;  --color-forest-100: #b0efbe; --color-forest-200: #70d988;
+  --color-forest-300: #2eba57; --color-forest-400: #009b2e;
+  --color-ember-50: #fffaee;   --color-ember-100: #fff0d4;  --color-ember-200: #ffe4a8;
+  --color-ember-300: #ffd47c;  --color-ember-400: #ffc343;
+  --color-red-200: oklch(88.5% 0.062 18.334);  --color-red-300: oklch(80.8% 0.114 19.571);
+  --color-red-400: oklch(70.4% 0.191 22.216);
+  --color-teal-200: oklch(91% 0.096 180.426);  --color-teal-300: oklch(85.5% 0.138 181.071);
+  --color-teal-400: oklch(77.7% 0.152 181.912);
+  --color-rose-400: oklch(71.2% 0.194 13.428);
+  --color-purple-300: oklch(82.7% 0.119 306.383);
+}
+
+:root.light {
+  color-scheme: light;
+  --app-bg: radial-gradient(ellipse at 10% 0%,  rgba(0,123,35,.10) 0%, transparent 55%),
+            radial-gradient(ellipse at 90% 100%, rgba(255,195,67,.16) 0%, transparent 55%),
+            linear-gradient(160deg, #f3faf4 0%, #eef6f0 60%, #f8f6ec 100%);
+  --app-text: #12301b;
+  --fg-rgb: 18,48,27;
+
+  --glass-base-bg:     rgba(255,255,255,.78);  --glass-base-border:   1px solid rgba(18,48,27,.10);
+  --glass-green-bg:    rgba(0,123,35,.09);     --glass-green-border:  1px solid rgba(0,123,35,.22);
+  --glass-orange-bg:   rgba(245,157,0,.12);    --glass-orange-border: 1px solid rgba(217,125,0,.30);
+  --glass-dark-bg:     rgba(255,255,255,.88);  --glass-dark-border:   1px solid rgba(18,48,27,.10);
+  --glass-teal-bg:     rgba(7,172,162,.10);    --glass-teal-border:   1px solid rgba(7,172,162,.28);
+  --glass-blue-bg:     rgba(46,40,166,.08);    --glass-blue-border:   1px solid rgba(46,40,166,.22);
+
+  --input-bg: #fff;
+  --input-border: rgba(18,48,27,.18);
+  --input-placeholder: rgba(18,48,27,.40);
+  --panel-bg: #fff;
+
+  /* Light shades used as text on dark → dark shades on light */
+  --color-white: #12301b;
+  --color-forest-50: #0a2412;  --color-forest-100: #12301b; --color-forest-200: #1c4428;
+  --color-forest-300: #17692f; --color-forest-400: #00852a;
+  --color-ember-50: #5c2e00;   --color-ember-100: #6b3500;  --color-ember-200: #7d4000;
+  --color-ember-300: #924c00;  --color-ember-400: #a65800;
+  --color-red-200: #991b1b;    --color-red-300: #b91c1c;    --color-red-400: #dc2626;
+  --color-teal-200: #0f766e;   --color-teal-300: #0d7f76;   --color-teal-400: #0b8a80;
+  --color-rose-400: #e11d48;
+  --color-purple-300: #7e22ce;
+}
+
+/* Solid white (toggle knobs, dots) stays white; only translucent white tints flip */
+:root.light .bg-white { background-color: #fff; }
+:root.light .card-3d {
+  box-shadow: 0 1px 2px rgba(18,48,27,.06), 0 4px 12px rgba(18,48,27,.08), 0 0 0 1px rgba(18,48,27,.04) inset;
+}
+:root.light .card-3d:hover {
+  box-shadow: 0 4px 10px rgba(18,48,27,.08), 0 16px 32px rgba(18,48,27,.12), 0 0 0 1px rgba(0,123,35,.12) inset;
+}
+:root.light .text-glow-green, :root.light .text-glow-orange, :root.light .text-glow-teal { text-shadow: none; }
+/* Faded secondary text (e.g. text-forest-200/50) is too faint on white; lift its opacity */
+:root.light .text-white\/20 { color: color-mix(in oklab, var(--color-white) 45%, transparent); }
+:root.light .text-white\/25 { color: color-mix(in oklab, var(--color-white) 50%, transparent); }
+:root.light .text-white\/30 { color: color-mix(in oklab, var(--color-white) 55%, transparent); }
+:root.light .text-white\/40 { color: color-mix(in oklab, var(--color-white) 62%, transparent); }
+:root.light .text-white\/50 { color: color-mix(in oklab, var(--color-white) 70%, transparent); }
+:root.light .text-white\/60 { color: color-mix(in oklab, var(--color-white) 76%, transparent); }
+:root.light .text-white\/70 { color: color-mix(in oklab, var(--color-white) 82%, transparent); }
+:root.light .text-forest-100\/20 { color: color-mix(in oklab, var(--color-forest-100) 45%, transparent); }
+:root.light .text-forest-100\/25 { color: color-mix(in oklab, var(--color-forest-100) 50%, transparent); }
+:root.light .text-forest-100\/30 { color: color-mix(in oklab, var(--color-forest-100) 55%, transparent); }
+:root.light .text-forest-100\/40 { color: color-mix(in oklab, var(--color-forest-100) 62%, transparent); }
+:root.light .text-forest-100\/50 { color: color-mix(in oklab, var(--color-forest-100) 70%, transparent); }
+:root.light .text-forest-100\/60 { color: color-mix(in oklab, var(--color-forest-100) 76%, transparent); }
+:root.light .text-forest-100\/70 { color: color-mix(in oklab, var(--color-forest-100) 82%, transparent); }
+:root.light .text-forest-200\/20 { color: color-mix(in oklab, var(--color-forest-200) 45%, transparent); }
+:root.light .text-forest-200\/25 { color: color-mix(in oklab, var(--color-forest-200) 50%, transparent); }
+:root.light .text-forest-200\/30 { color: color-mix(in oklab, var(--color-forest-200) 55%, transparent); }
+:root.light .text-forest-200\/40 { color: color-mix(in oklab, var(--color-forest-200) 62%, transparent); }
+:root.light .text-forest-200\/50 { color: color-mix(in oklab, var(--color-forest-200) 70%, transparent); }
+:root.light .text-forest-200\/60 { color: color-mix(in oklab, var(--color-forest-200) 76%, transparent); }
+:root.light .text-forest-200\/70 { color: color-mix(in oklab, var(--color-forest-200) 82%, transparent); }
+:root.light .text-forest-300\/20 { color: color-mix(in oklab, var(--color-forest-300) 45%, transparent); }
+:root.light .text-forest-300\/25 { color: color-mix(in oklab, var(--color-forest-300) 50%, transparent); }
+:root.light .text-forest-300\/30 { color: color-mix(in oklab, var(--color-forest-300) 55%, transparent); }
+:root.light .text-forest-300\/40 { color: color-mix(in oklab, var(--color-forest-300) 62%, transparent); }
+:root.light .text-forest-300\/50 { color: color-mix(in oklab, var(--color-forest-300) 70%, transparent); }
+:root.light .text-forest-300\/60 { color: color-mix(in oklab, var(--color-forest-300) 76%, transparent); }
+:root.light .text-forest-300\/70 { color: color-mix(in oklab, var(--color-forest-300) 82%, transparent); }
+:root.light .text-forest-400\/20 { color: color-mix(in oklab, var(--color-forest-400) 45%, transparent); }
+:root.light .text-forest-400\/25 { color: color-mix(in oklab, var(--color-forest-400) 50%, transparent); }
+:root.light .text-forest-400\/30 { color: color-mix(in oklab, var(--color-forest-400) 55%, transparent); }
+:root.light .text-forest-400\/40 { color: color-mix(in oklab, var(--color-forest-400) 62%, transparent); }
+:root.light .text-forest-400\/50 { color: color-mix(in oklab, var(--color-forest-400) 70%, transparent); }
+:root.light .text-forest-400\/60 { color: color-mix(in oklab, var(--color-forest-400) 76%, transparent); }
+:root.light .text-forest-400\/70 { color: color-mix(in oklab, var(--color-forest-400) 82%, transparent); }
+:root.light .text-white\/35 { color: color-mix(in oklab, var(--color-white) 58%, transparent); }
+:root.light .text-white\/45 { color: color-mix(in oklab, var(--color-white) 66%, transparent); }
+:root.light .text-white\/55 { color: color-mix(in oklab, var(--color-white) 73%, transparent); }
+:root.light .text-forest-100\/35 { color: color-mix(in oklab, var(--color-forest-100) 58%, transparent); }
+:root.light .text-forest-100\/45 { color: color-mix(in oklab, var(--color-forest-100) 66%, transparent); }
+:root.light .text-forest-100\/55 { color: color-mix(in oklab, var(--color-forest-100) 73%, transparent); }
+:root.light .text-forest-200\/35 { color: color-mix(in oklab, var(--color-forest-200) 58%, transparent); }
+:root.light .text-forest-200\/45 { color: color-mix(in oklab, var(--color-forest-200) 66%, transparent); }
+:root.light .text-forest-200\/55 { color: color-mix(in oklab, var(--color-forest-200) 73%, transparent); }
+:root.light .text-forest-300\/35 { color: color-mix(in oklab, var(--color-forest-300) 58%, transparent); }
+:root.light .text-forest-300\/45 { color: color-mix(in oklab, var(--color-forest-300) 66%, transparent); }
+:root.light .text-forest-300\/55 { color: color-mix(in oklab, var(--color-forest-300) 73%, transparent); }
+:root.light .text-forest-400\/35 { color: color-mix(in oklab, var(--color-forest-400) 58%, transparent); }
+:root.light .text-forest-400\/45 { color: color-mix(in oklab, var(--color-forest-400) 66%, transparent); }
+:root.light .text-forest-400\/55 { color: color-mix(in oklab, var(--color-forest-400) 73%, transparent); }
+/* Native <option> popups have inline dark backgrounds */
+:root.light option { background: #fff !important; color: #12301b !important; }
+
 /* ─── Global Reset ─────────────────────────────────────────────── */
 @layer base {
   *, *::before, *::after { box-sizing: border-box; }
@@ -78,12 +230,9 @@
     margin: 0;
     font-family: var(--font-sans);
     font-size: var(--font-size-base);
-    background: radial-gradient(ellipse at 10% 0%,  rgba(0,94,26,.30) 0%, transparent 55%),
-                radial-gradient(ellipse at 90% 100%, rgba(46,40,166,.20) 0%, transparent 55%),
-                radial-gradient(ellipse at 50% 50%,  rgba(7,172,162,.08) 0%, transparent 60%),
-                linear-gradient(160deg, #021a09 0%, #010e05 60%, #050418 100%);
+    background: var(--app-bg);
     background-attachment: fixed;
-    color: #e8f5ee;
+    color: var(--app-text);
     overflow-x: hidden;
     min-height: 100%;
   }
@@ -99,40 +248,40 @@
 
   /* Glass card */
   .glass {
-    background: rgba(255, 255, 255, 0.06);
+    background: var(--glass-base-bg);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(255, 255, 255, 0.12);
+    border: var(--glass-base-border);
   }
   .glass-green {
-    background: rgba(0, 94, 26, 0.18);
+    background: var(--glass-green-bg);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(46, 186, 87, 0.22);
+    border: var(--glass-green-border);
   }
   .glass-orange {
-    background: rgba(255, 195, 67, 0.14);
+    background: var(--glass-orange-bg);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(255, 195, 67, 0.28);
+    border: var(--glass-orange-border);
   }
   .glass-dark {
-    background: rgba(1, 14, 5, 0.65);
+    background: var(--glass-dark-bg);
     backdrop-filter: blur(24px) saturate(180%);
     -webkit-backdrop-filter: blur(24px) saturate(180%);
-    border: 1px solid rgba(255, 255, 255, 0.08);
+    border: var(--glass-dark-border);
   }
   .glass-teal {
-    background: rgba(7, 172, 162, 0.14);
+    background: var(--glass-teal-bg);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(7, 172, 162, 0.25);
+    border: var(--glass-teal-border);
   }
   .glass-blue {
-    background: rgba(46, 40, 166, 0.18);
+    background: var(--glass-blue-bg);
     backdrop-filter: blur(20px) saturate(160%);
     -webkit-backdrop-filter: blur(20px) saturate(160%);
-    border: 1px solid rgba(46, 40, 166, 0.30);
+    border: var(--glass-blue-border);
   }
 
   /* 3-D lift card */
@@ -235,13 +384,13 @@
 
   /* Input glass */
   .input-glass {
-    background: rgba(255,255,255,.07);
-    border: 1px solid rgba(255,255,255,.12);
+    background: var(--input-bg);
+    border: 1px solid var(--input-border);
     border-radius: .75rem;
-    color: #e8f5ee;
+    color: var(--app-text);
     transition: border-color .2s, box-shadow .2s;
   }
-  .input-glass::placeholder { color: rgba(176,239,190,.40); }
+  .input-glass::placeholder { color: var(--input-placeholder); }
   .input-glass:focus {
     outline: none;
     border-color: rgba(46,186,87,.5);

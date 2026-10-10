@@ -1,6 +1,7 @@
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { RestaurantProvider } from './context/RestaurantContext';
 import { RiderProvider } from './context/RiderContext';
@@ -75,6 +76,7 @@ function RequireCustomer({ children }) {
 
 function App() {
   return (
+    <ThemeProvider>
     <NotificationProvider>
       <AuthProvider>
         <CartProvider>
@@ -183,6 +185,7 @@ function App() {
         </CartProvider>
       </AuthProvider>
     </NotificationProvider>
+    </ThemeProvider>
   );
 }
 

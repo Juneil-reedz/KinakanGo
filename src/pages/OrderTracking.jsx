@@ -260,7 +260,7 @@ export default function OrderTracking() {
 
             {/* Order header */}
             <div className="p-5 flex flex-wrap items-start justify-between gap-4"
-              style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+              style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
                   <p className="text-white font-bold text-base">Order #{order.id}</p>
@@ -356,7 +356,7 @@ export default function OrderTracking() {
                   return (
                     <div className="rounded-2xl overflow-hidden" style={{ boxShadow: '0 8px 32px rgba(0,0,0,.35)' }}>
                       <div className="px-4 py-2.5 flex items-center gap-2 glass"
-                        style={{ borderBottom: '1px solid rgba(255,255,255,.07)' }}>
+                        style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
                         <MapPin className="w-3.5 h-3.5 text-rose-400" />
                         <p className="text-white text-xs font-semibold">
                           {isDelivering ? 'Live Rider Location' : 'Rider Heading to Pickup'}
@@ -412,7 +412,7 @@ export default function OrderTracking() {
               <div className="px-5 pb-4">
                 <div className="glass rounded-2xl overflow-hidden">
                   <div className="flex items-center gap-2 px-4 py-3"
-                    style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+                    style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
                     <UtensilsCrossed className="w-4 h-4 text-ember-400" />
                     <p className="text-white text-sm font-semibold">
                       {order.restaurant_name} · {order.items.length} item{order.items.length !== 1 ? 's' : ''}
@@ -450,7 +450,7 @@ export default function OrderTracking() {
                   </div>
                   {/* Totals */}
                   <div className="px-4 py-3 space-y-1.5 glass-dark"
-                    style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+                    style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
                     {[
                       ['Subtotal',       order.subtotal],
                       ['Delivery fee',   order.delivery_fee],
@@ -462,7 +462,7 @@ export default function OrderTracking() {
                       </div>
                     ))}
                     <div className="flex justify-between items-center pt-1.5"
-                      style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+                      style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
                       <span className="text-white font-bold text-sm">Total</span>
                       <span className="text-ember-400 font-heading font-bold text-base">
                         ₱{Number(order.total).toFixed(2)}

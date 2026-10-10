@@ -192,7 +192,7 @@ export default function AdminRestaurants() {
 
                 {/* Expanded details */}
                 {isOpen && (
-                  <div className="px-4 pb-4" style={{ borderTop:"1px solid rgba(255,255,255,.07)" }}>
+                  <div className="px-4 pb-4" style={{ borderTop:"1px solid rgba(var(--fg-rgb),.07)" }}>
                     <div className="pt-3 grid grid-cols-2 gap-2 text-xs">
                       {r.deliveryFee != null && (
                         <div className="glass rounded-xl px-3 py-2">

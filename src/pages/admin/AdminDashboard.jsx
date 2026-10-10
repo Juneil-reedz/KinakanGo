@@ -146,7 +146,7 @@ export default function AdminDashboard() {
 
       {/* Flagged Issues */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="p-4 flex items-center justify-between" style={{ borderBottom:"1px solid rgba(255,255,255,.07)" }}>
+        <div className="p-4 flex items-center justify-between" style={{ borderBottom:"1px solid rgba(var(--fg-rgb),.07)" }}>
           <p className="text-white font-semibold">Recent Issues</p>
           <Link to="/admin/issues" className="text-ember-400 hover:text-ember-300 text-xs flex items-center gap-1 transition-colors">
             View All <ArrowUpRight className="w-3.5 h-3.5" />

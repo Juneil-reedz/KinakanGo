@@ -206,7 +206,7 @@ export default function RiderApplication() {
         )}
 
         {/* Navigation */}
-        <div className="flex items-center justify-between mt-8 pt-6" style={{ borderTop: '1px solid rgba(255,255,255,.08)' }}>
+        <div className="flex items-center justify-between mt-8 pt-6" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)' }}>
           <button onClick={handleBack} disabled={step === 1}
             className="glass hover:glass-green transition-all text-forest-200/70 hover:text-white disabled:opacity-30 text-sm font-medium px-5 py-2.5 rounded-xl">
             Back

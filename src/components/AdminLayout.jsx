@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
 import { LayoutDashboard, Users, Store, Bike, AlertTriangle, Ticket, LogOut, Shield, Bell, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 const NAV = [
   { path:'/admin/dashboard',    label:'Dashboard',    icon:LayoutDashboard },
@@ -38,11 +39,11 @@ export default function AdminLayout({ children }) {
     <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className={`glass-dark flex-shrink-0 fixed top-0 left-0 h-screen z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
-        style={{ borderRight:'1px solid rgba(255,255,255,.07)' }}>
+        style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={`p-4 flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}
-            style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+            style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
             <Link to="/admin/dashboard" className="flex items-center gap-3">
               <div className="w-10 h-10 btn-glow-green rounded-xl flex items-center justify-center flex-shrink-0">
                 <Shield className="w-5 h-5 text-white" />
@@ -70,7 +71,7 @@ export default function AdminLayout({ children }) {
           </nav>
 
           {/* User footer */}
-          <div className="px-3 pb-4 space-y-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)', paddingTop:'1rem' }}>
+          <div className="px-3 pb-4 space-y-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)', paddingTop:'1rem' }}>
             {!collapsed && admin && (
               <div className="glass rounded-xl px-3 py-2.5">
                 <p className="text-white text-xs font-semibold truncate">{admin.name}</p>
@@ -95,11 +96,12 @@ export default function AdminLayout({ children }) {
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Top bar */}
         <header className="glass-dark sticky top-0 z-30 px-5 py-3 flex items-center justify-between"
-          style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+          style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <h2 className="text-white font-heading font-bold">
             {NAV.find(n => isActive(n.path))?.label || 'Dashboard'}
           </h2>
           <div className="flex items-center gap-2">
+            <ThemeToggle className="!w-8 !h-8" />
             <button className="relative w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-200/60 hover:text-white transition-all">
               <Bell className="w-4 h-4" />
               <span className="absolute top-1.5 right-1.5 w-1.5 h-1.5 bg-ember-500 rounded-full animate-pulse" />
@@ -114,7 +116,7 @@ export default function AdminLayout({ children }) {
         <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
 
         <footer className="glass-dark px-5 py-3 text-center text-forest-200/40 text-xs"
-          style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+          style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
           © {new Date().getFullYear()} KinakanGo Admin Panel
         </footer>
       </div>

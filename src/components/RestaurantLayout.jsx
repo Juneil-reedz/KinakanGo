@@ -3,6 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
 import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home, LogOut, MessageSquare, ToggleLeft, ToggleRight } from 'lucide-react';
+import ThemeToggle from './ThemeToggle';
 
 const NAV = [
   { path:'/owner/dashboard', label:'Dashboard', icon:LayoutDashboard },
@@ -55,11 +56,11 @@ export default function RestaurantLayout({ children }) {
     <div className="min-h-screen flex">
       {/* Sidebar */}
       <aside className={`glass-dark flex-shrink-0 relative transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
-        style={{ borderRight:'1px solid rgba(255,255,255,.07)' }}>
+        style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
           <div className={`p-5 flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}
-            style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+            style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
             <div className="w-12 h-12 btn-glow-orange rounded-2xl flex items-center justify-center flex-shrink-0">
               <Store className="w-6 h-6 text-white" />
             </div>
@@ -85,7 +86,7 @@ export default function RestaurantLayout({ children }) {
           </nav>
 
           {/* User */}
-          <div className="px-3 pb-5 space-y-2" style={{ borderTop:'1px solid rgba(255,255,255,.07)', paddingTop:'1rem' }}>
+          <div className="px-3 pb-5 space-y-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)', paddingTop:'1rem' }}>
             {!collapsed && restaurant && (
               <div className="glass rounded-xl px-3 py-2.5 mb-2">
                 <p className="text-white text-xs font-semibold truncate">{restaurant.name}</p>
@@ -123,12 +124,13 @@ export default function RestaurantLayout({ children }) {
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
         <header className="glass-dark px-6 py-4 flex items-center justify-between flex-shrink-0"
-          style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+          style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <div>
             <h2 className="text-white font-heading font-bold">{NAV.find(n => location.pathname.startsWith(n.path))?.label || 'Dashboard'}</h2>
             <p className="text-forest-200/50 text-xs">Your recent activity</p>
           </div>
           <div className="flex items-center gap-2">
+            <ThemeToggle />
             <button onClick={toggleOpen} disabled={savingStatus}
               className={`hidden sm:flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-semibold transition-all disabled:opacity-60 ${(restaurant?.is_open ?? true) ? 'glass-green text-forest-100' : 'bg-red-500/20 text-red-200'}`}>
               {(restaurant?.is_open ?? true) ? <ToggleRight className="w-4 h-4" /> : <ToggleLeft className="w-4 h-4" />}

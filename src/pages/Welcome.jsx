@@ -18,7 +18,7 @@ export default function Welcome() {
   };
 
   return (
-    <div className="fixed inset-0 overflow-hidden flex items-center justify-center bg-[#001207] px-5 py-8">
+    <div className="keep-dark fixed inset-0 overflow-hidden flex items-center justify-center bg-[#001207] px-5 py-8">
       <div className="orb w-[28rem] h-[28rem] bg-forest-600/20 top-[-8rem] left-[-10rem]" />
       <div className="orb w-80 h-80 bg-ember-500/10 bottom-[-5rem] right-[-6rem]" />
       <div className="orb w-72 h-72 bg-forest-400/10 bottom-20 left-1/2 -translate-x-1/2" />

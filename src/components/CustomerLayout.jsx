@@ -11,6 +11,7 @@ import {
 } from 'lucide-react';
 import { restaurantsApi } from '../services/api';
 import CustomerBottomNav from './CustomerBottomNav';
+import ThemeToggle from './ThemeToggle';
 
 const NAV = [
   { key: 'dashboard',    label: 'Dashboard',    icon: HomeIcon,        path: '/' },
@@ -90,7 +91,7 @@ export default function CustomerLayout() {
   const notificationPanel = bellOpen && (
     <div ref={notificationPanelRef}
       className="fixed left-4 right-4 top-20 z-[2147483647] rounded-2xl shadow-2xl overflow-hidden sm:left-auto sm:right-6 sm:w-80"
-      style={{ background: '#061a10', border: '1px solid rgba(255,255,255,.12)', boxShadow: '0 24px 48px rgba(0,0,0,.75)' }}>
+      style={{ background: 'var(--panel-bg)', border: '1px solid rgba(var(--fg-rgb),.12)', boxShadow: '0 24px 48px rgba(0,0,0,.75)' }}>
       <div className="flex items-center justify-between px-4 py-3 border-b border-white/10">
         <p className="text-white font-semibold text-sm">Notifications</p>
         <div className="flex gap-2">
@@ -160,7 +161,7 @@ export default function CustomerLayout() {
         ${collapsed ? 'w-20' : 'w-64'}
         fixed lg:relative
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
-      `} style={{ boxShadow: '4px 0 32px rgba(0,0,0,.4), 1px 0 0 rgba(255,255,255,.06)' }}>
+      `} style={{ boxShadow: '4px 0 32px rgba(0,0,0,.4), 1px 0 0 rgba(var(--fg-rgb),.06)' }}>
 
         {/* Logo row */}
         <div className={`flex items-center ${collapsed ? 'justify-center py-5' : 'justify-between px-4 py-3'}`}>
@@ -262,7 +263,7 @@ export default function CustomerLayout() {
         {/* Header — dashboard only */}
         {active === 'dashboard' && (
           <header className="glass-dark flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
-            style={{ borderBottom: '1px solid rgba(255,255,255,.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
+            style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
 
             {/* Mobile menu btn */}
             <button onClick={() => setMobileOpen(!mobileOpen)}
@@ -276,7 +277,7 @@ export default function CustomerLayout() {
             </div>
 
             {/* Search */}
-            <div className="flex-1 max-w-md relative">
+            <div className="flex-1 min-w-0 max-w-md relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/60" />
               <input
                 value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
@@ -287,6 +288,7 @@ export default function CustomerLayout() {
             </div>
 
             <div className="ml-auto flex items-center gap-2">
+              <ThemeToggle />
               <button onClick={() => navigate('/cart')} className="relative hidden lg:flex w-9 h-9 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all">
                 <ShoppingCart className="w-5 h-5" />
                 {cartItems.length > 0 && (
@@ -328,7 +330,7 @@ export default function CustomerLayout() {
           RIGHT PANEL
       ══════════════════════════════ */}
       <aside className="hidden xl:flex w-80 flex-col glass-dark overflow-y-auto scrollbar-hide"
-        style={{ borderLeft: '1px solid rgba(255,255,255,.07)', boxShadow: '-4px 0 32px rgba(0,0,0,.3)' }}>
+        style={{ borderLeft: '1px solid rgba(var(--fg-rgb),.07)', boxShadow: '-4px 0 32px rgba(0,0,0,.3)' }}>
 
         {showVideoPanel ? (
           /* Video / promo panel */

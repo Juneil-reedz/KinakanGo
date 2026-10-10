@@ -157,7 +157,7 @@ export default function RiderEarnings() {
 
       {/* Trip history */}
       <div className="glass rounded-2xl overflow-hidden">
-        <div className="p-4" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        <div className="p-4" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <p className="text-white font-semibold">Recent Trips</p>
         </div>
         {loading ? (
@@ -203,7 +203,7 @@ export default function RiderEarnings() {
                 );
               })}
             </div>
-            <div className="p-4 glass-dark flex items-center justify-between" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+            <div className="p-4 glass-dark flex items-center justify-between" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
               <p className="text-forest-200/60 text-sm">Total ({trips.length} trips)</p>
               <p className="text-white font-heading font-bold text-lg">
                 ₱{totalEarned.toFixed(2)}

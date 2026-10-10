@@ -167,7 +167,7 @@ export default function Messages() {
 
       <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-0 lg:min-h-[calc(100vh-13rem)]">
         <section className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col min-h-[calc(100vh-14rem)] lg:min-h-0`}>
-          <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+          <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
             <div className="flex items-center gap-2">
               <Inbox className="w-4 h-4 text-forest-300" />
               <p className="text-white font-semibold">Inbox</p>
@@ -218,7 +218,7 @@ export default function Messages() {
         <section className={`${mobileThreadOpen ? 'flex' : 'hidden lg:flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col h-[calc(100vh-8.5rem)] min-h-0 lg:h-auto lg:min-h-0`}>
           {selectedConversation ? (
             <>
-              <div className="p-4 sm:p-5 flex items-center gap-3" style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+              <div className="p-4 sm:p-5 flex items-center gap-3" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
                 <button type="button" onClick={closeMobileThread}
                   className="lg:hidden w-10 h-10 glass rounded-2xl flex items-center justify-center text-forest-100 flex-shrink-0">
                   <ArrowLeft className="w-5 h-5" />
@@ -276,7 +276,7 @@ export default function Messages() {
                 ))}
               </div>
 
-              <form onSubmit={sendReply} className="p-4 space-y-3" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+              <form onSubmit={sendReply} className="p-4 space-y-3" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
                 <div className="flex items-center gap-2 text-forest-200/60 text-xs font-semibold uppercase tracking-wide">
                   <Reply className="w-3.5 h-3.5" /> Reply to {selectedConversation.name}
                 </div>

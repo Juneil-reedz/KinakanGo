@@ -39,7 +39,7 @@ export default function Cart() {
 
       {/* Header */}
       <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
-        style={{ borderBottom:'1px solid rgba(255,255,255,.07)' }}>
+        style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <button onClick={() => navigate(-1)}
           className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
           <ArrowLeft className="w-4 h-4" />
@@ -105,7 +105,7 @@ export default function Cart() {
       {/* Fixed bottom summary */}
       <div className="fixed bottom-0 left-0 right-0 z-20">
       <div className="glass-dark p-4"
-        style={{ borderTop:'1px solid rgba(255,255,255,.08)', boxShadow:'0 -8px 32px rgba(0,0,0,.4)' }}>
+        style={{ borderTop:'1px solid rgba(var(--fg-rgb),.08)', boxShadow:'0 -8px 32px rgba(0,0,0,.4)' }}>
         <div className="max-w-2xl mx-auto space-y-2 mb-4">
           {[
             { label:'Subtotal',    val:`₱${subtotal.toFixed(2)}` },

@@ -85,7 +85,7 @@ export default function OrderReceipt() {
       <div className="max-w-4xl mx-auto glass print:bg-white print:shadow-none rounded-2xl overflow-hidden">
 
         {/* Header strip */}
-        <div className="p-6 md:p-8" style={{ borderBottom: '1px solid rgba(255,255,255,.1)' }}>
+        <div className="p-6 md:p-8" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.1)' }}>
           <div className="flex flex-col sm:flex-row justify-between items-start gap-4">
             <div>
               <h1 className="text-3xl font-heading font-bold text-ember-400 mb-1 print:text-orange-500">
@@ -112,7 +112,7 @@ export default function OrderReceipt() {
         </div>
 
         {/* Customer + Delivery info */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 md:p-8" style={{ borderBottom: '1px solid rgba(255,255,255,.1)' }}>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 p-6 md:p-8" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.1)' }}>
           <div>
             <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3 print:text-gray-500">Customer Information</p>
             {[
@@ -134,11 +134,11 @@ export default function OrderReceipt() {
         </div>
 
         {/* Order items table */}
-        <div className="p-6 md:p-8" style={{ borderBottom: '1px solid rgba(255,255,255,.1)' }}>
+        <div className="p-6 md:p-8" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.1)' }}>
           <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-4 print:text-gray-500">Order Items</p>
           <table className="w-full">
             <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,.1)' }}>
+              <tr style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.1)' }}>
                 {['Item', 'Qty', 'Price', 'Total'].map((h, i) => (
                   <th key={h} className={`py-3 text-forest-200/50 text-xs font-semibold uppercase print:text-gray-500 ${i === 0 ? 'text-left' : i === 1 ? 'text-center' : 'text-right'}`}>
                     {h}
@@ -148,7 +148,7 @@ export default function OrderReceipt() {
             </thead>
             <tbody>
               {orderData.items.map((item, i) => (
-                <tr key={i} style={{ borderBottom: '1px solid rgba(255,255,255,.06)' }}>
+                <tr key={i} style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.06)' }}>
                   <td className="py-3 text-white text-sm print:text-black">{item.name}</td>
                   <td className="py-3 text-center text-forest-200/60 text-sm print:text-gray-700">{item.quantity}</td>
                   <td className="py-3 text-right text-forest-200/60 text-sm print:text-gray-700">₱{Number(item.price).toFixed(2)}</td>
@@ -161,7 +161,7 @@ export default function OrderReceipt() {
           </table>
 
           {/* Totals */}
-          <div className="ml-auto max-w-xs space-y-2 mt-4 pt-4" style={{ borderTop: '1px solid rgba(255,255,255,.1)' }}>
+          <div className="ml-auto max-w-xs space-y-2 mt-4 pt-4" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.1)' }}>
             {[
               ['Subtotal',     orderData.subtotal.toFixed(2)],
               ['Delivery Fee', orderData.deliveryFee.toFixed(2)],
@@ -171,7 +171,7 @@ export default function OrderReceipt() {
                 <span>{l}</span><span>₱{v}</span>
               </div>
             ))}
-            <div className="flex justify-between text-white font-heading font-bold text-lg pt-2 print:text-black" style={{ borderTop: '1px solid rgba(255,255,255,.2)' }}>
+            <div className="flex justify-between text-white font-heading font-bold text-lg pt-2 print:text-black" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.2)' }}>
               <span>Total</span>
               <span className="text-ember-400 print:text-orange-600">₱{orderData.total.toFixed(2)}</span>
             </div>
@@ -179,7 +179,7 @@ export default function OrderReceipt() {
         </div>
 
         {/* Payment info */}
-        <div className="p-6 md:p-8" style={{ borderBottom: '1px solid rgba(255,255,255,.1)' }}>
+        <div className="p-6 md:p-8" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.1)' }}>
           <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3 print:text-gray-500">Payment Information</p>
           <p className="text-forest-100/70 text-sm print:text-gray-700">
             <span className="text-white font-semibold print:text-black">Method:</span>{' '}

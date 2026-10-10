@@ -263,7 +263,7 @@ export default function RestaurantMenu() {
                   </span>
                 </div>
 
-                <div className="flex gap-2 pt-3" style={{ borderTop:'1px solid rgba(255,255,255,.07)' }}>
+                <div className="flex gap-2 pt-3" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
                   <button onClick={() => openEdit(item)}
                     className="flex-1 glass hover:glass-orange transition-all text-forest-100/80 hover:text-white text-xs font-medium py-2 rounded-xl flex items-center justify-center gap-1.5">
                     <Edit2 className="w-3.5 h-3.5" /> Edit
@@ -283,7 +283,7 @@ export default function RestaurantMenu() {
       {catModal && createPortal(
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:9999, overflowY:'auto' }}>
           <div style={{ minHeight:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
-            <div className="glass rounded-3xl p-6 w-full" style={{ background:'rgba(8,22,12,0.98)', border:'1px solid rgba(255,255,255,.12)', maxWidth:'22rem' }}>
+            <div className="glass rounded-3xl p-6 w-full" style={{ background:'rgba(8,22,12,0.98)', border:'1px solid rgba(var(--fg-rgb),.12)', maxWidth:'22rem' }}>
               <div className="flex items-center justify-between mb-4">
                 <p className="text-white font-semibold text-lg">New Category</p>
                 <button onClick={() => setCatModal(false)} className="w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-200 hover:glass-orange transition-all">
@@ -323,7 +323,7 @@ export default function RestaurantMenu() {
       {modal && createPortal(
         <div style={{ position:'fixed', inset:0, background:'rgba(0,0,0,0.75)', backdropFilter:'blur(6px)', zIndex:9999, overflowY:'auto' }}>
           <div style={{ minHeight:'100%', display:'flex', alignItems:'center', justifyContent:'center', padding:'1rem' }}>
-          <div className="glass rounded-3xl p-6 w-full max-w-md" style={{ background:'rgba(8,22,12,0.98)', border:'1px solid rgba(255,255,255,.12)', maxWidth:'28rem', width:'100%' }}>
+          <div className="glass rounded-3xl p-6 w-full max-w-md" style={{ background:'rgba(8,22,12,0.98)', border:'1px solid rgba(var(--fg-rgb),.12)', maxWidth:'28rem', width:'100%' }}>
             <div className="flex items-center justify-between mb-5">
               <p className="text-white font-semibold text-lg">{modal === 'add' ? 'Add New Item' : 'Edit Item'}</p>
               <button onClick={closeModal} className="w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-200 hover:glass-orange transition-all">
