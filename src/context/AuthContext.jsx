@@ -5,8 +5,10 @@ const AuthContext = createContext();
 
 const normalizeUser = (u) => {
   if (!u) return null;
-  const avatar = u.avatar || u.avatarUrl || u.avatar_url || null;
-  return { ...u, avatar: avatar?.startsWith?.('data:') ? null : avatar };
+  const isData = (v) => typeof v === 'string' && v.startsWith('data:');
+  const avatar = [u.avatar, u.avatarUrl, u.avatar_url].find(v => v && !isData(v)) || null;
+  // Raw image data is too large for browser storage; the API returns photos as links
+  return { ...u, avatar, avatarUrl: avatar, avatar_url: avatar };
 };
 
 export const useAuth = () => {
@@ -78,15 +80,19 @@ export const AuthProvider = ({ children }) => {
   }, []);
 
   const updateUser = async (updates) => {
-    const updated = normalizeUser({ ...user, ...updates });
+    let next = { ...user, ...updates };
     const shouldPersistProfile = ['name', 'phone', 'avatar', 'avatarUrl'].some(key => Object.prototype.hasOwnProperty.call(updates, key));
     if (user?.id && shouldPersistProfile) {
-      await usersApi.update(user.id, {
+      const res = await usersApi.update(user.id, {
         name: updates.name,
         phone: updates.phone,
         avatarUrl: updates.avatar || updates.avatarUrl,
       });
+      // An uploaded photo is sent as image data; show it via the short link the
+      // server returns (raw image data is too big to keep in browser storage)
+      if (res?.avatarUrl) next = { ...next, avatar: res.avatarUrl, avatarUrl: res.avatarUrl, avatar_url: res.avatarUrl };
     }
+    const updated = normalizeUser(next);
     persist(updated);
     return updated;
   };

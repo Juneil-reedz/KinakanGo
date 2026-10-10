@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { useNotification } from "../../context/NotificationContext";
-import { usersApi } from "../../services/api";
 import { adminRequest } from "../../context/AdminContext";
 import { Bike, Search, Star, MapPin, Phone, Edit, Trash2, Eye, DollarSign, TrendingUp, Package, CheckCircle, Clock, Calendar, Truck, X, Check, Image as ImageIcon } from "lucide-react";
 
@@ -75,7 +74,7 @@ export default function AdminRiders() {
 
   const confirmDelete = async () => {
     try {
-      await usersApi.update(selected.id, { deleted: true });
+      await adminRequest(`/users/${selected.id}`, { method: 'PATCH', body: JSON.stringify({ deleted: true }) });
       setList(prev => prev.filter(r => r.id !== selected.id));
       addNotification("Rider removed", "success");
       close();
@@ -356,7 +355,7 @@ export default function AdminRiders() {
               const email = e.target.email.value;
               const phone = e.target.phone.value;
               try {
-                await usersApi.update(selected.id, { name, email, phone });
+                await adminRequest(`/users/${selected.id}`, { method: 'PATCH', body: JSON.stringify({ name, email, phone }) });
                 setList(prev => prev.map(r => r.id === selected.id ? { ...r, name, email, phone } : r));
                 addNotification("Rider updated", "success");
                 close();

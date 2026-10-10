@@ -7,6 +7,7 @@ const pool   = require('../config/db');
 const SOURCES = {
   restaurants:  'SELECT image_url FROM restaurants WHERE id = $1',
   'menu-items': 'SELECT image_url FROM menu_items  WHERE id = $1',
+  users:        'SELECT avatar_url AS image_url FROM users WHERE id = $1',
 };
 
 router.get('/:kind/:id', async (req, res) => {
@@ -40,10 +41,10 @@ router.get('/:kind/:id', async (req, res) => {
 // link, or a placeholder pointing at this route when it's an inline data URL.
 // Run the query result through `resolveImageUrls` to make placeholders absolute.
 const IMG_PREFIX = '@img/';
-function imageUrlSql(table, kind) {
-  return `CASE WHEN ${table}.image_url LIKE 'data:%'
+function imageUrlSql(table, kind, column = 'image_url') {
+  return `CASE WHEN ${table}.${column} LIKE 'data:%'
             THEN '${IMG_PREFIX}${kind}/' || ${table}.id || '?v=' || EXTRACT(EPOCH FROM ${table}.updated_at)::bigint
-            ELSE ${table}.image_url END`;
+            ELSE ${table}.${column} END`;
 }
 
 function resolveImageUrls(req, row, fields) {

@@ -2,6 +2,7 @@ const bcrypt = require('bcryptjs');
 const jwt    = require('jsonwebtoken');
 const crypto = require('crypto');
 const pool   = require('../config/db');
+const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 async function sendEmail({ to, subject, html }) {
   const res = await fetch('https://api.brevo.com/v3/smtp/email', {
@@ -67,10 +68,10 @@ async function register(req, res) {
 async function login(req, res) {
   const { email, password } = req.body;
   const { rows } = await pool.query(
-    'SELECT id, name, email, password_hash, role, is_active, avatar_url FROM users WHERE email = $1',
+    `SELECT id, name, email, password_hash, role, is_active, ${imageUrlSql('users', 'users', 'avatar_url')} AS avatar_url FROM users WHERE email = $1`,
     [email]
   );
-  const row = rows[0];
+  const row = rows[0] && resolveImageUrls(req, rows[0], ['avatar_url']);
   if (!row) return res.status(401).json({ error: 'Invalid credentials' });
   if (!row.is_active) return res.status(403).json({ error: 'Account suspended' });
 
@@ -144,10 +145,11 @@ async function logout(req, res) {
 
 async function me(req, res) {
   const { rows } = await pool.query(
-    'SELECT id, name, email, phone, role, avatar_url, is_active, created_at FROM users WHERE id = $1',
+    `SELECT id, name, email, phone, role, ${imageUrlSql('users', 'users', 'avatar_url')} AS avatar_url, is_active, created_at FROM users WHERE id = $1`,
     [req.user.id]
   );
   if (!rows.length) return res.status(404).json({ error: 'User not found' });
+  resolveImageUrls(req, rows[0], ['avatar_url']);
   const [rResult, rpResult] = await Promise.allSettled([
     pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [req.user.id]),
     pool.query('SELECT user_id FROM rider_profiles WHERE user_id = $1 LIMIT 1', [req.user.id]),
