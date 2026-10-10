@@ -37,6 +37,7 @@ import Messages from './pages/Messages';
 import Settings from './pages/Settings';
 import ChangePassword from './pages/ChangePassword';
 import NotFound from './pages/NotFound';
+import Notifications from './pages/Notifications';
 import CustomerService from './pages/CustomerService';
 import AccountUpgrade from './pages/AccountUpgrade';
 import RestaurantOwnerApplication from './pages/RestaurantOwnerApplication';
@@ -152,6 +153,7 @@ function App() {
                     <Route path="messages" element={<Messages />} />
                     <Route path="settings" element={<Settings />} />
                     <Route path="change-password" element={<ChangePassword />} />
+                    <Route path="notifications" element={<Notifications />} />
                     <Route path="customer-service" element={<CustomerService />} />
                     <Route path="upgrade" element={<AccountUpgrade />} />
                     <Route path="apply/restaurant-owner" element={<RestaurantOwnerApplication />} />

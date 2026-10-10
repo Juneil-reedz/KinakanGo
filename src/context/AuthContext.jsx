@@ -1,5 +1,6 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { authApi, safeLocalSet, storage, usersApi, addressesApi, SESSION_EXPIRED_EVENT } from '../services/api';
+import { useNotification } from './NotificationContext';
 
 const AuthContext = createContext();
 
@@ -20,6 +21,7 @@ export const useAuth = () => {
 export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
+  const { clearAll: clearNotifications } = useNotification();
 
   // Put the server's address list on the user (state + saved copy)
   const applyAddresses = (list) => {
@@ -77,10 +79,11 @@ export const AuthProvider = ({ children }) => {
     const onExpired = () => {
       setUser(null);
       localStorage.removeItem('kkg_user');
+      clearNotifications();
     };
     window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
     return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
-  }, []);
+  }, [clearNotifications]);
 
   const persist = (u) => {
     const normalized = normalizeUser(u);
@@ -111,7 +114,8 @@ export const AuthProvider = ({ children }) => {
     try { await authApi.logout(storage.getRefresh()); } catch { /* ignore */ }
     storage.clearTokens();
     persist(null);
-  }, []);
+    clearNotifications();
+  }, [clearNotifications]);
 
   const updateUser = async (updates) => {
     let next = { ...user, ...updates };

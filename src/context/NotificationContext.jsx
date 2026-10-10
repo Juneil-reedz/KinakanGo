@@ -1,7 +1,20 @@
-import { createContext, useContext, useState, useCallback } from 'react';
+import { createContext, useContext, useState, useCallback, useEffect } from 'react';
 import ToastContainer from '../components/ToastContainer';
 
 const NotificationContext = createContext();
+
+// Notifications are kept in this browser so the Notifications page survives reloads
+const STORAGE_KEY = 'kkg_notifications';
+const MAX_KEPT    = 50;
+
+const loadSaved = () => {
+  try {
+    const list = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+    return Array.isArray(list) ? list.slice(0, MAX_KEPT) : [];
+  } catch {
+    return [];
+  }
+};
 
 export const useNotification = () => {
   const context = useContext(NotificationContext);
@@ -11,7 +24,14 @@ export const useNotification = () => {
 
 export const NotificationProvider = ({ children }) => {
   const [toasts, setToasts]             = useState([]);
-  const [notifications, setNotifications] = useState([]);
+  const [notifications, setNotifications] = useState(loadSaved);
+
+  useEffect(() => {
+    try {
+      if (notifications.length) localStorage.setItem(STORAGE_KEY, JSON.stringify(notifications));
+      else localStorage.removeItem(STORAGE_KEY);
+    } catch { /* storage full or unavailable: keep them in memory only */ }
+  }, [notifications]);
 
   const removeToast = useCallback((id) => {
     setToasts(prev => prev.filter(t => t.id !== id));
@@ -23,14 +43,22 @@ export const NotificationProvider = ({ children }) => {
     setToasts(prev => [...prev, { id, message, type, duration }]);
     // Add to persistent list
     setNotifications(prev => [
-      { id, message, type, read: false, createdAt: new Date() },
-      ...prev.slice(0, 19), // keep last 20
+      { id, message, type, read: false, createdAt: new Date().toISOString() },
+      ...prev.slice(0, MAX_KEPT - 1),
     ]);
     return id;
   }, []);
 
   const markAllRead = useCallback(() => {
     setNotifications(prev => prev.map(n => ({ ...n, read: true })));
+  }, []);
+
+  const markRead = useCallback((id) => {
+    setNotifications(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
+  }, []);
+
+  const removeNotification = useCallback((id) => {
+    setNotifications(prev => prev.filter(n => n.id !== id));
   }, []);
 
   const clearAll = useCallback(() => setNotifications([]), []);
@@ -48,6 +76,8 @@ export const NotificationProvider = ({ children }) => {
       notifications,
       unreadCount,
       markAllRead,
+      markRead,
+      removeNotification,
       clearAll,
     }}>
       {children}
