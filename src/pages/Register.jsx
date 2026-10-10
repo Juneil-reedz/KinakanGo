@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Eye, EyeOff, User, Mail, Phone, Lock, Utensils, ChevronRight, ArrowLeft, Check } from 'lucide-react';
+import useGoBack from '../hooks/useGoBack';
 
 export default function Register() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { register } = useAuth();
   const { addNotification } = useNotification();
 
@@ -43,7 +45,7 @@ export default function Register() {
     try {
       await register({ name: form.name, email: form.email, phone: form.phone, password: form.password });
       addNotification('Account created! Welcome aboard', 'success');
-      navigate('/');
+      navigate('/', { replace: true });
     } catch (err) {
       const msg = err?.data?.error || err?.message || 'Registration failed';
       if (msg.toLowerCase().includes('email')) {
@@ -82,7 +84,7 @@ export default function Register() {
       <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
 
       <div className="w-full max-w-md relative z-10 animate-fade-up">
-        <button onClick={() => navigate('/welcome')}
+        <button onClick={() => goBack('/welcome')}
           className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>

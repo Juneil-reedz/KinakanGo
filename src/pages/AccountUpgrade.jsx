@@ -7,7 +7,9 @@ import {
 } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
-import { request, authApi, restaurantsApi } from '../services/api';
+import { useRestaurant } from '../context/RestaurantContext';
+import { useRider } from '../context/RiderContext';
+import { request, authApi } from '../services/api';
 
 const PLANS = [
   {
@@ -78,6 +80,8 @@ export default function AccountUpgrade() {
   const navigate = useNavigate();
   const { addNotification } = useNotification();
   const { user, updateUser } = useAuth();
+  const { enterFromCustomer: enterRestaurant } = useRestaurant();
+  const { enterFromCustomer: enterRider } = useRider();
 
   // steps: plans → role → requirements → done
   const [step, setStep]           = useState('plans');
@@ -103,11 +107,22 @@ export default function AccountUpgrade() {
   const goToRestaurantDashboard = async () => {
     setDashLoading(true);
     try {
-      const data = await restaurantsApi.myRestaurant();
-      localStorage.setItem('kkg_restaurant', JSON.stringify(data));
+      await enterRestaurant();
       navigate('/owner/dashboard');
     } catch {
       navigate('/owner/login');
+    } finally {
+      setDashLoading(false);
+    }
+  };
+
+  const goToRiderDashboard = async () => {
+    setDashLoading(true);
+    try {
+      await enterRider();
+      navigate('/rider/dashboard');
+    } catch {
+      navigate('/rider/login');
     } finally {
       setDashLoading(false);
     }
@@ -222,7 +237,7 @@ export default function AccountUpgrade() {
               <p className="text-white font-heading font-bold text-2xl mb-2">Your Rider Account is Ready!</p>
               <p className="text-white/70 text-sm max-w-sm mx-auto">Accept deliveries, track earnings, and manage your availability from the Rider Dashboard.</p>
             </div>
-            <button onClick={() => navigate('/rider/dashboard')}
+            <button onClick={goToRiderDashboard}
               className="btn-glow-teal text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3">
               <Bike className="w-5 h-5" /> Open Rider Dashboard <ArrowRight className="w-5 h-5" />
             </button>
@@ -280,7 +295,7 @@ export default function AccountUpgrade() {
                 <p className="glass rounded-xl px-4 py-2 text-forest-200/70 text-sm">Admin note: {existing.admin_note}</p>
               )}
               <button
-                onClick={isRestaurant ? goToRestaurantDashboard : () => navigate('/rider/dashboard')}
+                onClick={isRestaurant ? goToRestaurantDashboard : goToRiderDashboard}
                 disabled={dashLoading}
                 className={`${isRestaurant ? 'btn-glow-orange' : 'btn-glow-teal'} text-white px-8 py-4 rounded-2xl font-heading font-bold text-base flex items-center gap-3 disabled:opacity-70`}>
                 {dashLoading

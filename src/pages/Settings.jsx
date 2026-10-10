@@ -93,7 +93,7 @@ export default function Settings() {
       <div className="glass rounded-2xl p-5 space-y-2">
         <p className="text-white font-semibold mb-3">Account</p>
         {[
-          { label:'Change Password', icon:Lock,        action:() => navigate('/forgot-password') },
+          { label:'Change Password', icon:Lock,        action:() => navigate('/change-password') },
           { label:'Help & Support',  icon:HelpCircle,  action:() => navigate('/customer-service') },
         ].map(({ label, icon:Icon, action }) => (
           <button key={label} onClick={action}

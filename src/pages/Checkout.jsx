@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { createOrder, restaurantsApi } from '../services/api';
 import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone } from 'lucide-react';
+import useGoBack from '../hooks/useGoBack';
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -22,6 +23,7 @@ function pickImage(onPick) {
 
 export default function Checkout() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { cartItems, restaurantId, getCartTotal, clearCart } = useCart();
   const { user } = useAuth();
   const { addNotification } = useNotification();
@@ -90,7 +92,7 @@ export default function Checkout() {
       const order = await createOrder(orderData);
       addNotification('Order placed successfully!', 'success');
       clearCart();
-      setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state: { orderData } }), 1200);
+      setTimeout(() => navigate(`/order-confirmation/${order.id}`, { state: { orderData }, replace: true }), 1200);
     } catch {
       addNotification('Failed to place order. Please try again.', 'error');
       setSubmitting(false);
@@ -122,9 +124,10 @@ export default function Checkout() {
       {/* Header */}
       <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3 mb-4"
         style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)' }}>
-        <Link to="/cart" className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
+        <button onClick={() => goBack('/cart')} aria-label="Back"
+          className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
           <ArrowLeft className="w-4 h-4" />
-        </Link>
+        </button>
         <h1 className="text-white font-heading font-bold text-lg flex-1">Checkout</h1>
         <span className="text-forest-200/50 text-xs">{cartItems.length} item{cartItems.length > 1 ? 's' : ''}</span>
       </div>

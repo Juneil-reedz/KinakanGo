@@ -2,6 +2,8 @@ import { useState, useRef, useEffect } from 'react';
 import { useNavigate, useLocation, Outlet } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
+import { useRestaurant } from '../context/RestaurantContext';
+import { useRider } from '../context/RiderContext';
 import { useNotification } from '../context/NotificationContext';
 import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
@@ -9,7 +11,7 @@ import {
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
   Crown, Utensils, Star, Zap, User, CheckCheck, Trash2, Store, Bike, Loader2, LogOut
 } from 'lucide-react';
-import { restaurantsApi } from '../services/api';
+
 import CustomerBottomNav from './CustomerBottomNav';
 import ThemeToggle from './ThemeToggle';
 
@@ -26,6 +28,8 @@ export default function CustomerLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { user, logout } = useAuth();
+  const { enterFromCustomer: enterRestaurant } = useRestaurant();
+  const { enterFromCustomer: enterRider } = useRider();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
   const { notifications, unreadCount, markAllRead, clearAll } = useNotification();
   const [collapsed, setCollapsed]       = useState(false);
@@ -39,11 +43,22 @@ export default function CustomerLayout() {
   const goToRestaurantDashboard = async () => {
     setDashLoading(true);
     try {
-      const data = await restaurantsApi.myRestaurant();
-      localStorage.setItem('kkg_restaurant', JSON.stringify(data));
+      await enterRestaurant();
       navigate('/owner/dashboard');
     } catch {
       navigate('/owner/login');
+    } finally {
+      setDashLoading(false);
+    }
+  };
+
+  const goToRiderDashboard = async () => {
+    setDashLoading(true);
+    try {
+      await enterRider();
+      navigate('/rider/dashboard');
+    } catch {
+      navigate('/rider/login');
     } finally {
       setDashLoading(false);
     }
@@ -68,14 +83,27 @@ export default function CustomerLayout() {
     if (p === '/settings') return 'setting';
     return 'dashboard';
   };
-  const active = getActive();
+  const active = getActive(); // drives the header and right panel
+
+  // Menu highlight: only light up an item when we're actually in that section
+  const getNavKey = () => {
+    const p = location.pathname;
+    if (p === '/') return 'dashboard';
+    if (p.startsWith('/restaurants') || p.startsWith('/restaurant/') || p === '/search') return 'food-order';
+    if (p === '/favorites') return 'favorite';
+    if (p === '/messages') return 'message';
+    if (p === '/orders' || p.startsWith('/order-')) return 'order-history';
+    if (p === '/settings' || p === '/change-password') return 'setting';
+    return null;
+  };
+  const navKey = getNavKey();
 
   const handleNav = (path) => { navigate(path); setMobileOpen(false); };
 
   const handleLogout = () => {
     logout();
     setMobileOpen(false);
-    navigate('/login');
+    navigate('/login', { replace: true });
   };
 
   const handleUpdateQty = (id, delta) => {
@@ -186,7 +214,7 @@ export default function CustomerLayout() {
         {/* Nav items */}
         <nav className="flex-1 px-3 overflow-y-auto scrollbar-hide space-y-1">
           {NAV.map(({ key, label, icon: Icon, path }) => {
-            const isActive = active === key;
+            const isActive = navKey === key;
             return (
               <button key={key} onClick={() => handleNav(path)} title={collapsed ? label : ''}
                 className={`
@@ -234,7 +262,7 @@ export default function CustomerLayout() {
                 <Bike className="w-6 h-6 text-teal-300 mb-2" />
                 <p className="text-white font-bold text-sm mb-1">Rider Dashboard</p>
                 <p className="text-forest-200/70 text-xs mb-3">Accept deliveries & track earnings</p>
-                <button onClick={() => navigate('/rider/dashboard')}
+                <button onClick={goToRiderDashboard}
                   className="w-full py-2 rounded-xl btn-glow-teal text-white text-xs font-bold">
                   Open Dashboard
                 </button>
@@ -318,6 +346,17 @@ export default function CustomerLayout() {
               </button>
             </div>
           </header>
+        )}
+
+        {/* Mobile top bar for pages without the dashboard header, so the menu is always reachable */}
+        {active !== 'dashboard' && (
+          <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 pt-3">
+            <button onClick={() => setMobileOpen(true)} aria-label="Open menu"
+              className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
+              <Menu className="w-5 h-5" />
+            </button>
+            <ThemeToggle />
+          </div>
         )}
 
         {/* Page content */}

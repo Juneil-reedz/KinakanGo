@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi } from '../services/api';
+import { authApi, createRefresher, storage as customerStorage } from '../services/api';
 
 const BASE = import.meta.env.VITE_API_URL || '/api';
 const RESTAURANT_ACCESS_KEY = 'kkg_restaurant_access';
@@ -18,23 +18,7 @@ const restaurantStorage = {
   },
 };
 
-async function tryRestaurantRefresh() {
-  const refreshToken = restaurantStorage.getRefresh();
-  if (!refreshToken) return false;
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return false;
-    const { accessToken } = await res.json();
-    restaurantStorage.setTokens(accessToken, null);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const refreshSession = createRefresher(restaurantStorage);
 
 export async function restaurantRequest(path, options = {}, retry = true) {
   const token = restaurantStorage.getAccess();
@@ -47,10 +31,11 @@ export async function restaurantRequest(path, options = {}, retry = true) {
     },
   });
 
-  if (res.status === 401 && retry) {
-    const refreshed = await tryRestaurantRefresh();
-    if (refreshed) return restaurantRequest(path, options, false);
-    restaurantStorage.clearTokens();
+  // Refresh once on 401; only drop the session if the server rejects the refresh token
+  if (res.status === 401 && retry && token) {
+    const result = await refreshSession();
+    if (result === 'ok') return restaurantRequest(path, options, false);
+    if (result === 'rejected') restaurantStorage.clearTokens();
   }
 
   const data = await res.json().catch(() => ({}));
@@ -98,8 +83,27 @@ export function RestaurantProvider({ children }) {
     return { success: true, restaurant: restaurantData };
   };
 
+  // Open the owner panel with the customer's existing session (no second login)
+  const enterFromCustomer = async () => {
+    if (!customerStorage.getAccess()) throw new Error('Not signed in');
+    restaurantStorage.setTokens(customerStorage.getAccess(), customerStorage.getRefresh());
+    try {
+      const restaurantData = await restaurantRequest('/restaurants/owner/me');
+      if (!restaurantData) throw new Error('No restaurant found for this account');
+      persist(restaurantData);
+      return restaurantData;
+    } catch (err) {
+      restaurantStorage.clearTokens();
+      throw err;
+    }
+  };
+
   const logout = useCallback(async () => {
-    try { await authApi.logout(restaurantStorage.getRefresh()); } catch { /* ignore */ }
+    // A session shared with the customer app must not be revoked server-side
+    const refresh = restaurantStorage.getRefresh();
+    if (refresh && refresh !== customerStorage.getRefresh()) {
+      try { await authApi.logout(refresh); } catch { /* ignore */ }
+    }
     restaurantStorage.clearTokens();
     persist(null);
   }, []);
@@ -113,7 +117,7 @@ export function RestaurantProvider({ children }) {
   };
 
   return (
-    <RestaurantContext.Provider value={{ restaurant, isLoading, login, logout, updateRestaurant, isAuthenticated: !!restaurant }}>
+    <RestaurantContext.Provider value={{ restaurant, isLoading, login, logout, enterFromCustomer, updateRestaurant, isAuthenticated: !!restaurant }}>
       {children}
     </RestaurantContext.Provider>
   );

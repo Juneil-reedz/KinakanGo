@@ -3,9 +3,13 @@ import { useNavigate, useSearchParams } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { Lock, Eye, EyeOff, ArrowLeft, Utensils, ChevronRight, AlertCircle } from 'lucide-react';
 import { authApi } from '../services/api';
+import useGoBack from '../hooks/useGoBack';
+import { useAuth } from '../context/AuthContext';
 
 export default function ResetPassword() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
+  const { isAuthenticated, logout } = useAuth();
   const [searchParams] = useSearchParams();
   const { addNotification } = useNotification();
 
@@ -37,6 +41,8 @@ export default function ResetPassword() {
     setLoading(true);
     try {
       await authApi.resetPassword(token, form.password);
+      // The reset signs out every session, including this browser's if it was logged in
+      if (isAuthenticated) await logout();
       addNotification('Password reset! Please log in.', 'success');
       navigate('/login', { replace: true });
     } catch (err) {
@@ -54,9 +60,9 @@ export default function ResetPassword() {
       <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
 
       <div className="w-full max-w-md relative z-10 animate-fade-up">
-        <button onClick={() => navigate('/login')}
+        <button onClick={() => goBack('/login')}
           className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back to Login
+          <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
         <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>

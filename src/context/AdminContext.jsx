@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, request } from '../services/api';
+import { authApi, request, createRefresher } from '../services/api';
 
 const AdminContext = createContext();
 
@@ -20,6 +20,8 @@ const adminStorage = {
   },
 };
 
+const refreshAdmin = createRefresher(adminStorage);
+
 // Dedicated fetch wrapper that always uses admin tokens
 async function adminRequest(path, options = {}, retry = true) {
   const BASE  = import.meta.env.VITE_API_URL || '/api';
@@ -33,23 +35,11 @@ async function adminRequest(path, options = {}, retry = true) {
     },
   });
 
-  if (res.status === 401 && retry) {
-    const refreshToken = adminStorage.getRefresh();
-    if (refreshToken) {
-      try {
-        const rr = await fetch(`${BASE}/auth/refresh`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ refreshToken }),
-        });
-        if (rr.ok) {
-          const { accessToken } = await rr.json();
-          adminStorage.setTokens(accessToken, null);
-          return adminRequest(path, options, false);
-        }
-      } catch {}
-    }
-    adminStorage.clearTokens();
+  // Refresh once on 401; only drop the session if the server rejects the refresh token
+  if (res.status === 401 && retry && token) {
+    const result = await refreshAdmin();
+    if (result === 'ok') return adminRequest(path, options, false);
+    if (result === 'rejected') adminStorage.clearTokens();
   }
 
   const data = await res.json().catch(() => ({}));

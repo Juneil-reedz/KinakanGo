@@ -1,3 +1,4 @@
+import { useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
@@ -7,9 +8,9 @@ import { RestaurantProvider } from './context/RestaurantContext';
 import { RiderProvider } from './context/RiderContext';
 import { AdminProvider } from './context/AdminContext';
 import { FavoritesProvider } from './context/FavoritesContext';
-import Header from './components/Header';
-import Footer from './components/Footer';
-import BottomNav from './components/BottomNav';
+import { useRestaurant } from './context/RestaurantContext';
+import { useRider } from './context/RiderContext';
+import { useAdmin } from './context/AdminContext';
 import CustomerLayout from './components/CustomerLayout';
 import RestaurantLayout from './components/RestaurantLayout';
 import RiderLayout from './components/RiderLayout';
@@ -34,6 +35,8 @@ import Favorites from './pages/Favorites';
 import Addresses from './pages/Addresses';
 import Messages from './pages/Messages';
 import Settings from './pages/Settings';
+import ChangePassword from './pages/ChangePassword';
+import NotFound from './pages/NotFound';
 import CustomerService from './pages/CustomerService';
 import AccountUpgrade from './pages/AccountUpgrade';
 import RestaurantOwnerApplication from './pages/RestaurantOwnerApplication';
@@ -74,6 +77,36 @@ function RequireCustomer({ children }) {
   return children;
 }
 
+// Login/register screens: someone already signed in is sent on instead of
+// seeing a login form (e.g. pressing Back after logging in).
+// Decided once, when the page opens — signing in on the page itself is left to
+// the page's own redirect.
+function GuestOnly({ children, isAuthed, loading, to }) {
+  const location = useLocation();
+  const authedOnOpen = useRef(null);
+  if (loading) return <div className="min-h-screen" />;
+  if (authedOnOpen.current === null) authedOnOpen.current = isAuthed;
+  if (authedOnOpen.current) return <Navigate to={location.state?.from || to} replace />;
+  return children;
+}
+
+function CustomerGuest({ children }) {
+  const { isAuthenticated, loading } = useAuth();
+  return <GuestOnly isAuthed={isAuthenticated} loading={loading} to="/">{children}</GuestOnly>;
+}
+function OwnerGuest({ children }) {
+  const { restaurant, isLoading } = useRestaurant();
+  return <GuestOnly isAuthed={!!restaurant} loading={isLoading} to="/owner/dashboard">{children}</GuestOnly>;
+}
+function RiderGuest({ children }) {
+  const { rider, isLoading } = useRider();
+  return <GuestOnly isAuthed={!!rider} loading={isLoading} to="/rider/dashboard">{children}</GuestOnly>;
+}
+function AdminGuest({ children }) {
+  const { admin, isLoading } = useAdmin();
+  return <GuestOnly isAuthed={!!admin} loading={isLoading} to="/admin/dashboard">{children}</GuestOnly>;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -90,8 +123,8 @@ function App() {
                   <Route path="/welcome" element={<Welcome />} />
 
                   {/* Auth Routes (No Header/Footer) */}
-                  <Route path="/login" element={<Login />} />
-                  <Route path="/register" element={<Register />} />
+                  <Route path="/login" element={<CustomerGuest><Login /></CustomerGuest>} />
+                  <Route path="/register" element={<CustomerGuest><Register /></CustomerGuest>} />
                   <Route path="/forgot-password" element={<ForgotPassword />} />
                   <Route path="/reset-password" element={<ResetPassword />} />
 
@@ -118,14 +151,16 @@ function App() {
                     <Route path="addresses" element={<Addresses />} />
                     <Route path="messages" element={<Messages />} />
                     <Route path="settings" element={<Settings />} />
+                    <Route path="change-password" element={<ChangePassword />} />
                     <Route path="customer-service" element={<CustomerService />} />
                     <Route path="upgrade" element={<AccountUpgrade />} />
                     <Route path="apply/restaurant-owner" element={<RestaurantOwnerApplication />} />
                     <Route path="apply/rider" element={<RiderApplication />} />
+                    <Route path="*" element={<NotFound />} />
                   </Route>
 
                   {/* Restaurant Owner Portal Routes */}
-                  <Route path="/owner/login" element={<RestaurantLogin />} />
+                  <Route path="/owner/login" element={<OwnerGuest><RestaurantLogin /></OwnerGuest>} />
                   <Route
                     path="/owner/*"
                     element={
@@ -137,13 +172,15 @@ function App() {
                           <Route path="menu" element={<RestaurantMenu />} />
                           <Route path="reports" element={<RestaurantReports />} />
                           <Route path="settings" element={<RestaurantSettings />} />
+                          <Route index element={<Navigate to="dashboard" replace />} />
+                          <Route path="*" element={<NotFound homePath="/owner/dashboard" homeLabel="Dashboard" />} />
                         </Routes>
                       </RestaurantLayout>
                     }
                   />
 
                   {/* Rider Routes */}
-                  <Route path="/rider/login" element={<RiderLogin />} />
+                  <Route path="/rider/login" element={<RiderGuest><RiderLogin /></RiderGuest>} />
                   <Route
                     path="/rider/*"
                     element={
@@ -153,13 +190,15 @@ function App() {
                           <Route path="delivery/:orderId" element={<RiderDelivery />} />
                           <Route path="earnings" element={<RiderEarnings />} />
                           <Route path="history" element={<RiderHistory />} />
+                          <Route index element={<Navigate to="dashboard" replace />} />
+                          <Route path="*" element={<NotFound homePath="/rider/dashboard" homeLabel="Dashboard" />} />
                         </Routes>
                       </RiderLayout>
                     }
                   />
 
                   {/* Admin Routes */}
-                  <Route path="/admin/login" element={<AdminLogin />} />
+                  <Route path="/admin/login" element={<AdminGuest><AdminLogin /></AdminGuest>} />
                   <Route
                     path="/admin/*"
                     element={
@@ -172,6 +211,8 @@ function App() {
                           <Route path="issues" element={<AdminIssues />} />
                           <Route path="promos" element={<AdminPromos />} />
                           <Route path="applications" element={<AdminApplications />} />
+                          <Route index element={<Navigate to="dashboard" replace />} />
+                          <Route path="*" element={<NotFound homePath="/admin/dashboard" homeLabel="Dashboard" />} />
                         </Routes>
                       </AdminLayout>
                     }

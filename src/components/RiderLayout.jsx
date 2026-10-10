@@ -1,5 +1,5 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { useRider } from '../context/RiderContext';
 import { useNotification } from '../context/NotificationContext';
 import { LayoutDashboard, DollarSign, Bike, Star, LogOut, Menu, X, History } from 'lucide-react';
@@ -14,10 +14,15 @@ const NAV = [
 export default function RiderLayout({ children }) {
   const location = useLocation();
   const navigate  = useNavigate();
-  const { rider, logout } = useRider();
+  const { rider, isLoading, logout } = useRider();
   const [mobileOpen, setMobileOpen] = useState(false);
 
-  const handleLogout = () => { logout(); navigate('/rider/login'); };
+  // Same guard as the restaurant and admin panels: no rider session -> rider login
+  useEffect(() => {
+    if (!isLoading && !rider) navigate('/rider/login', { replace: true });
+  }, [rider, isLoading, navigate]);
+
+  const handleLogout = () => { logout(); navigate('/rider/login', { replace: true }); };
 
   const isActive = (p) => location.pathname === p;
 
@@ -80,6 +85,14 @@ export default function RiderLayout({ children }) {
       </div>
     </div>
   );
+
+  if (isLoading || !rider) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="w-10 h-10 rounded-full border-2 border-forest-400/30 border-t-forest-400 animate-spin" />
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen flex flex-col lg:flex-row">

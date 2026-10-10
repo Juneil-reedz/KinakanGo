@@ -28,7 +28,7 @@ export default function RestaurantLayout({ children }) {
 
   const isActive = (p) => location.pathname === p;
 
-  const handleLogout = () => { logout(); navigate('/owner/login'); };
+  const handleLogout = () => { logout(); navigate('/owner/login', { replace: true }); };
 
   const toggleOpen = async () => {
     if (savingStatus) return;

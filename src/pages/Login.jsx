@@ -3,9 +3,11 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Eye, EyeOff, Mail, Lock, Utensils, ChevronRight, ArrowLeft } from 'lucide-react';
+import useGoBack from '../hooks/useGoBack';
 
 export default function Login() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const location = useLocation();
   const { login } = useAuth();
   const { addNotification } = useNotification();
@@ -45,7 +47,7 @@ export default function Login() {
       <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
 
       <div className="w-full max-w-md relative z-10 animate-fade-up">
-        <button onClick={() => navigate('/welcome')}
+        <button onClick={() => goBack('/welcome')}
           className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
         </button>

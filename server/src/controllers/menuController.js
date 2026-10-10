@@ -24,6 +24,25 @@ async function listAll(req, res) {
   res.json(rows);
 }
 
+// Single public menu item — lets the food detail page load when opened directly
+async function getItem(req, res) {
+  const id = parseInt(req.params.id);
+  if (isNaN(id)) return res.status(400).json({ error: 'Invalid item id' });
+  const { rows } = await pool.query(
+    `SELECT m.id, m.name, m.description, m.price, m.image_url,
+            m.is_vegetarian, m.is_available, m.prep_time_mins,
+            c.name AS category_name,
+            r.id AS restaurant_id, r.name AS restaurant_name, r.rating
+     FROM menu_items m
+     JOIN restaurants r ON m.restaurant_id = r.id
+     LEFT JOIN menu_categories c ON m.category_id = c.id
+     WHERE m.id = $1 AND r.is_approved = true`,
+    [id]
+  );
+  if (!rows.length) return res.status(404).json({ error: 'Item not found' });
+  res.json(rows[0]);
+}
+
 async function listItems(req, res) {
   const restaurantId = parseInt(req.params.restaurantId);
   if (isNaN(restaurantId)) return res.status(400).json({ error: 'Invalid restaurant id' });
@@ -124,4 +143,4 @@ async function deleteItem(req, res) {
   res.json({ message: 'Deleted' });
 }
 
-module.exports = { listAll, listItems, createItem, updateItem, deleteItem };
+module.exports = { listAll, getItem, listItems, createItem, updateItem, deleteItem };

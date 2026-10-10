@@ -10,10 +10,13 @@ const ITEMS = [
   { key: 'order-history', icon: Clock,        path: '/orders' },
 ];
 
+// Only highlight a tab when we're in that section (not on Profile, Settings, etc.)
 const getActiveKey = (pathname) => {
-  if (pathname.startsWith('/restaurants') || pathname.startsWith('/restaurant/')) return 'food-order';
+  if (pathname === '/') return 'dashboard';
+  if (pathname.startsWith('/restaurants') || pathname.startsWith('/restaurant/') || pathname === '/search') return 'food-order';
+  if (pathname.startsWith('/order-')) return 'order-history';
   const match = ITEMS.find(i => i.path !== '/' && pathname === i.path);
-  return match ? match.key : 'dashboard';
+  return match ? match.key : null;
 };
 
 // Mobile bottom nav shared by CustomerLayout and standalone customer pages (e.g. Cart).

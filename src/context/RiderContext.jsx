@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi } from '../services/api';
+import { authApi, createRefresher, storage as customerStorage } from '../services/api';
 
 const BASE = import.meta.env.VITE_API_URL || '/api';
 
@@ -20,23 +20,7 @@ const riderStorage = {
   },
 };
 
-async function tryRiderRefresh() {
-  const refreshToken = riderStorage.getRefresh();
-  if (!refreshToken) return false;
-  try {
-    const res = await fetch(`${BASE}/auth/refresh`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return false;
-    const { accessToken } = await res.json();
-    riderStorage.setTokens(accessToken, null);
-    return true;
-  } catch {
-    return false;
-  }
-}
+const refreshSession = createRefresher(riderStorage);
 
 // All rider portal API calls go through this — uses rider-specific tokens
 export async function riderRequest(path, options = {}, retry = true) {
@@ -50,10 +34,11 @@ export async function riderRequest(path, options = {}, retry = true) {
     },
   });
 
-  if (res.status === 401 && retry) {
-    const refreshed = await tryRiderRefresh();
-    if (refreshed) return riderRequest(path, options, false);
-    riderStorage.clearTokens();
+  // Refresh once on 401; only drop the session if the server rejects the refresh token
+  if (res.status === 401 && retry && token) {
+    const result = await refreshSession();
+    if (result === 'ok') return riderRequest(path, options, false);
+    if (result === 'rejected') riderStorage.clearTokens();
   }
 
   const data = await res.json().catch(() => ({}));
@@ -99,14 +84,33 @@ export function RiderProvider({ children }) {
     return { success: true, rider: res.user };
   };
 
-  const logout = useCallback(async () => {
+  // Open the rider panel with the customer's existing session (no second login)
+  const enterFromCustomer = async () => {
+    if (!customerStorage.getAccess()) throw new Error('Not signed in');
+    riderStorage.setTokens(customerStorage.getAccess(), customerStorage.getRefresh());
     try {
-      await fetch(`${BASE}/auth/logout`, {
-        method:  'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body:    JSON.stringify({ refreshToken: riderStorage.getRefresh() }),
-      });
-    } catch { /* ignore */ }
+      const me = await riderRequest('/auth/me');
+      if (me.role !== 'rider' && !me.has_rider_profile) throw new Error('Not a rider account');
+      persist(me);
+      return me;
+    } catch (err) {
+      riderStorage.clearTokens();
+      throw err;
+    }
+  };
+
+  const logout = useCallback(async () => {
+    // A session shared with the customer app must not be revoked server-side
+    const refresh = riderStorage.getRefresh();
+    if (refresh && refresh !== customerStorage.getRefresh()) {
+      try {
+        await fetch(`${BASE}/auth/logout`, {
+          method:  'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body:    JSON.stringify({ refreshToken: refresh }),
+        });
+      } catch { /* ignore */ }
+    }
     riderStorage.clearTokens();
     persist(null);
   }, []);
@@ -114,7 +118,7 @@ export function RiderProvider({ children }) {
   const updateRider = (updates) => persist({ ...rider, ...updates });
 
   return (
-    <RiderContext.Provider value={{ rider, isLoading, login, logout, updateRider, isAuthenticated: !!rider }}>
+    <RiderContext.Provider value={{ rider, isLoading, login, logout, enterFromCustomer, updateRider, isAuthenticated: !!rider }}>
       {children}
     </RiderContext.Provider>
   );

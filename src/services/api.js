@@ -39,24 +39,45 @@ export const storage = {
   clearTokens:    ()      => { localStorage.removeItem(TOKEN_KEY); localStorage.removeItem(REFRESH_KEY); },
 };
 
-// Silently refresh the access token using the stored refresh token
-async function tryRefresh() {
-  const refreshToken = storage.getRefresh();
-  if (!refreshToken) return false;
-  try {
-    const res  = await fetch(`${BASE}/auth/refresh`, {
-      method:  'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body:    JSON.stringify({ refreshToken }),
-    });
-    if (!res.ok) return false;
-    const { accessToken } = await res.json();
-    storage.setTokens(accessToken, null);
-    return true;
-  } catch {
-    return false;
-  }
+// Silent token refresh shared by the customer app and the restaurant/rider/admin
+// panels (each passes its own token storage). Resolves to:
+//   'ok'       new access token saved
+//   'rejected' server refused the refresh token (revoked/expired) -> session is over
+//   'error'    network failure / server down (e.g. Render waking up) -> keep the session
+// Concurrent 401s share one in-flight refresh instead of firing several.
+export function createRefresher(store) {
+  let inFlight = null;
+  const run = async () => {
+    const refreshToken = store.getRefresh();
+    if (!refreshToken) return 'rejected';
+    try {
+      const res = await fetch(`${BASE}/auth/refresh`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ refreshToken }),
+      });
+      if (res.status === 400 || res.status === 401 || res.status === 403) return 'rejected';
+      if (!res.ok) return 'error';
+      const { accessToken } = await res.json();
+      store.setTokens(accessToken, null);
+      return 'ok';
+    } catch {
+      return 'error';
+    }
+  };
+  return () => {
+    if (!inFlight) inFlight = run().finally(() => { inFlight = null; });
+    return inFlight;
+  };
 }
+
+// Fired when the customer session is definitively over so AuthContext can log out cleanly
+export const SESSION_EXPIRED_EVENT = 'kkg:session-expired';
+
+const refreshCustomer = createRefresher({
+  getRefresh: () => storage.getRefresh(),
+  setTokens:  (a, r) => storage.setTokens(a, r),
+});
 
 export async function request(path, options = {}, retry = true) {
   const token = storage.getAccess();
@@ -69,11 +90,15 @@ export async function request(path, options = {}, retry = true) {
     },
   });
 
-  // On 401, attempt silent refresh once then retry
-  if (res.status === 401 && retry) {
-    const refreshed = await tryRefresh();
-    if (refreshed) return request(path, options, false);
-    storage.clearTokens();
+  // On 401, attempt silent refresh once then retry. Only end the session when the
+  // server rejects the refresh token — a network blip must not log the user out.
+  if (res.status === 401 && retry && token) {
+    const result = await refreshCustomer();
+    if (result === 'ok') return request(path, options, false);
+    if (result === 'rejected') {
+      storage.clearTokens();
+      window.dispatchEvent(new Event(SESSION_EXPIRED_EVENT));
+    }
   }
 
   const data = await res.json().catch(() => ({}));
@@ -93,6 +118,8 @@ export const authApi = {
   logout:  (refreshToken) =>
     request('/auth/logout',   { method: 'POST', body: JSON.stringify({ refreshToken }) }),
   me: () => request('/auth/me'),
+  changePassword: (currentPassword, newPassword) =>
+    request('/auth/change-password', { method: 'POST', body: JSON.stringify({ currentPassword, newPassword, refreshToken: storage.getRefresh() }) }),
   forgotPassword: (email) =>
     request('/auth/forgot-password', { method: 'POST', body: JSON.stringify({ email }) }),
   verifyResetOtp: (email, otp) =>
@@ -126,6 +153,7 @@ export const restaurantsApi = {
 // ── Menu ──────────────────────────────────────────────────────────────────────
 
 export const menuApi = {
+  getItem: (itemId)              => request(`/menu/${itemId}`),
   list:   (restaurantId)         => request(`/restaurants/${restaurantId}/menu`),
   create: (restaurantId, data)   => request(`/restaurants/${restaurantId}/menu`,           { method: 'POST',   body: JSON.stringify(data) }),
   update: (restaurantId, itemId, data) => request(`/restaurants/${restaurantId}/menu/${itemId}`, { method: 'PATCH',  body: JSON.stringify(data) }),

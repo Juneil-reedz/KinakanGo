@@ -25,7 +25,7 @@ export default function AdminLayout({ children }) {
   }, [admin, isLoading, navigate]);
 
   const isActive = (p) => location.pathname === p;
-  const handleLogout = () => { logout(); navigate('/admin/login'); };
+  const handleLogout = () => { logout(); navigate('/admin/login', { replace: true }); };
 
   if (isLoading || !admin) {
     return (

@@ -1,8 +1,10 @@
-﻿import { useState } from 'react';
+﻿import { useState, useEffect } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { ArrowLeft, Heart, Star, Clock, MapPin, Plus, Minus, ShoppingCart, Check } from 'lucide-react';
+import { menuApi } from '../services/api';
+import useGoBack from '../hooks/useGoBack';
 
 const ADD_ONS = [
   { id:1, name:'Extra Cheese', price:50,  image:'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=200&h=200&fit=crop' },
@@ -13,6 +15,7 @@ const ADD_ONS = [
 export default function FoodDetail() {
   const { id }     = useParams();
   const navigate   = useNavigate();
+  const goBack     = useGoBack();
   const location   = useLocation();
   const { addToCart } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
@@ -20,13 +23,38 @@ export default function FoodDetail() {
   const [quantity, setQuantity]         = useState(1);
   const [selectedAddOns, setSelectedAddOns] = useState([]);
 
-  const foodItem = location.state?.foodItem || {
-    id: parseInt(id), name:'Delicious Food',
-    description:'Fresh ingredients prepared with care. A delicious combination of flavors that will satisfy your cravings.',
-    price:350, rating:4.5,
-    image:'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=800&h=800&fit=crop',
-    restaurant:'Restaurant', category:'food',
-  };
+  // Normally passed from the list we came from; when opened directly (refresh,
+  // shared link) load it from the API instead of showing placeholder data.
+  const stateItem = location.state?.foodItem;
+  const [fetched, setFetched] = useState(null);
+  const [status, setStatus]   = useState(stateItem ? 'ready' : 'loading');
+
+  useEffect(() => {
+    if (stateItem) return;
+    setStatus('loading');
+    menuApi.getItem(id)
+      .then(item => { setFetched(item); setStatus('ready'); })
+      .catch(() => setStatus('missing'));
+  }, [id, stateItem]);
+
+  if (status !== 'ready') {
+    return (
+      <div className="min-h-screen flex items-center justify-center px-4">
+        {status === 'loading'
+          ? <div className="w-10 h-10 rounded-full border-2 border-forest-300/30 border-t-forest-300 animate-spin" />
+          : <div className="glass rounded-3xl p-10 max-w-sm w-full text-center">
+              <p className="text-white font-bold text-lg mb-2">Item not found</p>
+              <p className="text-forest-200/60 text-sm mb-6">This item may no longer be available.</p>
+              <button onClick={() => navigate('/restaurants', { replace: true })}
+                className="btn-glow-orange text-white text-sm font-bold px-6 py-2.5 rounded-xl">Browse Food</button>
+            </div>}
+      </div>
+    );
+  }
+
+  const raw = stateItem || fetched;
+  // API prices arrive as strings ("150.00"); keep the maths numeric
+  const foodItem = { ...raw, price: Number(raw.price) || 0 };
 
   const toggleAddOn = (a) => setSelectedAddOns(p => p.find(i=>i.id===a.id) ? p.filter(i=>i.id!==a.id) : [...p,a]);
   const total = (foodItem.price + selectedAddOns.reduce((s,a)=>s+a.price,0)) * quantity;
@@ -51,7 +79,7 @@ export default function FoodDetail() {
         <img src={foodItem.image || foodItem.image_url} alt={foodItem.name} className="w-full h-full object-cover" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
         {/* Nav buttons */}
-        <button onClick={() => navigate(-1)}
+        <button onClick={() => goBack('/restaurants')} aria-label="Back"
           className="absolute top-4 left-4 w-10 h-10 glass rounded-xl flex items-center justify-center text-white hover:glass-green transition-all">
           <ArrowLeft className="w-5 h-5" />
         </button>
@@ -70,7 +98,7 @@ export default function FoodDetail() {
               <h1 className="text-xl font-heading font-bold text-white">{foodItem.name}</h1>
               <p className="text-ember-400 font-heading font-bold text-xl flex-shrink-0">₱{Number(foodItem.price).toFixed(2)}</p>
             </div>
-            <p className="text-forest-200/60 text-sm capitalize mt-0.5">{foodItem.category || 'Food'}</p>
+            <p className="text-forest-200/60 text-sm capitalize mt-0.5">{foodItem.category || foodItem.category_name || 'Food'}</p>
           </div>
 
           {/* Stats */}
@@ -81,7 +109,7 @@ export default function FoodDetail() {
             </div>
             <div className="flex items-center gap-1.5 glass rounded-xl px-3 py-2 text-xs text-forest-200/70">
               <MapPin className="w-3.5 h-3.5 text-ember-400" />
-              {typeof foodItem.restaurant === 'string' ? foodItem.restaurant : foodItem.restaurant?.name}
+              {typeof foodItem.restaurant === 'string' ? foodItem.restaurant : (foodItem.restaurant?.name || foodItem.restaurant_name)}
             </div>
             <div className="flex items-center gap-1.5 glass rounded-xl px-3 py-2 text-xs text-forest-200/70">
               <Clock className="w-3.5 h-3.5" />30 min

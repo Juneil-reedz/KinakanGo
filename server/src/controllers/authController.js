@@ -239,6 +239,27 @@ async function verifyResetOtp(req, res) {
   res.json({ resetToken });
 }
 
+// Logged-in password change: requires the current password. Signs out every
+// other session but keeps the caller's refresh token valid.
+async function changePassword(req, res) {
+  const { currentPassword, newPassword, refreshToken } = req.body;
+  if (!currentPassword || !newPassword) return res.status(400).json({ error: 'Current and new password are required' });
+  if (newPassword.length < 8) return res.status(400).json({ error: 'Password must be at least 8 characters' });
+
+  const { rows } = await pool.query('SELECT password_hash FROM users WHERE id = $1', [req.user.id]);
+  if (!rows.length) return res.status(404).json({ error: 'User not found' });
+  const ok = await bcrypt.compare(currentPassword, rows[0].password_hash);
+  if (!ok) return res.status(400).json({ error: 'Current password is incorrect' });
+
+  const hash = await bcrypt.hash(newPassword, 12);
+  await pool.query('UPDATE users SET password_hash = $1 WHERE id = $2', [hash, req.user.id]);
+  await pool.query(
+    'DELETE FROM refresh_tokens WHERE user_id = $1 AND token IS DISTINCT FROM $2',
+    [req.user.id, refreshToken || null]
+  );
+  res.json({ message: 'Password changed' });
+}
+
 async function resetPassword(req, res) {
   const { token, password } = req.body;
   if (!token || !password) return res.status(400).json({ error: 'Token and password are required' });
@@ -260,4 +281,4 @@ async function resetPassword(req, res) {
   res.json({ message: 'Password reset successfully. Please log in.' });
 }
 
-module.exports = { register, login, refresh, logout, me, forgotPassword, verifyResetOtp, resetPassword };
+module.exports = { register, login, refresh, logout, me, forgotPassword, verifyResetOtp, resetPassword, changePassword };

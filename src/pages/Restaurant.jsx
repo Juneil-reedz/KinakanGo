@@ -4,10 +4,12 @@ import { restaurantsApi, menuApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, Minus, X, ArrowLeft, Clock, Truck, ChevronRight, ShoppingCart, UtensilsCrossed } from 'lucide-react';
+import useGoBack from '../hooks/useGoBack';
 
 export default function Restaurant() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { addToCart } = useCart();
   const { isFavorite, toggleFavorite } = useFavorites();
 
@@ -66,7 +68,7 @@ export default function Restaurant() {
   return (
     <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
       {/* Back */}
-      <button onClick={() => navigate(-1)}
+      <button onClick={() => goBack('/restaurants')}
         className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm transition-colors">
         <ArrowLeft className="w-4 h-4" /> Restaurants
       </button>

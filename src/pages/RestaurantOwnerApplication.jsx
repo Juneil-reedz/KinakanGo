@@ -80,7 +80,7 @@ export default function RestaurantOwnerApplication() {
   const handleSubmit = () => {
     if (!validate()) return;
     showSuccess("Application submitted! We'll review it within 2–5 business days.");
-    setTimeout(() => navigate('/profile'), 2000);
+    setTimeout(() => navigate('/profile', { replace: true }), 2000);
   };
 
   const INPUT = 'w-full input-glass py-3 text-sm';

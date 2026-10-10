@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, safeLocalSet, storage, usersApi } from '../services/api';
+import { authApi, safeLocalSet, storage, usersApi, SESSION_EXPIRED_EVENT } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -35,6 +35,16 @@ export const AuthProvider = ({ children }) => {
     } else {
       setLoading(false);
     }
+  }, []);
+
+  // The API layer fires this when the server rejects the refresh token
+  useEffect(() => {
+    const onExpired = () => {
+      setUser(null);
+      localStorage.removeItem('kkg_user');
+    };
+    window.addEventListener(SESSION_EXPIRED_EVENT, onExpired);
+    return () => window.removeEventListener(SESSION_EXPIRED_EVENT, onExpired);
   }, []);
 
   const persist = (u) => {

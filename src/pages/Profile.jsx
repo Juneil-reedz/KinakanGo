@@ -99,7 +99,7 @@ export default function Profile() {
 
   const handleLogout = async () => {
     await logout();
-    navigate('/welcome');
+    navigate('/login', { replace: true });
   };
 
   const handleReorder = async (order) => {

@@ -2,9 +2,11 @@ import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Minus, Plus, X, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
+import useGoBack from '../hooks/useGoBack';
 
 export default function Cart() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
 
   const subtotal    = getCartTotal();
@@ -40,7 +42,7 @@ export default function Cart() {
       {/* Header */}
       <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
         style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
-        <button onClick={() => navigate(-1)}
+        <button onClick={() => goBack('/')}
           className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
           <ArrowLeft className="w-4 h-4" />
         </button>

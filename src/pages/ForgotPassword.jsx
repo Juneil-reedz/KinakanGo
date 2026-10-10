@@ -3,9 +3,11 @@ import { useNavigate } from 'react-router-dom';
 import { useNotification } from '../context/NotificationContext';
 import { Mail, ArrowLeft, Utensils, ChevronRight, KeyRound } from 'lucide-react';
 import { authApi } from '../services/api';
+import useGoBack from '../hooks/useGoBack';
 
 export default function ForgotPassword() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { addNotification } = useNotification();
   const [step, setStep]       = useState('email'); // 'email' | 'otp'
   const [email, setEmail]     = useState('');
@@ -66,9 +68,9 @@ export default function ForgotPassword() {
 
       <div className="w-full max-w-md relative z-10 animate-fade-up">
         <button
-          onClick={() => (step === 'otp' ? setStep('email') : navigate('/login'))}
+          onClick={() => (step === 'otp' ? setStep('email') : goBack('/login'))}
           className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> {step === 'otp' ? 'Back' : 'Back to Login'}
+          <ArrowLeft className="w-4 h-4" /> Back
         </button>
 
         <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>

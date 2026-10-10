@@ -3,9 +3,11 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useRider } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
 import { Mail, Lock, Eye, EyeOff, ChevronRight, ArrowLeft } from 'lucide-react';
+import useGoBack from '../../hooks/useGoBack';
 
 export default function RiderLogin() {
   const navigate = useNavigate();
+  const goBack = useGoBack();
   const { login } = useRider();
   const { showSuccess, showError } = useNotification();
 
@@ -29,7 +31,7 @@ export default function RiderLogin() {
     setLoading(true);
     try {
       const result = await login(form.email, form.password);
-      if (result.success) { showSuccess('Welcome back, Rider!'); setTimeout(() => navigate('/rider/dashboard'), 800); }
+      if (result.success) { showSuccess('Welcome back, Rider!'); setTimeout(() => navigate('/rider/dashboard', { replace: true }), 800); }
       else { showError(result.error || 'Login failed'); setLoading(false); }
     } catch { showError('An error occurred'); setLoading(false); }
   };
@@ -40,9 +42,9 @@ export default function RiderLogin() {
       <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
 
       <div className="w-full max-w-md relative z-10 animate-fade-up">
-        <Link to="/login" className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
+        <button onClick={() => goBack('/login')} className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
           <ArrowLeft className="w-4 h-4" /> Back
-        </Link>
+        </button>
 
         <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>
           <div className="flex flex-col items-center mb-7">
@@ -89,7 +91,7 @@ export default function RiderLogin() {
 
           <p className="text-center text-forest-200/50 text-sm mt-5">
             Want to become a rider?{' '}
-            <Link to="/rider-application" className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">Apply here</Link>
+            <Link to="/apply/rider" className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">Apply here</Link>
           </p>
         </div>
       </div>
