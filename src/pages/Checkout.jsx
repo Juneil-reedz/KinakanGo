@@ -42,7 +42,7 @@ export default function Checkout() {
   const [form, setForm] = useState({
     fullName: user?.name || '',
     email: user?.email || '',
-    phone: '',
+    phone: user?.phone || '',
     address: '',
     city: 'Bongao',
     zipCode: '7500',
@@ -62,7 +62,34 @@ export default function Checkout() {
   const set = (field) => (e) => {
     setForm(f => ({ ...f, [field]: e.target.value }));
     setErrors(er => ({ ...er, [field]: undefined }));
+    // Editing the address by hand means it's no longer exactly a saved one
+    if (['address', 'city', 'zipCode'].includes(field)) setSelectedAddrId(null);
   };
+
+  // Saved addresses: the default is filled in automatically; tap another to switch
+  const savedAddresses = user?.addresses || [];
+  const [selectedAddrId, setSelectedAddrId] = useState(null);
+  const [addrTouched, setAddrTouched]       = useState(false);
+
+  const pickSavedAddress = (a) => {
+    setSelectedAddrId(a.id);
+    setAddrTouched(true);
+    setForm(f => ({
+      ...f,
+      address: a.address,
+      city: a.city || f.city,
+      zipCode: a.zip || f.zipCode,
+      deliveryInstructions: f.deliveryInstructions || a.notes || '',
+    }));
+    setErrors(er => ({ ...er, address: undefined, city: undefined }));
+  };
+
+  // Addresses can arrive after the page opens (loaded from the account)
+  const defaultAddress = savedAddresses.find(a => a.isDefault) || savedAddresses[0];
+  useEffect(() => {
+    if (!addrTouched && defaultAddress && !form.address) pickSavedAddress(defaultAddress);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [defaultAddress?.id]);
 
   const validate = () => {
     const e = {};
@@ -172,7 +199,33 @@ export default function Checkout() {
 
             {/* Delivery address */}
             <div className="glass rounded-2xl p-5">
-              <p className="text-white font-semibold mb-4">Delivery Address</p>
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-white font-semibold">Delivery Address</p>
+                <Link to="/addresses" className="text-ember-400 hover:text-ember-300 text-xs font-medium">
+                  {savedAddresses.length ? 'Manage' : '+ Save an address'}
+                </Link>
+              </div>
+
+              {savedAddresses.length > 0 && (
+                <div className="flex gap-2 overflow-x-auto scrollbar-hide pb-3 mb-1">
+                  {savedAddresses.map(a => {
+                    const active = a.id === selectedAddrId;
+                    return (
+                      <button key={a.id} type="button" onClick={() => pickSavedAddress(a)} aria-pressed={active}
+                        className={`flex-shrink-0 max-w-[14rem] text-left rounded-xl px-3 py-2 transition-all border
+                          ${active ? 'glass-green border-forest-400/50' : 'glass border-transparent hover:glass-green'}`}>
+                        <p className="text-white text-xs font-semibold flex items-center gap-1.5">
+                          <MapPin className="w-3.5 h-3.5 text-ember-400 flex-shrink-0" />
+                          {a.label || 'Address'}
+                          {a.isDefault && <span className="text-forest-300 text-[10px] font-medium">· Default</span>}
+                        </p>
+                        <p className="text-forest-200/60 text-xs truncate mt-0.5">{[a.address, a.city].filter(Boolean).join(', ')}</p>
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+
               <div className="space-y-3">
                 <div>
                   <label className="block text-forest-200/60 text-xs mb-1">Street Address *</label>

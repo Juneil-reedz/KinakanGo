@@ -1,5 +1,5 @@
 import { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { authApi, safeLocalSet, storage, usersApi, SESSION_EXPIRED_EVENT } from '../services/api';
+import { authApi, safeLocalSet, storage, usersApi, addressesApi, SESSION_EXPIRED_EVENT } from '../services/api';
 
 const AuthContext = createContext();
 
@@ -21,16 +21,49 @@ export const AuthProvider = ({ children }) => {
   const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
+  // Put the server's address list on the user (state + saved copy)
+  const applyAddresses = (list) => {
+    setUser(prev => {
+      if (!prev) return prev;
+      const next = { ...prev, addresses: list };
+      safeLocalSet('kkg_user', JSON.stringify(next));
+      return next;
+    });
+  };
+
+  // Load saved addresses from the account. Addresses that were only kept in this
+  // browser (before they were stored on the server) are uploaded once.
+  const syncAddresses = async (localList = []) => {
+    try {
+      let { data } = await addressesApi.list();
+      if (!data.length && localList.length) {
+        for (const a of localList) {
+          ({ data } = await addressesApi.create({
+            label: a.label, address: a.address, city: a.city, province: a.province,
+            zip: a.zip, notes: a.notes, isDefault: !!a.isDefault,
+          }));
+        }
+      }
+      applyAddresses(data);
+    } catch { /* keep whatever we have; the next load retries */ }
+  };
+
   // Hydrate from localStorage, then refresh capabilities from server
   useEffect(() => {
     const saved = localStorage.getItem('kkg_user');
     if (saved && storage.getAccess()) {
       const cached = normalizeUser(JSON.parse(saved));
       setUser(cached);
+      syncAddresses(cached.addresses || []);
       // Refresh has_restaurant / has_rider_profile in background
       authApi.me()
         .then(fresh => {
-            if (fresh) persist({ ...cached, ...normalizeUser(fresh) });
+          // Merge into the current user so addresses loaded meanwhile are kept
+          if (fresh) setUser(prev => {
+            const next = normalizeUser({ ...(prev || cached), ...fresh });
+            safeLocalSet('kkg_user', JSON.stringify(next));
+            return next;
+          });
         })
         .catch(() => {})
         .finally(() => setLoading(false));
@@ -63,6 +96,7 @@ export const AuthProvider = ({ children }) => {
     }
     storage.setTokens(res.accessToken, res.refreshToken);
     persist(res.user);
+    syncAddresses();
     return normalizeUser(res.user);
   };
 
@@ -97,28 +131,23 @@ export const AuthProvider = ({ children }) => {
     return updated;
   };
 
-  // Address helpers (local-only until address API is wired)
-  const addAddress = (address) => {
-    const list = user.addresses || [];
-    const newAddr = { id: Date.now(), ...address, isDefault: list.length === 0 || address.isDefault };
-    const updated = list.map(a => ({ ...a, isDefault: newAddr.isDefault ? false : a.isDefault }));
-    updateUser({ addresses: [...updated, newAddr] });
-    return newAddr;
+  // Saved addresses live on the account (server); each call returns the full list
+  const addAddress = async (address) => {
+    const { data } = await addressesApi.create(address);
+    applyAddresses(data);
+    return data;
   };
 
-  const updateAddress = (id, updates) => {
-    const updated = (user.addresses || []).map(a =>
-      a.id === id ? { ...a, ...updates } : updates.isDefault ? { ...a, isDefault: false } : a
-    );
-    updateUser({ addresses: updated });
+  const updateAddress = async (id, updates) => {
+    const { data } = await addressesApi.update(id, updates);
+    applyAddresses(data);
+    return data;
   };
 
-  const deleteAddress = (id) => {
-    const filtered = (user.addresses || []).filter(a => a.id !== id);
-    if (filtered.length && (user.addresses || []).find(a => a.id === id)?.isDefault) {
-      filtered[0].isDefault = true;
-    }
-    updateUser({ addresses: filtered });
+  const deleteAddress = async (id) => {
+    const { data } = await addressesApi.remove(id);
+    applyAddresses(data);
+    return data;
   };
 
   // Payment helpers (local-only)

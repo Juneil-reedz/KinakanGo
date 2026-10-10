@@ -150,6 +150,16 @@ export const restaurantsApi = {
   approve:   (id)          => request(`/restaurants/${id}/approve`, { method: 'POST' }),
 };
 
+// ── Saved addresses (signed-in customer) ──────────────────────────────────────
+// Every call resolves to { data: [...full list, default first] }
+
+export const addressesApi = {
+  list:   ()            => request('/addresses'),
+  create: (address)     => request('/addresses',       { method: 'POST',   body: JSON.stringify(address) }),
+  update: (id, changes) => request(`/addresses/${id}`, { method: 'PATCH',  body: JSON.stringify(changes) }),
+  remove: (id)          => request(`/addresses/${id}`, { method: 'DELETE' }),
+};
+
 // ── Menu ──────────────────────────────────────────────────────────────────────
 
 export const menuApi = {

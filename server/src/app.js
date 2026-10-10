@@ -68,6 +68,15 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 `).catch(err => console.warn('messages updated_at column warning:', err.message));
 
+// Saved addresses also keep city / province / ZIP / delivery notes
+pool.query(`
+  ALTER TABLE customer_addresses
+    ADD COLUMN IF NOT EXISTS city     VARCHAR(120) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS province VARCHAR(120) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS zip      VARCHAR(20)  DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS notes    TEXT         DEFAULT NULL
+`).catch(err => console.warn('customer_addresses columns warning:', err.message));
+
 pool.query(`
   ALTER TABLE promo_codes
     ADD COLUMN IF NOT EXISTS owner_id INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL
@@ -103,6 +112,7 @@ const riderRoutes   = require('./routes/riders');
 const favoriteRoutes = require('./routes/favorites');
 const messageRoutes = require('./routes/messages');
 const imageRoutes   = require('./routes/images');
+const addressRoutes = require('./routes/addresses');
 
 const app = express();
 
@@ -133,6 +143,7 @@ app.use('/api/riders',       riderRoutes);
 app.use('/api/favorites',    favoriteRoutes);
 app.use('/api/messages',     messageRoutes);
 app.use('/api/images',       imageRoutes);
+app.use('/api/addresses',    addressRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

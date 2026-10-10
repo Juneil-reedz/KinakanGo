@@ -22,27 +22,41 @@ export default function Addresses() {
   const openEdit = (addr) => { setForm({ label: addr.label || 'Home', address: addr.address || '', city: addr.city || '', province: addr.province || '', zip: addr.zip || '', notes: addr.notes || '', isDefault: addr.isDefault || false }); setEditing(addr.id); setShowForm(true); };
   const closeForm = () => { setShowForm(false); setEditing(null); };
 
-  const handleSave = () => {
+  const [saving, setSaving] = useState(false);
+  const failed = (err) => addNotification(err?.data?.error || 'Could not save — check your connection and try again', 'error');
+
+  const handleSave = async () => {
     if (!form.address.trim()) { addNotification('Street address is required', 'error'); return; }
-    if (editing !== null) {
-      updateAddress(editing, form);
-      addNotification('Address updated!', 'success');
-    } else {
-      addAddress(form);
-      addNotification('Address added!', 'success');
+    setSaving(true);
+    try {
+      if (editing !== null) {
+        await updateAddress(editing, form);
+        addNotification('Address updated!', 'success');
+      } else {
+        await addAddress(form);
+        addNotification('Address added!', 'success');
+      }
+      closeForm();
+    } catch (err) {
+      failed(err);
+    } finally {
+      setSaving(false);
     }
-    closeForm();
   };
 
-  const handleDelete = (id) => {
+  const handleDelete = async (id) => {
     if (!window.confirm('Delete this address?')) return;
-    deleteAddress(id);
-    addNotification('Address removed', 'success');
+    try {
+      await deleteAddress(id);
+      addNotification('Address removed', 'success');
+    } catch (err) { failed(err); }
   };
 
-  const handleSetDefault = (id) => {
-    updateAddress(id, { isDefault: true });
-    addNotification('Default address updated!', 'success');
+  const handleSetDefault = async (id) => {
+    try {
+      await updateAddress(id, { isDefault: true });
+      addNotification('Default address updated!', 'success');
+    } catch (err) { failed(err); }
   };
 
   const LabelIcon = ({ label }) => {
@@ -54,10 +68,12 @@ export default function Addresses() {
     <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-white">My Addresses</h1>
+        {addresses.length > 0 && !showForm && (
         <button onClick={openAdd}
           className="btn-glow-green text-white text-sm px-4 py-2.5 rounded-xl flex items-center gap-2">
           <Plus className="w-4 h-4" /> Add Address
         </button>
+        )}
       </div>
 
       {/* Address list */}
@@ -185,8 +201,8 @@ export default function Addresses() {
               <button onClick={closeForm} className="flex-1 glass text-forest-200 py-2.5 rounded-xl text-sm hover:glass-green transition-all">
                 Cancel
               </button>
-              <button onClick={handleSave} className="flex-1 btn-glow-green text-white py-2.5 rounded-xl text-sm font-semibold">
-                {editing !== null ? 'Save Changes' : 'Add Address'}
+              <button onClick={handleSave} disabled={saving} className="flex-1 btn-glow-green text-white py-2.5 rounded-xl text-sm font-semibold disabled:opacity-60">
+                {saving ? 'Saving…' : editing !== null ? 'Save Changes' : 'Save Address'}
               </button>
             </div>
           </div>
