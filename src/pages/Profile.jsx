@@ -10,7 +10,7 @@ import {
 } from 'lucide-react';
 
 const QUICK_ACTIONS = [
-  { label:'Order History', icon:Package,   color:'from-forest-600 to-forest-700', tab:'orders' },
+  { label:'Orders',        icon:Package,   color:'from-forest-600 to-forest-700', tab:'orders' },
   { label:'Favorites',     icon:Heart,     color:'from-forest-500 to-forest-600', to:'/favorites' },
   { label:'Addresses',     icon:MapPin,    color:'from-forest-700 to-forest-800', to:'/addresses' },
   { label:'Support',       icon:Mail,      color:'from-ember-400 to-ember-500',   to:'/customer-service' },
@@ -212,7 +212,8 @@ export default function Profile() {
           {/* Quick actions */}
           <div>
             <p className="text-white font-semibold mb-3">Quick Actions</p>
-            <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1 sm:grid sm:grid-cols-6 sm:overflow-visible">
+            {/* 3 per row on phones, one row of 6 from tablet width (xl = 768px here) */}
+            <div className="grid grid-cols-3 xl:grid-cols-6 gap-3">
               {QUICK_ACTIONS.map(({ label, icon:Icon, color, tab, to, logout: isLogout }) => (
                 <button key={label}
                   onClick={() => {
@@ -220,11 +221,11 @@ export default function Profile() {
                     else if (tab) setActiveTab(tab);
                     else navigate(to);
                   }}
-                  className="glass card-3d rounded-2xl p-3 min-w-[5.2rem] sm:min-w-0 flex flex-col items-center gap-2 hover:glass-green transition-all group">
+                  className="glass card-3d rounded-2xl px-2 py-3 min-w-0 flex flex-col items-center gap-2 hover:glass-green transition-all group">
                   <div className={`w-10 h-10 bg-gradient-to-br ${color} rounded-xl flex items-center justify-center group-hover:scale-110 transition-transform`}>
                     <Icon className="w-5 h-5 text-white" />
                   </div>
-                  <p className={`text-xs font-medium text-center leading-tight ${isLogout ? 'text-red-400' : 'text-forest-100/70'}`}>{label}</p>
+                  <p className={`w-full text-xs font-medium text-center leading-tight truncate ${isLogout ? 'text-red-400' : 'text-forest-100/70'}`}>{label}</p>
                 </button>
               ))}
             </div>
