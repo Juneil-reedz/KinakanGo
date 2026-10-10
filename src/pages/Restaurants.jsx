@@ -4,7 +4,8 @@ import { getRestaurants, getAllMenuItems } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import Loader from '../components/Loader';
-import { Utensils, Store, Plus, Minus, X, Heart, Star, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Utensils, Store, Plus, Check, Heart, Star, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
 
 const CATEGORIES = [
   { id:'all',      label:'All',      emoji:'🍽️' },
@@ -21,6 +22,7 @@ export default function Restaurants() {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
+  const { addNotification } = useNotification();
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [restaurants, setRestaurants]     = useState([]);
@@ -30,8 +32,7 @@ export default function Restaurants() {
   const [selectedCat, setSelectedCat]     = useState(searchParams.get('category') || 'all');
   const [sortBy, setSortBy]               = useState('recommended');
   const [viewMode, setViewMode]           = useState('food');
-  const [modalItem, setModalItem]         = useState(null);
-  const [modalQty, setModalQty]           = useState(1);
+  const [justAdded, setJustAdded]         = useState(null); // id of the item showing a ✓
 
   useEffect(() => { fetchData(); }, [selectedCat, searchQuery, sortBy, viewMode]);
 
@@ -71,9 +72,14 @@ export default function Restaurants() {
     setSearchParams(sp);
   };
 
+  // "+" adds one straight to the cart (addToCart asks first if the cart is from another restaurant)
   const addItem = (item, qty = 1) => {
-    addToCart({ id:item.id, name:item.name, price:Number(item.price), quantity:qty, image:item.image_url || item.image },
+    const added = addToCart({ id:item.id, name:item.name, price:Number(item.price), quantity:qty, image:item.image_url || item.image },
               item.restaurant || { id: item.restaurant_id, name: item.restaurant_name || '' });
+    if (!added) return;
+    addNotification(`${item.name} added to cart`, 'success');
+    setJustAdded(item.id);
+    setTimeout(() => setJustAdded(id => (id === item.id ? null : id)), 1200);
   };
 
   return (
@@ -153,9 +159,10 @@ export default function Restaurants() {
                       <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
                       <span className="text-ember-300 text-xs">{item.rating || '4.8'}</span>
                     </div>
-                    <button onClick={e => { e.stopPropagation(); setModalItem(item); setModalQty(1); }}
-                      className="w-6 h-6 btn-glow-orange rounded-lg flex items-center justify-center">
-                      <Plus className="w-3 h-3 text-white" />
+                    <button onClick={e => { e.stopPropagation(); addItem(item); }}
+                      aria-label={`Add ${item.name} to cart`}
+                      className="w-8 h-8 btn-glow-orange rounded-lg flex items-center justify-center">
+                      {justAdded === item.id ? <Check className="w-4 h-4 text-white" /> : <Plus className="w-4 h-4 text-white" />}
                     </button>
                   </div>
                 </div>
@@ -215,47 +222,6 @@ export default function Restaurants() {
         )
       )}
 
-      {/* Add-to-cart modal */}
-      {modalItem && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ background:'rgba(0,0,0,.7)', backdropFilter:'blur(8px)' }}
-          onClick={() => setModalItem(null)}>
-          <div className="glass w-full max-w-sm rounded-3xl overflow-hidden card-3d animate-fade-up"
-            onClick={e => e.stopPropagation()}>
-            <div className="relative h-48">
-              <img src={modalItem.image} alt={modalItem.name} className="w-full h-full object-cover" />
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <button onClick={() => setModalItem(null)}
-                className="absolute top-3 right-3 w-8 h-8 glass rounded-full flex items-center justify-center text-white">
-                <X className="w-4 h-4" />
-              </button>
-              <p className="absolute bottom-3 left-4 text-white font-bold text-xl text-glow-orange">₱{Number(modalItem.price).toFixed(2)}</p>
-            </div>
-            <div className="p-5">
-              <p className="text-white font-heading font-bold text-lg mb-1">{modalItem.name}</p>
-              <p className="text-forest-200/60 text-sm mb-4">{modalItem.description}</p>
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-forest-200/60 text-sm">Quantity</span>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => setModalQty(q => Math.max(1,q-1))}
-                    className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
-                    <Minus className="w-4 h-4 text-forest-200" />
-                  </button>
-                  <span className="text-white font-bold w-5 text-center">{modalQty}</span>
-                  <button onClick={() => setModalQty(q => q+1)}
-                    className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-green transition-all">
-                    <Plus className="w-4 h-4 text-forest-200" />
-                  </button>
-                </div>
-              </div>
-              <button onClick={() => { addItem(modalItem, modalQty); setModalItem(null); }}
-                className="w-full py-3.5 btn-glow-orange text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                Add to Cart — ₱{(modalItem.price * modalQty).toFixed(2)} <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
     </div>
   );
 }
