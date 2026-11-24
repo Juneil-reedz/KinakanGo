@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useNotification } from '../context/NotificationContext';
-import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home, LogOut, MessageSquare, ToggleLeft, ToggleRight, AlertTriangle } from 'lucide-react';
+import { LayoutDashboard, ShoppingBag, UtensilsCrossed, BarChart3, Settings, ChevronLeft, ChevronRight, Store, Home, LogOut, MessageSquare, ToggleLeft, ToggleRight, AlertTriangle, Wallet } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
 
@@ -12,6 +12,7 @@ const NAV = [
   { path:'/owner/issues',    label:'Problems',  icon:AlertTriangle },
   { path:'/owner/messages',  label:'Messages',  icon:MessageSquare },
   { path:'/owner/menu',      label:'Menu',      icon:UtensilsCrossed },
+  { path:'/owner/rider-pay', label:'Rider Pay', icon:Wallet },
   { path:'/owner/reports',   label:'Reports',   icon:BarChart3 },
   { path:'/owner/settings',  label:'Settings',  icon:Settings },
 ];

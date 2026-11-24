@@ -58,6 +58,8 @@ import RiderDashboard from './pages/rider/RiderDashboard';
 import RiderDelivery from './pages/rider/RiderDelivery';
 import RiderEarnings from './pages/rider/RiderEarnings';
 import RiderHistory from './pages/rider/RiderHistory';
+import RestaurantRiderPay from './pages/restaurant/RestaurantRiderPay';
+import AdminRiderPay from './pages/admin/AdminRiderPay';
 import AdminLogin from './pages/admin/AdminLogin';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminUsers from './pages/admin/AdminUsers';
@@ -194,6 +196,7 @@ function App() {
                           <Route path="messages" element={<RestaurantMessages />} />
                           <Route path="menu" element={<RestaurantMenu />} />
                           <Route path="reports" element={<RestaurantReports />} />
+                          <Route path="rider-pay" element={<RestaurantRiderPay />} />
                           <Route path="settings" element={<RestaurantSettings />} />
                           <Route index element={<Navigate to="dashboard" replace />} />
                           <Route path="*" element={<NotFound homePath="/owner/dashboard" homeLabel="Dashboard" />} />
@@ -236,6 +239,7 @@ function App() {
                           <Route path="restaurants" element={<AdminRestaurants />} />
                           <Route path="riders" element={<AdminRiders />} />
                           <Route path="issues" element={<AdminIssues />} />
+                          <Route path="rider-pay" element={<AdminRiderPay />} />
                           <Route path="promos" element={<AdminPromos />} />
                           <Route path="applications" element={<AdminApplications />} />
                           <Route index element={<Navigate to="dashboard" replace />} />

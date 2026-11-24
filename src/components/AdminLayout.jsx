@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useAdmin } from '../context/AdminContext';
-import { LayoutDashboard, Users, Store, Bike, AlertTriangle, Ticket, LogOut, Shield, Bell, ChevronLeft, ChevronRight, FileText } from 'lucide-react';
+import { LayoutDashboard, Users, Store, Bike, AlertTriangle, Ticket, LogOut, Shield, Bell, ChevronLeft, ChevronRight, FileText, Wallet } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 
 const NAV = [
@@ -11,6 +11,7 @@ const NAV = [
   { path:'/admin/riders',       label:'Riders',       icon:Bike },
   { path:'/admin/applications', label:'Applications', icon:FileText },
   { path:'/admin/issues',       label:'Issues',       icon:AlertTriangle },
+  { path:'/admin/rider-pay',    label:'Rider Pay',    icon:Wallet },
   { path:'/admin/promos',       label:'Promos',       icon:Ticket },
 ];
 

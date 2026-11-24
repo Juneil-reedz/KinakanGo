@@ -1,7 +1,45 @@
 import { useState, useEffect } from 'react';
 import { useRider, riderRequest } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Banknote, Package, TrendingUp, Star, MapPin, Store, Download, CreditCard } from 'lucide-react';
+import { Banknote, Package, TrendingUp, Star, MapPin, Store, Download, Smartphone } from 'lucide-react';
+import RiderPayBoard from '../../components/RiderPayBoard';
+
+// The GCash number restaurants send delivery fees to
+function GcashSetting() {
+  const { addNotification } = useNotification();
+  const [num, setNum] = useState('');
+  const [name, setName] = useState('');
+  const [saved, setSaved] = useState(null);
+  const [saving, setSaving] = useState(false);
+  useEffect(() => {
+    riderRequest('/rider-pay/rider/gcash')
+      .then(r => { setNum(r.gcashNumber || r.phone || ''); setName(r.gcashName || ''); setSaved(r.gcashNumber || ''); })
+      .catch(() => setSaved(''));
+  }, []);
+  const save = async () => {
+    setSaving(true);
+    try {
+      const r = await riderRequest('/rider-pay/rider/gcash', { method: 'PATCH', body: JSON.stringify({ gcashNumber: num, gcashName: name }) });
+      setNum(r.gcashNumber); setSaved(r.gcashNumber);
+      addNotification('GCash number saved', 'success');
+    } catch (err) {
+      addNotification(err?.data?.error || 'Could not save', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+  return (
+    <div className="glass rounded-2xl p-4 space-y-2">
+      <p className="text-white font-semibold text-sm flex items-center gap-2"><Smartphone className="w-4 h-4 text-teal-300" /> Your GCash for delivery fees</p>
+      {saved === '' && <p className="text-ember-200 text-xs">Add your GCash number so restaurants know where to send your fees.</p>}
+      <div className="flex gap-2 flex-wrap">
+        <input type="tel" value={num} onChange={e => setNum(e.target.value)} placeholder="09171234567" className="flex-1 min-w-[140px] input-glass py-2 px-3 text-sm" />
+        <input value={name} onChange={e => setName(e.target.value)} placeholder="Name on GCash" maxLength={120} className="flex-1 min-w-[140px] input-glass py-2 px-3 text-sm" />
+        <button onClick={save} disabled={saving || !num.trim()} className="btn-glow-green text-white text-xs font-semibold px-4 py-2 rounded-xl disabled:opacity-50">{saving ? 'Saving…' : 'Save'}</button>
+      </div>
+    </div>
+  );
+}
 
 export default function RiderEarnings() {
   const { rider }          = useRider();
@@ -225,15 +263,24 @@ export default function RiderEarnings() {
         )}
       </div>
 
-      {/* Payout */}
+      {/* Getting paid: restaurants pay delivery fees directly */}
+      <div className="space-y-3">
+        <div>
+          <p className="text-white font-semibold">Getting paid</p>
+          <p className="text-forest-200/50 text-sm">
+            Each delivery is added here automatically. For a GCash order the restaurant owes you the delivery fee.
+            For a cash order you keep the fee from the cash and owe the restaurant the rest.
+          </p>
+        </div>
+        <GcashSetting />
+        <RiderPayBoard side="rider" request={riderRequest} />
+      </div>
+
+      {/* Reports */}
       <div className="glass rounded-2xl p-5">
-        <p className="text-white font-semibold mb-1">Payment & Reports</p>
-        <p className="text-forest-200/50 text-sm mb-4">Request payout or download your earnings report.</p>
+        <p className="text-white font-semibold mb-1">Reports</p>
+        <p className="text-forest-200/50 text-sm mb-4">Ask KinakanGo for your earnings report.</p>
         <div className="flex gap-3 flex-wrap">
-          <button onClick={() => sendAdminRequest('payout')} disabled={requesting || totalEarned <= 0}
-            className="flex-1 btn-glow-orange text-white text-sm font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
-            <CreditCard className="w-4 h-4" /> {requesting === 'payout' ? 'Sending...' : 'Request Payout'}
-          </button>
           <button onClick={() => sendAdminRequest('report')} disabled={requesting}
             className="flex-1 glass hover:glass-green transition-all text-forest-100 text-sm font-medium py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-60">
             <Download className="w-4 h-4" /> {requesting === 'report' ? 'Sending...' : 'Request Report'}
