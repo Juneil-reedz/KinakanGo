@@ -24,6 +24,12 @@ const PROMO_STYLES = [
   { bg: 'from-forest-600/80 to-ember-800/80', accent: '#3db870' },
 ];
 
+const POSTER = {
+  id: 'poster',
+  poster: `${import.meta.env.BASE_URL}promos/good-food-good-mood.jpg`,
+  alt: 'Good Food, Good Mood! Fresh meals from Bongao\'s favorite restaurants, delivered to your door. Order now.',
+};
+
 const promoTitle = (promo) => {
   const value = Number(promo.discountValue ?? promo.discount_value ?? promo.value ?? 0);
   const type = promo.discountType || promo.discount_type || promo.type;
@@ -65,7 +71,8 @@ export default function Home() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const promoCards = activePromos.length
+  // The KinakanGo poster always leads the carousel; live promo codes follow it
+  const promoCards = [POSTER, ...(activePromos.length
     ? activePromos.map((item, index) => {
         const style = PROMO_STYLES[index % PROMO_STYLES.length];
         return {
@@ -76,7 +83,7 @@ export default function Home() {
           ...style,
         };
       })
-    : [];
+    : [])];
 
   useEffect(() => {
     if (promoCards.length < 2) return undefined;
@@ -103,6 +110,22 @@ export default function Home() {
 
       {/* ── Promo carousel (only real, active promo codes) ── */}
       {currentPromo && <section>
+        {currentPromo.poster ? (
+        <button type="button" onClick={() => navigate('/restaurants')}
+          className="relative block w-full rounded-3xl overflow-hidden card-3d text-left"
+          style={{ aspectRatio: '1200 / 630' }}>
+          <img src={currentPromo.poster} alt={currentPromo.alt} className="w-full h-full object-cover" />
+          {promoCards.length > 1 && (
+            <span className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
+              {promoCards.map((item, i) => (
+                <span key={item.id || i} role="presentation"
+                  onClick={e => { e.stopPropagation(); setPromo(i); }}
+                  className={`h-1.5 rounded-full transition-all ${i === currentPromoIndex ? 'w-6 bg-white' : 'w-1.5 bg-white/40'}`} />
+              ))}
+            </span>
+          )}
+        </button>
+        ) : (
         <div className={`relative bg-gradient-to-br ${currentPromo.bg} rounded-3xl p-5 md:p-7 overflow-hidden transition-all duration-700 card-3d`}
           style={{ border: `1px solid ${currentPromo.accent}30`, boxShadow: `0 8px 32px ${currentPromo.accent}20` }}>
           <div className="orb w-48 h-48 opacity-30 -top-10 -right-10"
@@ -125,6 +148,7 @@ export default function Home() {
             ))}
           </div>
         </div>
+        )}
       </section>}
 
       {/* ── Categories ───────────────────────────────── */}
