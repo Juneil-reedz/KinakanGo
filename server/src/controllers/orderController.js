@@ -442,7 +442,7 @@ async function listOrders(req, res) {
 
   const { rows } = await pool.query(
     `SELECT o.id, o.restaurant_id, o.status, o.total, o.subtotal, o.delivery_fee, o.tax,
-            o.payment_method, o.payment_status,
+            o.payment_method, o.payment_status, o.credit_used,
             o.created_at, o.delivered_at, o.delivery_address, NULL AS delivery_proof_image, o.rider_id,
             r.name AS restaurant_name, ${imageUrlSql('r', 'restaurants')} AS restaurant_image,
             r.address AS restaurant_address,

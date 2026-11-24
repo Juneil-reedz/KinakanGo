@@ -13,6 +13,7 @@ export default function Cart() {
   const { restaurant, food: subtotal, discount, deliveryFee, tax, total, credit, promoCode, setPromoCode, promoError, promoChecking } = useCartTotals();
   const minOrder = Number(restaurant?.min_order || 0);
   const belowMin = minOrder > 0 && subtotal < minOrder;
+  const closed = restaurant?.is_open === false;
   const [promoOpen, setPromoOpen]   = useState(false);
   const [promoInput, setPromoInput] = useState('');
 
@@ -159,12 +160,17 @@ export default function Cart() {
             You have ₱{credit.toFixed(2)} store credit at {restaurant?.name || 'this restaurant'}. You can use it at checkout.
           </p>
         )}
+        {closed && (
+          <p className="max-w-2xl mx-auto text-center text-red-300 text-sm">
+            {restaurant?.name || 'This restaurant'} is closed right now. You can check out when it opens again.
+          </p>
+        )}
         {belowMin && (
           <p className="max-w-2xl mx-auto text-center text-ember-300 text-sm">
             {restaurant?.name || 'This restaurant'} has a minimum order of ₱{minOrder.toFixed(2)}. Add ₱{(minOrder - subtotal).toFixed(2)} more to check out.
           </p>
         )}
-        <button onClick={() => navigate('/checkout')} disabled={belowMin}
+        <button onClick={() => navigate('/checkout')} disabled={belowMin || closed}
           className="w-full max-w-2xl mx-auto block py-4 btn-glow-orange text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50">
           Proceed to Checkout <ChevronRight className="w-5 h-5" />
         </button>

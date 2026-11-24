@@ -105,6 +105,30 @@ export const CartProvider = ({ children }) => {
     return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
   };
 
+  // Bring the cart in line with the restaurant's current menu: new prices, and
+  // foods that were removed or marked sold out. Returns what changed, for a message.
+  const syncWithMenu = (menuRows) => {
+    const byId = new Map(menuRows.map(m => [String(m.id), m]));
+    const changes = [];
+    const next = [];
+    for (const item of cartItems) {
+      const m = byId.get(String(item.id));
+      if (!m || m.is_available === false) { changes.push(`${item.name} is no longer available and was removed`); continue; }
+      const price = Number(m.price);
+      if (Number.isFinite(price) && Math.abs(price - Number(item.price)) > 0.005) {
+        changes.push(`${item.name} is now ₱${price.toFixed(2)}`);
+        next.push({ ...item, price });
+      } else {
+        next.push(item);
+      }
+    }
+    if (changes.length) {
+      setCartItems(next);
+      if (!next.length) { setRestaurantId(null); setPromoCode(''); localStorage.removeItem('cartRestaurantId'); }
+    }
+    return changes;
+  };
+
   const getCartCount = () => {
     return cartItems.reduce((sum, item) => sum + item.quantity, 0);
   };
@@ -118,6 +142,7 @@ export const CartProvider = ({ children }) => {
     clearCart,
     getCartTotal,
     getCartCount,
+    syncWithMenu,
     promoCode,
     setPromoCode,
   };

@@ -3,6 +3,11 @@ import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Package, Clock, ShoppingBag, MapPin } from 'lucide-react';
 import { ordersApi } from '../services/api';
 
+const STATUS_LABEL = {
+  pending: 'Waiting for the restaurant', accepted: 'Accepted', preparing: 'Being prepared',
+  ready: 'Ready for pickup', picked_up: 'On the way', delivered: 'Delivered', cancelled: 'Cancelled',
+};
+
 export default function OrderConfirmation() {
   const { orderId } = useParams();
   const navigate    = useNavigate();
@@ -40,7 +45,7 @@ export default function OrderConfirmation() {
             <div className="absolute inset-0 rounded-3xl animate-pulse-ring" style={{ background:'rgba(45,138,87,.4)' }} />
           </div>
           <h1 className="text-2xl font-heading font-bold text-white mb-2">Order Placed!</h1>
-          <p className="text-forest-200/60 text-sm">Your food is on its way. Hang tight!</p>
+          <p className="text-forest-200/60 text-sm">We sent your order to the restaurant. We'll notify you when they accept it.</p>
         </div>
 
         {/* Details */}
@@ -49,15 +54,19 @@ export default function OrderConfirmation() {
           {[
             { label:'Order ID',   val:`#${order.id}`,                        icon:Package  },
             { label:'Restaurant', val:order.restaurant_name || '—',           icon:ShoppingBag },
-            { label:'ETA',        val:'30-40 min',                            icon:Clock    },
+            { label:'Status',     val: STATUS_LABEL[order.status] || 'Waiting for the restaurant', icon:Clock },
             { label:'Total',      val:`₱${Number(order.total).toFixed(2)}`,   icon:null     },
+            ...(Number(order.credit_used) > 0 ? [
+              { label:'Store credit', val:`−₱${Number(order.credit_used).toFixed(2)}`, icon:null },
+              { label:'To pay',       val:`₱${(Number(order.total) - Number(order.credit_used)).toFixed(2)}`, icon:null },
+            ] : []),
           ].map(({ label, val, icon:Icon }) => (
             <div key={label} className="flex items-center justify-between py-1.5"
               style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.05)' }}>
               <span className="text-forest-200/60 text-sm flex items-center gap-2">
                 {Icon && <Icon className="w-4 h-4 text-forest-300/50" />}{label}
               </span>
-              <span className={`font-semibold text-sm ${label==='Total' ? 'text-ember-400' : 'text-white'}`}>{val}</span>
+              <span className={`font-semibold text-sm ${label === (Number(order.credit_used) > 0 ? 'To pay' : 'Total') ? 'text-ember-400' : 'text-white'}`}>{val}</span>
             </div>
           ))}
         </div>
@@ -67,9 +76,11 @@ export default function OrderConfirmation() {
           <p className="text-white font-semibold mb-3">What's Next?</p>
           <div className="space-y-3">
             {[
-              { n:'1', text:'Restaurant is preparing your order', color:'btn-glow-green'  },
-              { n:'2', text:'A rider will pick up your food',     color:'btn-glow-orange' },
-              { n:'3', text:'Delivered to your door!',            color:'btn-glow-green'  },
+              { n:'1', text:'The restaurant accepts and prepares your order', color:'btn-glow-green'  },
+              { n:'2', text:'A rider picks up your food',                     color:'btn-glow-orange' },
+              { n:'3', text:order.payment_method === 'gcash' || Number(order.total) - Number(order.credit_used || 0) <= 0
+                  ? 'Delivered to your door'
+                  : 'Delivered to your door. Pay the rider in cash', color:'btn-glow-green' },
             ].map(({ n, text, color }) => (
               <div key={n} className="flex items-center gap-3">
                 <div className={`w-8 h-8 ${color} rounded-lg flex items-center justify-center text-white font-bold text-sm flex-shrink-0`}>{n}</div>

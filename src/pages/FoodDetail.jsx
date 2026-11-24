@@ -2,15 +2,9 @@
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { ArrowLeft, Heart, Star, Clock, MapPin, Plus, Minus, ShoppingCart, Check } from 'lucide-react';
+import { ArrowLeft, Heart, Star, Clock, MapPin, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { menuApi } from '../services/api';
 import useGoBack from '../hooks/useGoBack';
-
-const ADD_ONS = [
-  { id:1, name:'Extra Cheese', price:50,  image:'https://images.unsplash.com/photo-1486297678162-eb2a19b0a32d?w=200&h=200&fit=crop' },
-  { id:2, name:'Pickles',      price:30,  image:'https://images.unsplash.com/photo-1623218655048-d60d0a8ee280?w=200&h=200&fit=crop' },
-  { id:3, name:'Extra Patty',  price:100, image:'https://images.unsplash.com/photo-1551248429-40975aa4de74?w=200&h=200&fit=crop' },
-];
 
 export default function FoodDetail() {
   const { id }     = useParams();
@@ -21,7 +15,6 @@ export default function FoodDetail() {
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [quantity, setQuantity]         = useState(1);
-  const [selectedAddOns, setSelectedAddOns] = useState([]);
 
   // Normally passed from the list we came from; when opened directly (refresh,
   // shared link) load it from the API instead of showing placeholder data.
@@ -57,8 +50,7 @@ export default function FoodDetail() {
   // API prices arrive as strings ("150.00"); keep the maths numeric
   const foodItem = { ...raw, price: Number(raw.price) || 0 };
 
-  const toggleAddOn = (a) => setSelectedAddOns(p => p.find(i=>i.id===a.id) ? p.filter(i=>i.id!==a.id) : [...p,a]);
-  const total = (foodItem.price + selectedAddOns.reduce((s,a)=>s+a.price,0)) * quantity;
+  const total = foodItem.price * quantity;
 
   const handleAdd = () => {
     const restaurantInfo = typeof foodItem.restaurant === 'string'
@@ -67,7 +59,7 @@ export default function FoodDetail() {
           id: foodItem.restaurant?.id || foodItem.restaurant_id || 0,
           name: foodItem.restaurant?.name || foodItem.restaurant_name || 'Restaurant',
         };
-    const added = addToCart({ id:foodItem.id, name:foodItem.name, price:total/quantity, quantity, addOns:selectedAddOns, image:foodItem.image || foodItem.image_url }, restaurantInfo);
+    const added = addToCart({ id:foodItem.id, name:foodItem.name, price:foodItem.price, quantity, image:foodItem.image || foodItem.image_url }, restaurantInfo);
     if (added) navigate('/cart');
   };
 
@@ -147,34 +139,6 @@ export default function FoodDetail() {
                 <p className="text-forest-200/60 text-sm leading-relaxed">{foodItem.description}</p>
               </div>
             )}
-
-            <div>
-              <p className="text-white font-semibold text-sm mb-3">Add Ons</p>
-              <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-hide">
-                {ADD_ONS.map(a => {
-                  const selected = !!selectedAddOns.find(i=>i.id===a.id);
-                  return (
-                    <button key={a.id} onClick={() => toggleAddOn(a)}
-                      className={`flex-shrink-0 relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all glass
-                        ${selected ? 'border-ember-500 scale-95 shadow-[0_0_12px_rgba(230,126,34,.4)]' : 'border-transparent'}`}>
-                      {/* A picture that fails to load is hidden rather than shown as a broken image */}
-                      <img src={a.image} alt="" className="absolute inset-0 w-full h-full object-cover"
-                        onError={e => { e.currentTarget.style.display = 'none'; }} />
-                      <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-                      {selected && (
-                        <div className="absolute top-1 right-1 w-5 h-5 btn-glow-orange rounded-full flex items-center justify-center">
-                          <Check className="w-3 h-3 text-white" />
-                        </div>
-                      )}
-                      <div className="absolute bottom-1 left-0 right-0 text-center">
-                        <p className="text-white text-xs font-medium leading-tight">{a.name}</p>
-                        <p className="text-ember-300 text-xs">+₱{a.price}</p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
 
             <div className="flex items-center justify-between">
               <p className="text-white font-semibold text-sm">Quantity</p>

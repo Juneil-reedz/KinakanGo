@@ -260,6 +260,12 @@ export default function RiderDashboard() {
                   <div className="text-right">
                     <p className="text-forest-300 font-heading font-bold text-lg">₱{Number(deliveryFee).toFixed(2)}</p>
                     <p className="text-forest-200/40 text-xs">your fee</p>
+                    {order.total != null && (() => {
+                      const due = Math.max(0, Number(order.total) - Number(order.credit_used || 0));
+                      return order.payment_method !== 'gcash' && due > 0.005
+                        ? <p className="text-ember-300 text-xs font-semibold mt-0.5">Collect ₱{due.toFixed(2)} cash</p>
+                        : <p className="text-forest-300/70 text-xs mt-0.5">Already paid</p>;
+                    })()}
                   </div>
                 </div>
 

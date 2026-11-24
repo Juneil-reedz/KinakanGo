@@ -419,6 +419,19 @@ export default function RiderDelivery() {
             <p className="text-forest-300 text-sm font-semibold">Your Delivery Fee</p>
             <p className="text-forest-300 font-heading font-bold text-lg">₱{Number(order?.delivery_fee || 0).toFixed(2)}</p>
           </div>
+          {order && (() => {
+            // How much the rider collects at the door: cash orders only, minus any store credit
+            const due = Math.max(0, Number(order.total || 0) - Number(order.credit_used || 0));
+            const collect = order.payment_method !== 'gcash' && due > 0.005;
+            return (
+              <div className={`mt-3 rounded-xl px-3 py-2.5 flex items-center justify-between ${collect ? 'glass-orange' : 'glass-green'}`}>
+                <p className={`text-sm font-semibold ${collect ? 'text-ember-200' : 'text-forest-200'}`}>
+                  {collect ? 'Collect from customer (cash)' : 'Already paid, collect nothing'}
+                </p>
+                {collect && <p className="text-ember-300 font-heading font-bold text-lg">₱{due.toFixed(2)}</p>}
+              </div>
+            );
+          })()}
           {order?.special_instructions && (
             <div className="mt-3 glass rounded-xl px-3 py-2 flex items-start gap-2">
               <AlertTriangle className="w-3.5 h-3.5 text-ember-400 mt-0.5 flex-shrink-0" />
