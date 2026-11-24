@@ -2,7 +2,9 @@ const pool = require('../config/db');
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 async function list(req, res) {
-  const { role, status, search, page = 1, limit = 20 } = req.query;
+  const { role, status, search } = req.query;
+  const page   = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit  = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 500);
   const offset = (page - 1) * limit;
   const where  = [];
   const params = [];
@@ -24,19 +26,28 @@ async function list(req, res) {
 
   const { rows } = await pool.query(
     `SELECT u.id, u.name, u.email, u.phone, u.role, ${imageUrlSql('u', 'users', 'avatar_url')} AS avatar_url, u.is_active, u.created_at,
-            rp.vehicle_type, rp.plate_number
+            rp.vehicle_type, rp.plate_number,
+            COALESCE(os.total_orders, 0) AS "totalOrders",
+            COALESCE(os.total_spent, 0)  AS "totalSpent"
      FROM users u
      LEFT JOIN rider_profiles rp ON rp.user_id = u.id
+     LEFT JOIN (
+       SELECT customer_id,
+              COUNT(*)::int AS total_orders,
+              COALESCE(SUM(total) FILTER (WHERE status = 'delivered'), 0)::float AS total_spent
+       FROM orders WHERE status NOT IN ('cancelled','refunded')
+       GROUP BY customer_id
+     ) os ON os.customer_id = u.id
      ${cond}
      ORDER BY u.created_at DESC
      LIMIT $${idx++} OFFSET $${idx++}`,
-    [...params, parseInt(limit), offset]
+    [...params, limit, offset]
   );
   const { rows: countRows } = await pool.query(
     `SELECT COUNT(*) AS total FROM users u LEFT JOIN rider_profiles rp ON rp.user_id = u.id ${cond}`, params
   );
   rows.forEach(r => resolveImageUrls(req, r, ['avatar_url']));
-  res.json({ data: rows, total: parseInt(countRows[0].total), page: parseInt(page), limit: parseInt(limit) });
+  res.json({ data: rows, total: parseInt(countRows[0].total), page, limit });
 }
 
 async function getOne(req, res) {

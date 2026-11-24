@@ -11,7 +11,7 @@ export default function RiderLogin() {
   const { login } = useRider();
   const { showSuccess, showError } = useNotification();
 
-  const [form, setForm]         = useState({ email:'rider@fooddelivery.com', password:'demo123' });
+  const [form, setForm]         = useState({ email:'', password:'' });
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors]     = useState({});
   const [loading, setLoading]   = useState(false);
@@ -53,9 +53,6 @@ export default function RiderLogin() {
             <p className="text-forest-200/60 text-sm mt-1">Sign in to start delivering</p>
           </div>
 
-          <div className="glass-green rounded-xl px-4 py-3 mb-5">
-            <p className="text-forest-200 text-xs"><span className="font-semibold text-white">Demo:</span> rider@fooddelivery.com / demo123</p>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

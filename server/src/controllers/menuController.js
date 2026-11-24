@@ -1,12 +1,23 @@
 const pool = require('../config/db');
 
 async function listAll(req, res) {
-  const { category, limit = 20 } = req.query;
+  const { category, search, sortBy } = req.query;
+  const limit  = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 200);
   const where  = ['m.is_available = true', 'r.is_approved = true', 'r.is_open = true'];
   const params = [];
   let   idx    = 1;
 
-  if (category) { where.push(`c.name ILIKE $${idx++}`); params.push(category); }
+  // Category chips use plural ids ("burgers"); match "Burger", "Burgers", "Beef Burgers"...
+  if (category) { where.push(`c.name ILIKE $${idx++}`); params.push(`%${String(category).replace(/e?s$/i, '')}%`); }
+  if (search) {
+    where.push(`(m.name ILIKE $${idx} OR m.description ILIKE $${idx} OR c.name ILIKE $${idx} OR r.name ILIKE $${idx})`);
+    params.push(`%${String(search).trim()}%`); idx++;
+  }
+  const ORDER = {
+    rating: 'm.avg_rating DESC, m.rating_count DESC, m.id DESC',
+    price:  'm.price ASC, m.id DESC',
+  };
+  const orderBy = ORDER[sortBy] || 'r.rating DESC, m.id DESC';
 
   const { rows } = await pool.query(
     `SELECT m.id, m.name, m.description, m.price, m.image_url,
@@ -18,9 +29,9 @@ async function listAll(req, res) {
      JOIN restaurants r ON m.restaurant_id = r.id
      LEFT JOIN menu_categories c ON m.category_id = c.id
      WHERE ${where.join(' AND ')}
-     ORDER BY r.rating DESC, m.id DESC
+     ORDER BY ${orderBy}
      LIMIT $${idx++}`,
-    [...params, parseInt(limit)]
+    [...params, limit]
   );
   res.json(rows);
 }

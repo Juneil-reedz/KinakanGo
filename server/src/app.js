@@ -122,8 +122,12 @@ pool.query(`
 
 pool.query(`
   ALTER TABLE promo_codes
-    ADD COLUMN IF NOT EXISTS owner_id INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL
-`).catch(err => console.warn('promo_codes owner_id column warning:', err.message));
+    ADD COLUMN IF NOT EXISTS owner_id     INT          DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+    ADD COLUMN IF NOT EXISTS max_discount DECIMAL(8,2) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS target_users VARCHAR(10)  NOT NULL DEFAULT 'all'
+`).then(() => pool.query(`
+  ALTER TABLE reviews ADD COLUMN IF NOT EXISTS rider_rating SMALLINT DEFAULT NULL
+`)).catch(err => console.warn('promo_codes columns warning:', err.message));
 
 pool.query(`
   CREATE TABLE IF NOT EXISTS rider_admin_requests (

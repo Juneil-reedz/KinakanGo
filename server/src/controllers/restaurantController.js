@@ -1,13 +1,20 @@
 const pool = require('../config/db');
 
 async function list(req, res) {
-  const { search, cuisine, isOpen, includeClosed, page = 1, limit = 20 } = req.query;
+  const { search, cuisine, isOpen, includeClosed, sortBy } = req.query;
+  const page   = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit  = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 200);
   const offset = (page - 1) * limit;
+  const ORDER = {
+    rating:      'rating DESC, review_count DESC',
+    deliveryFee: 'delivery_fee ASC, rating DESC',
+  };
+  const orderBy = ORDER[sortBy] || 'rating DESC';
   const where  = ['is_approved = true'];
   const params = [];
   let   idx    = 1;
 
-  if (search)  { where.push(`name ILIKE $${idx++}`);    params.push(`%${search}%`); }
+  if (search)  { where.push(`(name ILIKE $${idx} OR cuisine ILIKE $${idx} OR description ILIKE $${idx})`); params.push(`%${search}%`); idx++; }
   if (cuisine) { where.push(`cuisine = $${idx++}`);     params.push(cuisine); }
   if (isOpen !== undefined) {
     where.push(`is_open = $${idx++}`);
@@ -20,13 +27,13 @@ async function list(req, res) {
     `SELECT id, name, description, address, cuisine, image_url, cover_url,
             is_open, rating, review_count, delivery_fee, min_order
      FROM restaurants WHERE ${where.join(' AND ')}
-     ORDER BY rating DESC LIMIT $${idx++} OFFSET $${idx++}`,
-    [...params, parseInt(limit), offset]
+     ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`,
+    [...params, limit, offset]
   );
   const { rows: countRows } = await pool.query(
     `SELECT COUNT(*) AS total FROM restaurants WHERE ${where.join(' AND ')}`, params
   );
-  res.json({ data: rows, total: parseInt(countRows[0].total), page: parseInt(page), limit: parseInt(limit) });
+  res.json({ data: rows, total: parseInt(countRows[0].total), page, limit });
 }
 
 async function getOne(req, res) {
