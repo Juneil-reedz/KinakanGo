@@ -320,6 +320,14 @@ CREATE TABLE reviews (
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
+-- Riders who declined an order are not offered it again
+CREATE TABLE order_rider_declines (
+  order_id   INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  rider_id   INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (order_id, rider_id)
+);
+
 -- Per-item food ratings given with an order review
 CREATE TABLE order_item_ratings (
   order_id     INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,

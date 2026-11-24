@@ -16,7 +16,6 @@ import RestaurantLayout from './components/RestaurantLayout';
 import RiderLayout from './components/RiderLayout';
 import AdminLayout from './components/AdminLayout';
 import Home from './pages/Home';
-import Search from './pages/Search';
 import FoodDetail from './pages/FoodDetail';
 import Restaurants from './pages/Restaurants';
 import Restaurant from './pages/Restaurant';
@@ -159,7 +158,7 @@ function App() {
                   {/* Customer Routes with Layout */}
                   <Route path="/" element={<RequireCustomer><CustomerFeed><CustomerLayout /></CustomerFeed></RequireCustomer>}>
                     <Route index element={<Home />} />
-                    <Route path="search" element={<Search />} />
+                    <Route path="search" element={<Navigate to="/restaurants" replace />} />
                     <Route path="restaurants" element={<Restaurants />} />
                     <Route path="restaurant/:id" element={<Restaurant />} />
                     <Route path="order-confirmation/:orderId" element={<OrderConfirmation />} />

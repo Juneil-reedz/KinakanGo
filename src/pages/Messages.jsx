@@ -116,7 +116,9 @@ export default function Messages() {
     setSendingReply(true);
     try {
       const latestSubject = selectedConversation.latest?.subject || 'Message';
+      const partnerId = Number(selectedConversation.key.replace('user:', ''));
       const saved = await messagesApi.create({
+        ...(Number.isInteger(partnerId) && partnerId > 0 ? { toUserId: partnerId } : {}),
         to: selectedConversation.email || selectedConversation.name,
         subject: latestSubject.startsWith('Re:') ? latestSubject : `Re: ${latestSubject}`,
         body: reply,
@@ -311,7 +313,7 @@ export default function Messages() {
               </button>
             </div>
             <input value={form.to} onChange={e => setForm(f => ({ ...f, to: e.target.value }))}
-              placeholder="To: restaurant or support"
+              placeholder="To: restaurant name or email address"
               className="w-full input-glass py-3 text-sm" />
             <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
               placeholder="Subject"

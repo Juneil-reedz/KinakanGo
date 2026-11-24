@@ -194,16 +194,16 @@ export default function AdminRestaurants() {
                 {isOpen && (
                   <div className="px-4 pb-4" style={{ borderTop:"1px solid rgba(var(--fg-rgb),.07)" }}>
                     <div className="pt-3 grid grid-cols-2 gap-2 text-xs">
-                      {r.deliveryFee != null && (
+                      {(r.deliveryFee ?? r.delivery_fee) != null && (
                         <div className="glass rounded-xl px-3 py-2">
                           <p className="text-forest-200/40">Delivery Fee</p>
-                          <p className="text-white font-medium">₱{Number(r.deliveryFee).toFixed(2)}</p>
+                          <p className="text-white font-medium">₱{Number(r.deliveryFee ?? r.delivery_fee).toFixed(2)}</p>
                         </div>
                       )}
-                      {r.minOrder != null && (
+                      {(r.minOrder ?? r.min_order) != null && (
                         <div className="glass rounded-xl px-3 py-2">
                           <p className="text-forest-200/40">Min Order</p>
-                          <p className="text-white font-medium">₱{Number(r.minOrder).toFixed(2)}</p>
+                          <p className="text-white font-medium">₱{Number(r.minOrder ?? r.min_order).toFixed(2)}</p>
                         </div>
                       )}
                       <div className="glass rounded-xl px-3 py-2">
@@ -240,8 +240,8 @@ export default function AdminRestaurants() {
               {[
                 ["Rating",       selectedRestaurant.rating ? `${selectedRestaurant.rating} / 5.0` : "—"],
                 ["Delivery Time",selectedRestaurant.deliveryTime ? `${selectedRestaurant.deliveryTime} min` : "—"],
-                ["Delivery Fee", selectedRestaurant.deliveryFee != null ? `₱${Number(selectedRestaurant.deliveryFee).toFixed(2)}` : "—"],
-                ["Min Order",    selectedRestaurant.minOrder    != null ? `₱${Number(selectedRestaurant.minOrder).toFixed(2)}`    : "—"],
+                ["Delivery Fee", (selectedRestaurant.deliveryFee ?? selectedRestaurant.delivery_fee) != null ? `₱${Number(selectedRestaurant.deliveryFee ?? selectedRestaurant.delivery_fee).toFixed(2)}` : "—"],
+                ["Min Order",    (selectedRestaurant.minOrder ?? selectedRestaurant.min_order) != null ? `₱${Number(selectedRestaurant.minOrder ?? selectedRestaurant.min_order).toFixed(2)}` : "—"],
                 ["Status",       selectedRestaurant.isOpen ? "Open" : "Closed"],
                 ["Approved",     selectedRestaurant.approved ? "Yes" : "Pending"],
               ].map(([label, value]) => (

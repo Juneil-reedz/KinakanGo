@@ -7,41 +7,54 @@ router.use(authenticate);
 
 const normalizeSql = (value) => `regexp_replace(lower(${value}), '[^a-z0-9]', '', 'g')`;
 
+// Messages addressed only by restaurant name (older rows without a user id)
 const restaurantRecipientSql = `EXISTS (
   SELECT 1 FROM restaurants r
   WHERE r.owner_id = $1
-    AND (${normalizeSql('r.name')} = ${normalizeSql('m.recipient_label')} OR r.name ILIKE m.recipient_label)
+    AND ${normalizeSql('r.name')} = ${normalizeSql('m.recipient_label')}
 )`;
 
-async function resolveRecipient(to) {
-  const needle = String(to || '').trim();
-  if (!needle) return { recipient_user_id: null, recipient_label: '' };
+// Who a new message goes to. Only exact matches, so a typo never reaches the
+// wrong person:
+//  - toUserId: replying in an existing conversation (or writing to a restaurant owner)
+//  - to: a restaurant's exact name, or an account's exact email address
+async function resolveRecipient({ to, toUserId, fromRestaurant }, senderId) {
+  const ownsRestaurant = async (userId) =>
+    (await pool.query('SELECT name FROM restaurants WHERE owner_id = $1 LIMIT 1', [userId])).rows[0]?.name || null;
 
+  if (toUserId != null && toUserId !== '') {
+    const id = parseInt(toUserId);
+    const { rows: users } = await pool.query('SELECT id, name, email FROM users WHERE id = $1', [id]);
+    if (!users.length) return null;
+    const { rows: talked } = await pool.query(
+      `SELECT 1 FROM messages WHERE (sender_id = $1 AND recipient_user_id = $2) OR (sender_id = $2 AND recipient_user_id = $1) LIMIT 1`,
+      [senderId, id]
+    );
+    const restaurantName = await ownsRestaurant(id);
+    if (!talked.length && !restaurantName) return null;
+    // Writing from the customer app to a restaurant owner goes to their restaurant inbox
+    const isRestaurant = !!restaurantName && !fromRestaurant;
+    return { recipient_user_id: id, recipient_label: isRestaurant ? restaurantName : (users[0].name || users[0].email), isRestaurant };
+  }
+
+  const needle = String(to || '').trim();
+  if (!needle) return null;
   const { rows: restaurants } = await pool.query(
-    `SELECT owner_id AS user_id, name
-     FROM restaurants
-     WHERE name ILIKE $1 OR ${normalizeSql('name')} = ${normalizeSql('$2')}
-     ORDER BY CASE WHEN lower(name) = lower($2) OR ${normalizeSql('name')} = ${normalizeSql('$2')} THEN 0 ELSE 1 END
+    `SELECT owner_id AS user_id, name FROM restaurants
+     WHERE is_approved = true AND ${normalizeSql('name')} = ${normalizeSql('$1')}
      LIMIT 1`,
-    [`%${needle}%`, needle]
+    [needle]
   );
   if (restaurants.length) {
     return { recipient_user_id: restaurants[0].user_id, recipient_label: restaurants[0].name, isRestaurant: true };
   }
-
   const { rows: users } = await pool.query(
-    `SELECT id, name, email
-     FROM users
-     WHERE name ILIKE $1 OR email ILIKE $1
-     ORDER BY CASE WHEN lower(email) = lower($2) OR lower(name) = lower($2) THEN 0 ELSE 1 END
-     LIMIT 1`,
-    [`%${needle}%`, needle]
+    'SELECT id, name, email FROM users WHERE LOWER(email) = LOWER($1) LIMIT 1', [needle]
   );
   if (users.length) {
-    return { recipient_user_id: users[0].id, recipient_label: users[0].name || users[0].email };
+    return { recipient_user_id: users[0].id, recipient_label: users[0].name || users[0].email, isRestaurant: false };
   }
-
-  return { recipient_user_id: null, recipient_label: needle };
+  return null;
 }
 
 router.get('/', async (req, res) => {
@@ -80,11 +93,17 @@ router.get('/', async (req, res) => {
 
 router.post('/', async (req, res) => {
   try {
-    const { to, subject, body } = req.body;
-    if (!String(to || '').trim() || !String(body || '').trim()) {
+    const { to, toUserId, subject, body } = req.body;
+    if ((!String(to || '').trim() && !toUserId) || !String(body || '').trim()) {
       return res.status(400).json({ error: 'Recipient and message are required' });
     }
-    const recipient = await resolveRecipient(to);
+    const recipient = await resolveRecipient(req.body, req.user.id);
+    if (!recipient) {
+      return res.status(404).json({ error: `We couldn't find "${String(to || '').trim()}". Type the restaurant's exact name or the person's email address.` });
+    }
+    if (recipient.recipient_user_id === req.user.id) {
+      return res.status(400).json({ error: "You can't send a message to yourself" });
+    }
     const { rows } = await pool.query(
       `INSERT INTO messages (sender_id, recipient_user_id, recipient_label, subject, body)
        VALUES ($1, $2, $3, $4, $5)

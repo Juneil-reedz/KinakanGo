@@ -87,6 +87,8 @@ export default function RestaurantMessages() {
       const saved = await restaurantRequest('/messages', {
         method: 'POST',
         body: JSON.stringify({
+          ...(Number(selectedConversation.key.replace('user:', '')) > 0 ? { toUserId: Number(selectedConversation.key.replace('user:', '')) } : {}),
+          fromRestaurant: true,
           to: recipient,
           subject: latestSubject.startsWith('Re:') ? latestSubject : `Re: ${latestSubject}`,
           body: reply.trim(),

@@ -121,6 +121,15 @@ pool.query(`
 `).catch(err => console.warn('customer_addresses columns warning:', err.message));
 
 pool.query(`
+  CREATE TABLE IF NOT EXISTS order_rider_declines (
+    order_id   INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    rider_id   INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (order_id, rider_id)
+  )
+`).catch(err => console.warn('order_rider_declines init warning:', err.message));
+
+pool.query(`
   ALTER TABLE promo_codes
     ADD COLUMN IF NOT EXISTS owner_id     INT          DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
     ADD COLUMN IF NOT EXISTS max_discount DECIMAL(8,2) DEFAULT NULL,

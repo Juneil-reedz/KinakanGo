@@ -30,6 +30,8 @@ export default function RestaurantSettings() {
     gcash_name:   '',
     is_open:      true,
     image_url:    '',
+    delivery_fee: '',
+    min_order:    '',
   });
 
   useEffect(() => {
@@ -43,6 +45,8 @@ export default function RestaurantSettings() {
       gcash_name:   restaurant.gcash_name   || '',
       is_open:      restaurant.is_open      ?? true,
       image_url:    restaurant.image_url    || '',
+      delivery_fee: restaurant.delivery_fee != null ? String(Number(restaurant.delivery_fee)) : '',
+      min_order:    restaurant.min_order    != null ? String(Number(restaurant.min_order))    : '',
     });
   }, [restaurant]);
 
@@ -62,10 +66,12 @@ export default function RestaurantSettings() {
         gcashName:   form.gcash_name   || null,
         isOpen:      form.is_open,
         imageUrl:    form.image_url   || null,
+        deliveryFee: form.delivery_fee === '' ? null : Number(form.delivery_fee),
+        minOrder:    form.min_order    === '' ? null : Number(form.min_order),
       });
       addNotification('Settings saved!', 'success');
-    } catch {
-      addNotification('Failed to save settings', 'error');
+    } catch (err) {
+      addNotification(err?.data?.error || err?.message || 'Failed to save settings', 'error');
     } finally {
       setSaving(false);
     }
@@ -139,6 +145,24 @@ export default function RestaurantSettings() {
                 ? <ToggleRight className="w-10 h-10 text-forest-400" />
                 : <ToggleLeft  className="w-10 h-10 text-forest-200/30" />}
             </button>
+          </div>
+        </div>
+
+        {/* Delivery & orders */}
+        <div className="glass rounded-2xl p-5 space-y-3">
+          <p className="text-white font-semibold">Delivery &amp; Orders</p>
+          <div className="grid grid-cols-2 gap-3">
+            {[
+              { label:'Delivery fee (₱)',  key:'delivery_fee', hint:'Added to every order' },
+              { label:'Minimum order (₱)', key:'min_order',    hint:'Food total needed to order; 0 = none' },
+            ].map(({ label, key, hint }) => (
+              <div key={key}>
+                <label className="block text-forest-200/60 text-xs font-medium mb-1">{label}</label>
+                <input type="number" min="0" step="1" value={form[key]} onChange={e => f(key, e.target.value)}
+                  className="w-full input-glass py-2.5 px-3 text-sm" />
+                <p className="text-forest-200/40 text-[11px] mt-1">{hint}</p>
+              </div>
+            ))}
           </div>
         </div>
 

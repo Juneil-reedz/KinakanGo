@@ -1,4 +1,5 @@
 const { promoDiscount, promoAudienceOk } = require('./promoController');
+const { APPROVED_RIDER_SQL, isApprovedRider } = require('../utils/riders');
 const crypto = require('crypto');
 const pool = require('../config/db');
 const { sendEmail } = require('../utils/email');
@@ -62,23 +63,32 @@ const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 // Returns the assigned rider's user_id, or null if no available rider exists.
 async function autoAssignRider(orderId) {
   try {
+    // An approved, online rider who isn't on another delivery and hasn't
+    // declined this order. The claim only succeeds while the order is still unassigned.
     const { rows } = await pool.query(
-      `SELECT rp.user_id
-       FROM rider_profiles rp
-       WHERE rp.is_available = true
-         AND rp.user_id NOT IN (
-           SELECT rider_id FROM orders
-           WHERE status IN ('ready', 'picked_up') AND rider_id IS NOT NULL
-         )
-       ORDER BY RANDOM()
-       LIMIT 1`
+      `UPDATE orders SET rider_id = pick.user_id
+       FROM (
+         SELECT rp.user_id
+         FROM rider_profiles rp
+         WHERE rp.is_available = true
+           AND ${APPROVED_RIDER_SQL('rp.user_id')}
+           AND rp.user_id NOT IN (
+             SELECT rider_id FROM orders
+             WHERE status IN ('ready', 'picked_up') AND rider_id IS NOT NULL
+           )
+           AND NOT EXISTS (SELECT 1 FROM order_rider_declines d WHERE d.order_id = $1 AND d.rider_id = rp.user_id)
+         ORDER BY RANDOM()
+         LIMIT 1
+       ) pick
+       WHERE orders.id = $1 AND orders.rider_id IS NULL AND orders.status = 'ready'
+       RETURNING pick.user_id`,
+      [orderId]
     );
     if (!rows.length) {
       console.log(`autoAssignRider: no available rider for order ${orderId} — will assign when a rider comes online`);
       return null;
     }
     const riderId = rows[0].user_id;
-    await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, orderId]);
     console.log(`autoAssignRider: assigned rider ${riderId} to order ${orderId}`);
     await notify(riderId, {
       audience: 'rider', type: 'warning', link: '/rider/dashboard',
@@ -254,7 +264,7 @@ async function placeOrder(req, res) {
   }
 
   const { rows: restRows } = await pool.query(
-    'SELECT delivery_fee, is_open, is_approved FROM restaurants WHERE id = $1', [restaurantId]
+    'SELECT delivery_fee, min_order, is_open, is_approved FROM restaurants WHERE id = $1', [restaurantId]
   );
   if (!restRows.length || !restRows[0].is_approved) {
     return res.status(400).json({ error: 'This restaurant is not available' });
@@ -283,6 +293,11 @@ async function placeOrder(req, res) {
   }
   const itemMap = Object.fromEntries(menuRows.map(r => [r.id, r]));
   const gross = items.reduce((s, i) => s + Number(itemMap[i.menuItemId].price) * Number(i.quantity), 0);
+
+  const minOrder = Number(restRows[0].min_order || 0);
+  if (gross < minOrder) {
+    return res.status(400).json({ error: `This restaurant's minimum order is ₱${minOrder.toFixed(2)} of food` });
+  }
 
   // Same rules as /promos/validate, plus: a restaurant's own promo only works there.
   // The usage count is claimed atomically so max_uses can't be exceeded.
@@ -488,7 +503,7 @@ async function updateStatus(req, res) {
   }
 
   const { rows: beforeRows } = await pool.query(
-    `SELECT o.status, o.rider_id, o.delivery_fee, r.owner_id
+    `SELECT o.status, o.rider_id, o.delivery_fee, o.customer_id, o.payment_method, r.owner_id
      FROM orders o JOIN restaurants r ON r.id = o.restaurant_id WHERE o.id = $1`,
     [req.params.id]
   );
@@ -500,9 +515,12 @@ async function updateStatus(req, res) {
   const isAdmin = req.user.role === 'admin';
   const isOwner = before.owner_id === req.user.id;
   const isRider = before.rider_id != null && before.rider_id === req.user.id;
+  // The customer may cancel their own order until the restaurant accepts it
+  const isCustomer = before.customer_id === req.user.id;
   const allowedFor = [
     ...(isOwner ? RESTAURANT_STATUSES : []),
     ...(isRider ? RIDER_STATUSES : []),
+    ...(isCustomer && before.status === 'pending' ? ['cancelled'] : []),
   ];
   if (!isAdmin && !allowedFor.includes(status)) {
     return res.status(403).json({ error: 'You are not allowed to change this order' });
@@ -519,7 +537,12 @@ async function updateStatus(req, res) {
        status           = $1,
        cancelled_reason = CASE WHEN $2 = 'cancelled' THEN $3 ELSE cancelled_reason END,
        delivered_at     = CASE WHEN $4 = 'delivered'  THEN NOW() ELSE delivered_at END,
-       delivery_proof_image = CASE WHEN $4 = 'delivered' THEN $5 ELSE delivery_proof_image END
+       delivery_proof_image = CASE WHEN $4 = 'delivered' THEN $5 ELSE delivery_proof_image END,
+       payment_status   = CASE
+         WHEN payment_status = 'refunded' THEN payment_status
+         WHEN $4 = 'delivered' THEN 'paid'
+         WHEN payment_method = 'gcash' AND $4 IN ('accepted','preparing','ready','picked_up') THEN 'paid'
+         ELSE payment_status END
      WHERE id = $6
      RETURNING id, status`,
     [status, status, cancelledReason || null, status, deliveryProof || null, req.params.id]
@@ -527,6 +550,13 @@ async function updateStatus(req, res) {
   if (!updatedRows.length) return res.status(404).json({ error: 'Order not found' });
 
   await notifyOrderStatus(req.params.id, status, cancelledReason);
+  if (status === 'cancelled' && isCustomer && !isOwner && !isAdmin) {
+    await notify(before.owner_id, {
+      audience: 'restaurant', type: 'error', link: '/owner/orders',
+      title: `Order #${req.params.id} cancelled by the customer`,
+      message: cancelledReason || null,
+    });
+  }
 
   // When order is ready for pickup, auto-assign an available rider
   if (status === 'ready') {
@@ -579,8 +609,13 @@ async function riderResponse(req, res) {
     await notifyOrderStatus(orderId, 'picked_up');
     return res.json({ message: 'Order accepted', status: 'picked_up' });
   } else {
-    // Rider rejected — clear assignment and try next rider
-    await pool.query('UPDATE orders SET rider_id = NULL WHERE id = $1', [orderId]);
+    // Rider rejected — remember it (so they aren't offered it again), clear the
+    // assignment and try the next rider
+    await pool.query(
+      'INSERT INTO order_rider_declines (order_id, rider_id) VALUES ($1, $2) ON CONFLICT DO NOTHING',
+      [orderId, riderId]
+    );
+    await pool.query('UPDATE orders SET rider_id = NULL WHERE id = $1 AND rider_id = $2', [orderId, riderId]);
     const nextRider = await autoAssignRider(orderId);
     return res.json({ message: 'Order rejected', nextRiderId: nextRider || null });
   }
@@ -588,11 +623,9 @@ async function riderResponse(req, res) {
 
 async function assignRider(req, res) {
   const riderId = parseInt(req.body.riderId);
-  const { rows: riderRows } = await pool.query(
-    `SELECT 1 FROM rider_profiles rp JOIN users u ON u.id = rp.user_id
-     WHERE rp.user_id = $1 AND u.is_active = true`, [riderId]
-  );
-  if (!riderRows.length) return res.status(400).json({ error: 'That user is not an active rider' });
+  if (!Number.isInteger(riderId) || !(await isApprovedRider(riderId))) {
+    return res.status(400).json({ error: 'That user is not an active rider' });
+  }
   const { rows: orderRows } = await pool.query('SELECT status FROM orders WHERE id = $1', [req.params.id]);
   if (!orderRows.length) return res.status(404).json({ error: 'Order not found' });
   if (FINAL_STATUSES.includes(orderRows[0].status)) {

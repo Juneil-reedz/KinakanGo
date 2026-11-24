@@ -2,10 +2,11 @@ const router = require('express').Router();
 const { notify } = require('../utils/notify');
 const pool   = require('../config/db');
 const { authenticate, requireRole } = require('../middleware/auth');
+const { requireApprovedRider } = require('../utils/riders');
 
 router.use(authenticate);
 
-router.get('/me', async (req, res) => {
+router.get('/me', requireApprovedRider, async (req, res) => {
   try {
     const { rows } = await pool.query(
       // "Today" is worked out from delivered orders (Philippine time), because the
@@ -36,7 +37,7 @@ router.get('/me', async (req, res) => {
   }
 });
 
-router.post('/admin-requests', async (req, res) => {
+router.post('/admin-requests', requireApprovedRider, async (req, res) => {
   try {
     const { requestType, amount, period, details } = req.body;
     if (!['payout', 'report'].includes(requestType)) {
@@ -199,7 +200,7 @@ router.get('/:id/deliveries', requireRole('admin'), async (req, res) => {
 
 // Toggle rider's own availability status.
 // When coming online, immediately try to claim one unassigned 'ready' order.
-router.patch('/availability', async (req, res) => {
+router.patch('/availability', requireApprovedRider, async (req, res) => {
   const { is_available } = req.body;
   if (typeof is_available !== 'boolean') {
     return res.status(400).json({ error: 'is_available must be a boolean' });
@@ -214,31 +215,31 @@ router.patch('/availability', async (req, res) => {
 
     let assignedOrderId = null;
     if (is_available) {
-      // 1. Look for a genuinely unassigned ready order
-      let { rows } = await pool.query(
-        `SELECT id FROM orders
-         WHERE status = 'ready' AND rider_id IS NULL
-         ORDER BY created_at ASC LIMIT 1`
+      // Claim the oldest unassigned ready order, but only if this rider isn't
+      // already on a delivery. One UPDATE does the check and the claim, so two
+      // riders coming online together can't both take the same order. Orders
+      // this rider already declined are skipped.
+      const { rows } = await pool.query(
+        `UPDATE orders SET rider_id = $1
+         WHERE id = (
+           SELECT o.id FROM orders o
+           WHERE o.status = 'ready' AND o.rider_id IS NULL
+             AND NOT EXISTS (SELECT 1 FROM order_rider_declines d WHERE d.order_id = o.id AND d.rider_id = $1)
+           ORDER BY o.created_at ASC LIMIT 1
+           FOR UPDATE SKIP LOCKED
+         )
+         AND rider_id IS NULL
+         AND NOT EXISTS (SELECT 1 FROM orders busy WHERE busy.rider_id = $1 AND busy.status IN ('ready','picked_up'))
+         RETURNING id`,
+        [req.user.id]
       );
-
-      // 2. If nothing unassigned, look for orders assigned to a "ghost" rider —
-      //    i.e. rider_id points to a user who has no rider_profiles row, meaning
-      //    they were assigned by the old upgrade_requests fallback and never responded.
-      if (!rows.length) {
-        ({ rows } = await pool.query(
-          `SELECT o.id FROM orders o
-           LEFT JOIN rider_profiles rp ON rp.user_id = o.rider_id
-           WHERE o.status = 'ready'
-             AND o.rider_id IS NOT NULL
-             AND rp.user_id IS NULL
-           ORDER BY o.created_at ASC LIMIT 1`
-        ));
-      }
-
       if (rows.length) {
         assignedOrderId = rows[0].id;
-        await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [req.user.id, assignedOrderId]);
         console.log(`availability: assigned order ${assignedOrderId} to rider ${req.user.id}`);
+        await notify(req.user.id, {
+          audience: 'rider', type: 'warning', link: '/rider/dashboard',
+          title: `New delivery request · #${assignedOrderId}`, message: 'An order is ready for pickup. Accept or decline it in your dashboard.',
+        });
       }
     }
 
@@ -250,7 +251,7 @@ router.patch('/availability', async (req, res) => {
 });
 
 // Update rider's live GPS coordinates (called every ~10 s from the rider app)
-router.patch('/location', async (req, res) => {
+router.patch('/location', requireApprovedRider, async (req, res) => {
   const { lat, lng } = req.body;
   if (lat == null || lng == null) return res.status(400).json({ error: 'lat and lng required' });
   try {
