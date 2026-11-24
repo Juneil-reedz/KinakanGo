@@ -10,7 +10,7 @@ export default function Cart() {
   const navigate = useNavigate();
   const goBack = useGoBack();
   const { cartItems, updateQuantity, removeFromCart } = useCart();
-  const { restaurant, food: subtotal, discount, deliveryFee, tax, total, promoCode, setPromoCode, promoError, promoChecking } = useCartTotals();
+  const { restaurant, food: subtotal, discount, deliveryFee, tax, total, credit, promoCode, setPromoCode, promoError, promoChecking } = useCartTotals();
   const minOrder = Number(restaurant?.min_order || 0);
   const belowMin = minOrder > 0 && subtotal < minOrder;
   const [promoOpen, setPromoOpen]   = useState(false);
@@ -154,6 +154,11 @@ export default function Cart() {
             <span className="text-ember-400 font-heading font-bold text-xl">₱{total.toFixed(2)}</span>
           </div>
         </div>
+        {credit > 0 && (
+          <p className="max-w-2xl mx-auto text-center text-forest-300 text-sm">
+            You have ₱{credit.toFixed(2)} store credit at {restaurant?.name || 'this restaurant'}. You can use it at checkout.
+          </p>
+        )}
         {belowMin && (
           <p className="max-w-2xl mx-auto text-center text-ember-300 text-sm">
             {restaurant?.name || 'This restaurant'} has a minimum order of ₱{minOrder.toFixed(2)}. Add ₱{(minOrder - subtotal).toFixed(2)} more to check out.

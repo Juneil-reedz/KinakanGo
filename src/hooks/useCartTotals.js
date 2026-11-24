@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { restaurantsApi, promosApi } from '../services/api';
+import { restaurantsApi, promosApi, storeCreditApi } from '../services/api';
 
 // Same math as the server's placeOrder, so the cart, checkout and the saved
 // order all show one total: (food − promo) + 8% tax + the restaurant's delivery fee.
@@ -20,6 +20,15 @@ export default function useCartTotals() {
 
   const food = getCartTotal();
 
+  // Store credit the customer has at this restaurant (from earlier refunds)
+  const [credit, setCredit] = useState(0);
+  useEffect(() => {
+    if (!restaurantId) { setCredit(0); return; }
+    let live = true;
+    storeCreditApi.balance(restaurantId).then(r => { if (live) setCredit(Number(r.balance) || 0); }).catch(() => { if (live) setCredit(0); });
+    return () => { live = false; };
+  }, [restaurantId]);
+
   // Re-check the code whenever it or the cart total changes (min order, % discounts)
   useEffect(() => {
     if (!promoCode || !restaurantId || food <= 0) { setPromo({ discount: 0, error: '', checking: false }); return; }
@@ -38,7 +47,7 @@ export default function useCartTotals() {
   const total       = taxable + deliveryFee + tax;
 
   return {
-    restaurant, food, discount, deliveryFee, tax, total,
+    restaurant, food, discount, deliveryFee, tax, total, credit,
     promoCode, setPromoCode,
     promoError: promo.error, promoChecking: promo.checking,
     feeLoaded: !cartItems.length || restaurant !== null,

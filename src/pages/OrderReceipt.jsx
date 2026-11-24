@@ -8,6 +8,7 @@ import StarRating from '../components/StarRating';
 import { ordersApi, issuesApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
+import { useAuth } from '../context/AuthContext';
 
 const STATUS_LABEL = {
   pending: 'Waiting for restaurant', accepted: 'Accepted', preparing: 'Preparing',
@@ -125,6 +126,7 @@ const hoursSince = (t) => (t ? (Date.now() - new Date(t).getTime()) / 3600e3 : 0
 function reportState(r, waitHours = 24) {
   const amt = r.refund_approved ? peso(r.refund_approved) : '';
   const byAdmin = r.handler === 'admin';
+  if (r.refund_status === 'credited') return { text: `${amt} added to your store credit at this restaurant. It's used automatically on your next order there.`, tone: 'good' };
   if (r.refund_status === 'received') return { text: `Refund of ${amt} received`, tone: 'good' };
   if (r.refund_status === 'sent') return { text: `The restaurant sent your ${amt} refund`, tone: 'good', confirm: true };
   if (r.refund_status === 'not_received') return { text: `You told us the ${amt} refund didn't arrive. KinakanGo is checking with the restaurant.`, tone: 'wait' };
@@ -152,6 +154,9 @@ function ReportProblem({ order }) {
   const [text, setText] = useState('');
   const [wantRefund, setWantRefund] = useState(false);
   const [amount, setAmount] = useState('');
+  const { user } = useAuth();
+  const [method, setMethod] = useState('credit');
+  const [gcashNo, setGcashNo] = useState(user?.phone || '');
   const [saving, setSaving] = useState(false);
   const [waitHours, setWaitHours] = useState(24);
   const [busyId, setBusyId] = useState(null);
@@ -184,6 +189,7 @@ function ReportProblem({ order }) {
       const saved = await issuesApi.submit({
         orderId: order.id, type, description: text.trim(),
         refundRequested: wantRefund ? Number(amount || order.total) : null,
+        ...(wantRefund ? { refundMethod: method, refundGcash: method === 'gcash' ? gcashNo : null } : {}),
       });
       setReports(r => [saved, ...r]);
       setOpen(false); setText(''); setWantRefund(false); setAmount('');
@@ -258,6 +264,25 @@ function ReportProblem({ order }) {
               <input type="number" min="1" step="0.01" max={Number(order.total)} value={amount}
                 onChange={e => setAmount(e.target.value)} placeholder={`Amount (up to ${peso(order.total)})`}
                 className="w-full input-glass px-3 py-2.5 text-sm rounded-xl" />
+            )}
+            {wantRefund && (
+              <div className="space-y-2">
+                <p className="text-forest-200/70 text-xs">How do you want your refund?</p>
+                {[
+                  ['credit', 'Store credit', `Added right away when approved. Used on your next order at ${order.restaurant_name || 'this restaurant'}.`],
+                  ['gcash',  'GCash',        'The restaurant sends it to your GCash number.'],
+                  ['cash',   'Cash',         'The restaurant arranges to give it to you in cash.'],
+                ].map(([id, label, hint]) => (
+                  <label key={id} className={`flex items-start gap-2 rounded-xl p-2.5 text-sm cursor-pointer ${method === id ? 'glass-green' : 'glass'}`}>
+                    <input type="radio" name="refund-method" checked={method === id} onChange={() => setMethod(id)} className="mt-1" />
+                    <span className="text-forest-100">{label}<span className="block text-forest-200/60 text-xs">{hint}</span></span>
+                  </label>
+                ))}
+                {method === 'gcash' && (
+                  <input type="tel" value={gcashNo} onChange={e => setGcashNo(e.target.value)} placeholder="GCash number, e.g. 09171234567"
+                    className="w-full input-glass px-3 py-2.5 text-sm rounded-xl" />
+                )}
+              </div>
             )}
             <div className="flex gap-2">
               <button onClick={() => setOpen(false)} className="flex-1 glass text-forest-200 text-sm py-3 rounded-xl">Cancel</button>
@@ -452,6 +477,12 @@ export default function OrderReceipt() {
               <span className="text-white print:text-black">Total</span>
               <span className="text-ember-400 font-heading text-lg print:text-black">{peso(order.total)}</span>
             </div>
+            {Number(order.credit_used) > 0 && (
+              <>
+                <div className="flex justify-between text-forest-300 print:text-gray-600"><span>Paid with store credit</span><span>−{peso(order.credit_used)}</span></div>
+                <div className="flex justify-between font-bold"><span className="text-white print:text-black">Paid</span><span className="text-white print:text-black">{peso(Number(order.total) - Number(order.credit_used))}</span></div>
+              </>
+            )}
           </div>
         </Section>
 

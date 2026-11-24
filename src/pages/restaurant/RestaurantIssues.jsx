@@ -11,6 +11,9 @@ const TYPE_LABEL = {
   refund:  'Other / refund request',
 };
 const peso = (n) => `₱${Number(n || 0).toFixed(2)}`;
+// How the customer asked to get the money back
+const METHOD_LABEL = { credit: 'as store credit', cash: 'in cash' };
+METHOD_LABEL.gcash = 'to GCash';
 
 // What the restaurant needs to do about a report, and how it is shown
 function stage(i) {
@@ -18,6 +21,7 @@ function stage(i) {
   if (['to_send', 'not_received'].includes(i.refund_status)) {
     return { key: 'send', label: i.refund_status === 'not_received' ? "Customer didn't get the refund" : 'Send the refund', cls: 'bg-red-500/20 text-red-300' };
   }
+  if (i.refund_status === 'credited') return { key: 'done', label: 'Given as store credit', cls: 'glass-green text-forest-200' };
   if (i.refund_status === 'sent') return { key: 'done', label: 'Refund sent, waiting for the customer', cls: 'glass text-forest-200/70' };
   if (i.refund_status === 'received') return { key: 'done', label: 'Customer received the refund', cls: 'glass-green text-forest-200' };
   if (i.handler === 'admin' && i.status === 'pending') return { key: 'admin', label: 'KinakanGo is reviewing', cls: 'glass text-forest-200/70' };
@@ -128,11 +132,16 @@ export default function RestaurantIssues() {
                       </div>
                     </div>
                     {i.refund_requested && st.key === 'answer' && (
-                      <p className="glass-orange rounded-xl px-3 py-2 mt-2 text-ember-200 text-xs font-semibold">Asks for a refund of {peso(i.refund_requested)}</p>
+                      <p className="glass-orange rounded-xl px-3 py-2 mt-2 text-ember-200 text-xs font-semibold">
+                        Asks for a refund of {peso(i.refund_requested)} {METHOD_LABEL[i.refund_method] || ''}
+                      </p>
+                    )}
+                    {st.key === 'send' && i.refund_method && (
+                      <p className="text-ember-200 text-xs mt-2 font-semibold">Send it {METHOD_LABEL[i.refund_method]}{i.refund_method === 'gcash' && i.refund_gcash ? ` (${i.refund_gcash})` : ''}</p>
                     )}
                     {i.refund_approved && (
                       <p className="glass-green rounded-xl px-3 py-2 mt-2 text-forest-200 text-xs font-semibold">
-                        Refund to send: {peso(i.refund_approved)}{i.refund_sent_note ? ` · Sent: ${i.refund_sent_note}` : ''}
+                        {i.refund_status === 'credited' ? 'Store credit given' : 'Refund to send'}: {peso(i.refund_approved)}{i.refund_sent_note ? ` · Sent: ${i.refund_sent_note}` : ''}
                       </p>
                     )}
                     {i.escalation_reason && <p className="text-forest-200/60 text-xs mt-2">Customer to KinakanGo: "{i.escalation_reason}"</p>}
@@ -183,9 +192,15 @@ export default function RestaurantIssues() {
                 </div>
               </div>
             )}
+            {modal.mode === 'approve' && modal.issue.refund_method === 'credit' && (
+              <p className="text-forest-200/70 text-xs">The customer chose store credit, so the amount is added to their credit here right away. They use it on their next order with you.</p>
+            )}
+            {modal.mode === 'approve' && modal.issue.refund_method === 'gcash' && (
+              <p className="text-forest-200/70 text-xs">The customer wants it by GCash to {modal.issue.refund_gcash}. After approving, send it and tap "Refund sent".</p>
+            )}
             {modal.mode === 'sent' && (
               <p className="text-forest-200/70 text-xs">
-                Send {peso(modal.issue.refund_approved)} to the customer first, then say how you sent it so they can check.
+                Send {peso(modal.issue.refund_approved)} to the customer first{modal.issue.refund_method === 'gcash' && modal.issue.refund_gcash ? ` (GCash ${modal.issue.refund_gcash})` : ''}, then say how you sent it so they can check.
               </p>
             )}
             <div>

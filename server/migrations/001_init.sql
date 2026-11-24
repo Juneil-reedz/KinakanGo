@@ -183,6 +183,7 @@ CREATE TABLE orders (
   transaction_id       VARCHAR(100) DEFAULT NULL,
   proof_image          TEXT         DEFAULT NULL,  -- customer's GCash payment screenshot
   delivery_proof_image TEXT         DEFAULT NULL,  -- rider's proof-of-delivery photo
+  credit_used          DECIMAL(10,2) NOT NULL DEFAULT 0,  -- store credit applied; customer pays total - credit_used
   estimated_delivery   TIMESTAMPTZ  DEFAULT NULL,
   delivered_at         TIMESTAMPTZ  DEFAULT NULL,
   cancelled_reason     TEXT         DEFAULT NULL,
@@ -288,11 +289,26 @@ CREATE TABLE issues (
   refund_received_at TIMESTAMPTZ DEFAULT NULL,
   escalated_at       TIMESTAMPTZ DEFAULT NULL,
   escalation_reason  TEXT        DEFAULT NULL,
+  refund_method      VARCHAR(10) DEFAULT NULL,  -- how the customer wants it: gcash, cash, credit
+  refund_gcash       VARCHAR(30) DEFAULT NULL,
   created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 CREATE TRIGGER trg_issues_updated_at BEFORE UPDATE ON issues
   FOR EACH ROW EXECUTE FUNCTION set_updated_at();
+
+-- Store credit ledger: + refund given as credit (or returned), − used on an order
+CREATE TABLE store_credits (
+  id            SERIAL PRIMARY KEY,
+  customer_id   INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  amount        DECIMAL(10,2) NOT NULL,
+  order_id      INT DEFAULT NULL REFERENCES orders(id) ON DELETE SET NULL,
+  issue_id      INT DEFAULT NULL REFERENCES issues(id) ON DELETE SET NULL,
+  note          TEXT DEFAULT NULL,
+  created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_store_credits_owner ON store_credits(customer_id, restaurant_id);
 
 CREATE TABLE rider_admin_requests (
   id               SERIAL PRIMARY KEY,

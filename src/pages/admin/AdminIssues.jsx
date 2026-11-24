@@ -299,6 +299,7 @@ export default function AdminIssues() {
                       <div className="glass-orange rounded-xl px-3 py-2 mt-2">
                         <p className="text-ember-200 text-xs font-semibold">
                           {issue.source === 'riderRequest' ? 'Amount Requested' : 'Refund Requested'}: ₱{Number(issue.requestedRefund).toFixed(2)}
+                          {issue.refund_method && ` · ${{ credit: 'as store credit', gcash: `to GCash ${issue.refund_gcash || ''}`, cash: 'in cash' }[issue.refund_method]}`}
                         </p>
                       </div>
                     )}
@@ -309,7 +310,7 @@ export default function AdminIssues() {
                       <div className="glass-green rounded-xl px-3 py-2 mt-2">
                         <p className="text-forest-200 text-xs font-semibold">
                           Refund Approved: ₱{Number(issue.refundAmount).toFixed(2)}
-                          {issue.refundStatus && ` · ${{ to_send: 'restaurant has not sent it yet', sent: 'restaurant says it was sent', not_received: "customer says it didn't arrive", received: 'customer received it' }[issue.refundStatus] || issue.refundStatus}`}
+                          {issue.refundStatus && ` · ${{ to_send: 'restaurant has not sent it yet', sent: 'restaurant says it was sent', not_received: "customer says it didn't arrive", received: 'customer received it', credited: 'given as store credit' }[issue.refundStatus] || issue.refundStatus}`}
                         </p>
                         {issue.refundSentNote && <p className="text-forest-200/50 text-xs mt-0.5">Sent: {issue.refundSentNote}</p>}
                         {issue.refundNotes && <p className="text-forest-200/50 text-xs mt-0.5">Note: {issue.refundNotes}</p>}

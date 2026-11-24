@@ -229,6 +229,13 @@ export const issuesApi = {
   deny:    (id, notes)    => request(`/issues/${id}/deny`,    { method: 'POST', body: JSON.stringify({ notes }) }),
 };
 
+// ── Store credit ──────────────────────────────────────────────────────────────
+
+export const storeCreditApi = {
+  balance: (restaurantId) => request(`/store-credit?restaurantId=${restaurantId}`),
+  all:     ()             => request('/store-credit'),
+};
+
 // ── Promos ────────────────────────────────────────────────────────────────────
 
 export const promosApi = {
