@@ -31,7 +31,7 @@ export default function FoodDetail() {
       .catch(() => { if (!stateItem) setStatus('missing'); });
   }, [id, stateItem]);
 
-  // Other foods of the same kind to spin through (passed from the list, or loaded)
+  // Other foods of the same kind to swipe through (passed from the list, or loaded)
   const [pool, setPool] = useState(location.state?.options || null);
   useEffect(() => {
     if (pool) return;
@@ -39,11 +39,12 @@ export default function FoodDetail() {
       .then(r => setPool(Array.isArray(r) ? r : r?.data || []))
       .catch(() => setPool([]));
   }, [pool]);
-  const [current, setCurrent] = useState(null); // the option the user spun to
-  const [turn, setTurn]       = useState(0);    // degrees from swipes
-  const [drag, setDrag]       = useState(0);    // live degrees while dragging
-  const [swapping, setSwapping] = useState(false);
+  const [current, setCurrent] = useState(null); // the option the user swiped to
+  const [dragX, setDragX]     = useState(0);    // live finger offset in px
+  const [dragging, setDragging] = useState(false);
   const dragStart = useRef(null);
+  const stageRef  = useRef(null);
+  const moved     = useRef(false);
 
   if (status !== 'ready') {
     return (
@@ -73,27 +74,40 @@ export default function FoodDetail() {
   if (!options.some(i => i.id === baseItem.id)) options = [baseItem, ...options];
   const index = Math.max(0, options.findIndex(i => i.id === foodItem.id));
   const many = options.length > 1;
-  const prevItem = many ? options[(index - 1 + options.length) % options.length] : null;
-  const nextItem = many ? options[(index + 1) % options.length] : null;
 
-  // Spin the plate to the next or previous option
-  const spinTo = (dir) => {
-    if (!many || swapping) return;
-    const target = dir > 0 ? nextItem : prevItem;
-    setSwapping(true);
-    setTurn(t => t + (dir > 0 ? -360 : 360));
-    setTimeout(() => { setCurrent(target); setQuantity(1); }, 300);
-    setTimeout(() => setSwapping(false), 720);
+  // Carousel: the foods sit side by side; drag to slide, let go to snap
+  const goTo = (i) => {
+    if (!many) return;
+    const n = Math.min(options.length - 1, Math.max(0, i));
+    if (n === index) return;
+    setCurrent(options[n]);
+    setQuantity(1);
   };
+  const slotWidth = () => (stageRef.current?.offsetWidth || 360) * 0.62;
 
-  const onPointerDown = (e) => { dragStart.current = e.clientX; e.currentTarget.setPointerCapture?.(e.pointerId); };
-  const onPointerMove = (e) => { if (dragStart.current != null) setDrag((e.clientX - dragStart.current) * 0.6); };
+  const onPointerDown = (e) => {
+    if (!many) return;
+    dragStart.current = e.clientX;
+    setDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const onPointerMove = (e) => {
+    if (dragStart.current == null) return;
+    let dx = e.clientX - dragStart.current;
+    // Resist past the first and last food
+    if ((index === 0 && dx > 0) || (index === options.length - 1 && dx < 0)) dx *= 0.3;
+    setDragX(dx);
+  };
   const onPointerUp = (e) => {
     if (dragStart.current == null) return;
     const dx = e.clientX - dragStart.current;
     dragStart.current = null;
-    setDrag(0);
-    if (Math.abs(dx) > 45) spinTo(dx < 0 ? 1 : -1);
+    moved.current = Math.abs(dx) > 6;
+    setDragging(false);
+    setDragX(0);
+    const steps = Math.round(-dx / slotWidth());
+    if (steps) goTo(index + steps);
+    else if (Math.abs(dx) > 40) goTo(index + (dx < 0 ? 1 : -1));
   };
 
   const total = foodItem.price * quantity;
@@ -113,8 +127,6 @@ export default function FoodDetail() {
     ? foodItem.restaurant
     : (foodItem.restaurant?.name || foodItem.restaurant_name);
 
-  // The plate turns a little each time the quantity changes
-  const spin = (quantity - 1) * 40;
 
   const facts = [
     { label: 'Rating', value: Number(foodItem.rating_count) > 0 ? `${Number(foodItem.avg_rating).toFixed(1)} (${foodItem.rating_count})` : 'New', Icon: Star, tint: 'fact-amber' },
@@ -139,39 +151,47 @@ export default function FoodDetail() {
       </header>
 
       <div className="relative flex-1 w-full max-w-5xl mx-auto">
-        {/* The plate: drag or swipe it to spin to the next option */}
-        <div className="fd-stage" onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+        {/* The foods side by side: swipe to slide the next one into the middle */}
+        <div ref={stageRef} className={`fd-stage ${dragging ? 'is-dragging' : ''}`}
+          onPointerDown={onPointerDown} onPointerMove={onPointerMove}
           onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
-          {prevItem && (
-            <button type="button" className="fd-peek fd-peek-left" onClick={() => spinTo(-1)} aria-label={`Previous: ${prevItem.name}`}>
-              <img src={prevItem.image_url || prevItem.image} alt="" draggable="false" />
-            </button>
-          )}
-          <div className={`fd-plate ${location.state?.morph ? 'fd-plate-morph' : ''} ${swapping ? 'is-swapping' : ''} ${drag ? 'is-dragging' : ''}`}
-            style={{ viewTransitionName: `food-${baseItem.id}` }}>
-            <img src={foodItem.image || foodItem.image_url} alt={foodItem.name} draggable="false"
-              style={{ transform: `rotate(${turn + drag + spin}deg)` }} />
-          </div>
-          {nextItem && (
-            <button type="button" className="fd-peek fd-peek-right" onClick={() => spinTo(1)} aria-label={`Next: ${nextItem.name}`}>
-              <img src={nextItem.image_url || nextItem.image} alt="" draggable="false" />
-            </button>
-          )}
+          {options.map((o, i) => {
+            const rel = i - index;
+            if (Math.abs(rel) > 2) return null;
+            const slot = slotWidth();
+            const offset = rel * slot + dragX;
+            const t = Math.min(1, Math.abs(offset) / slot);
+            const scale = 1 - t * 0.48;
+            return (
+              <button key={o.id} type="button" tabIndex={rel === 0 ? -1 : 0}
+                onClick={() => { if (rel !== 0 && !moved.current) goTo(i); moved.current = false; }}
+                aria-label={rel === 0 ? o.name : `Show ${o.name}`}
+                className={`fd-plate ${rel === 0 && location.state?.morph && !current ? 'fd-plate-morph' : ''} ${rel === 0 ? 'is-center' : ''}`}
+                style={{
+                  transform: `translateX(calc(-50% + ${offset}px)) scale(${scale})`,
+                  opacity: 1 - t * 0.45,
+                  zIndex: 10 - Math.abs(rel),
+                  viewTransitionName: o.id === baseItem.id ? `food-${o.id}` : undefined,
+                }}>
+                <img src={o.image_url || o.image} alt="" draggable="false" />
+              </button>
+            );
+          })}
         </div>
 
         {many && (
           <div className="flex items-center justify-center gap-3 mt-3 fd-fade" style={{ animationDelay: '500ms' }}>
-            <button onClick={() => spinTo(-1)} aria-label="Previous option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10"><ChevronLeft className="w-5 h-5" /></button>
+            <button onClick={() => goTo(index - 1)} disabled={index === 0} aria-label="Previous option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
             <div className="flex items-center gap-1.5">
               {options.slice(0, 8).map((o, i) => (
                 <span key={o.id} className={`h-1.5 rounded-full transition-all ${i === index ? 'w-5 bg-ember-500' : 'w-1.5 bg-white/25'}`} />
               ))}
             </div>
-            <button onClick={() => spinTo(1)} aria-label="Next option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10"><ChevronRight className="w-5 h-5" /></button>
+            <button onClick={() => goTo(index + 1)} disabled={index === options.length - 1} aria-label="Next option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
           </div>
         )}
 
-        {/* Facts, sliding in one by one (again after each spin) */}
+        {/* Facts, sliding in one by one (again after each swipe) */}
         <div key={foodItem.id} className="relative z-10 px-5 mt-5 grid grid-cols-2 gap-3">
           {facts.map(({ label, value, Icon, tint }, i) => (
             <div key={label} className="fd-fact fd-slide" style={{ animationDelay: `${(current ? 0 : 200) + i * 70}ms` }}>
