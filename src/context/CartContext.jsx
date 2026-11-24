@@ -14,6 +14,15 @@ export const useCart = () => {
 export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [restaurantId, setRestaurantId] = useState(null);
+  // Promo code the customer entered in the cart; checked again at checkout
+  const [promoCode, setPromoCodeState] = useState(() => {
+    try { return localStorage.getItem('cartPromo') || ''; } catch { return ''; }
+  });
+  const setPromoCode = (code) => {
+    const c = (code || '').trim().toUpperCase();
+    setPromoCodeState(c);
+    try { c ? safeLocalSet('cartPromo', c) : localStorage.removeItem('cartPromo'); } catch { /* storage unavailable */ }
+  };
 
   // Load cart from localStorage on mount
   useEffect(() => {
@@ -67,6 +76,7 @@ export const CartProvider = ({ children }) => {
       const newItems = prevItems.filter((i) => i.id !== itemId);
       if (newItems.length === 0) {
         setRestaurantId(null);
+        setPromoCode('');
         localStorage.removeItem('cartRestaurantId');
       }
       return newItems;
@@ -85,6 +95,7 @@ export const CartProvider = ({ children }) => {
 
   const clearCart = () => {
     setCartItems([]);
+    setPromoCode('');
     setRestaurantId(null);
     localStorage.removeItem('cart');
     localStorage.removeItem('cartRestaurantId');
@@ -107,6 +118,8 @@ export const CartProvider = ({ children }) => {
     clearCart,
     getCartTotal,
     getCartCount,
+    promoCode,
+    setPromoCode,
   };
 
   return <CartContext.Provider value={value}>{children}</CartContext.Provider>;

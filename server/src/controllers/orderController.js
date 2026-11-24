@@ -290,12 +290,12 @@ async function placeOrder(req, res) {
   if (promoCode) {
     const { rows: promos } = await pool.query(
       `SELECT p.* FROM promo_codes p
-       WHERE p.code = $1 AND p.is_active = true
+       WHERE UPPER(p.code) = UPPER($1) AND p.is_active = true
          AND (p.starts_at  IS NULL OR p.starts_at  <= NOW())
          AND (p.expires_at IS NULL OR p.expires_at >  NOW())
          AND (p.max_uses   IS NULL OR p.used_count < p.max_uses)
          AND (p.owner_id   IS NULL OR p.owner_id = (SELECT owner_id FROM restaurants WHERE id = $2))`,
-      [promoCode, restaurantId]
+      [String(promoCode).trim(), restaurantId]
     );
     if (promos.length && gross >= Number(promos[0].min_order)) {
       const p = promos[0];

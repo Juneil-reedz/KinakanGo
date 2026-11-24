@@ -232,7 +232,7 @@ export const promosApi = {
   create:   (data)        => request('/promos',         { method: 'POST',   body: JSON.stringify(data) }),
   update:   (id, data)    => request(`/promos/${id}`,   { method: 'PATCH',  body: JSON.stringify(data) }),
   remove:   (id)          => request(`/promos/${id}`,   { method: 'DELETE' }),
-  validate: (code, total) => request('/promos/validate',{ method: 'POST',   body: JSON.stringify({ code, orderTotal: total }) }),
+  validate: (code, total, restaurantId) => request('/promos/validate',{ method: 'POST', body: JSON.stringify({ code, orderTotal: total, restaurantId }) }),
 };
 
 // Legacy named exports kept for any pages that import them directly
