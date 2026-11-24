@@ -1,9 +1,36 @@
-import { useEffect, useState } from 'react';
-import { ArrowLeft, Check, Inbox, MessageSquare, Pencil, Plus, Reply, Send, Trash2, User, X } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
+import { ArrowLeft, Check, CheckCheck, MessageSquare, Pencil, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { messagesApi } from '../services/api';
 import { useDialog } from '../context/DialogContext';
 
+const DESKTOP_QUERY = '(min-width: 37.5rem)';
+
+const formatTime = (value) => {
+  if (!value) return '';
+  const d = new Date(value);
+  const now = new Date();
+  if (d.toDateString() === now.toDateString()) return d.toLocaleTimeString('en-PH', { hour: 'numeric', minute: '2-digit' });
+  const yesterday = new Date(now); yesterday.setDate(now.getDate() - 1);
+  if (d.toDateString() === yesterday.toDateString()) return 'Yesterday';
+  return d.toLocaleDateString('en-PH', { month: 'short', day: 'numeric' });
+};
+
+const useIsDesktop = () => {
+  const [isDesktop, setIsDesktop] = useState(() => typeof window !== 'undefined' && window.matchMedia(DESKTOP_QUERY).matches);
+  useEffect(() => {
+    const mq = window.matchMedia(DESKTOP_QUERY);
+    const onChange = () => setIsDesktop(mq.matches);
+    mq.addEventListener('change', onChange);
+    return () => mq.removeEventListener('change', onChange);
+  }, []);
+  return isDesktop;
+};
+
 export default function Messages() {
+  const isDesktop = useIsDesktop();
+  const threadEndRef = useRef(null);
+  const [actionId, setActionId] = useState(null);
   const [messages, setMessages] = useState([]);
   const [selectedKey, setSelectedKey] = useState(null);
   const [showComposer, setShowComposer] = useState(false);
@@ -156,152 +183,189 @@ export default function Messages() {
 
   const closeMobileThread = () => {
     setEditing(null);
+    setActionId(null);
     setMobileThreadOpen(false);
   };
 
+  // Keep the newest message in view
+  useEffect(() => {
+    const el = threadEndRef.current;
+    if (el) el.scrollIntoView({ block: 'end' });
+  }, [selectedConversation?.key, thread.length, mobileThreadOpen]);
+
+  const avatar = (conversation, size = 'w-11 h-11') => (
+    <div className={`${size} rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden bg-white/10 ring-2 ring-white/10`}>
+      {conversation?.image
+        ? <img src={conversation.image} alt="" className="w-full h-full object-cover" />
+        : <User className="w-1/2 h-1/2 text-forest-100" />}
+    </div>
+  );
+
+  const threadView = selectedConversation ? (
+    <>
+      {/* Chat header */}
+      <div className="chat-header flex items-center gap-3 px-3 sm:px-4 py-3 flex-shrink-0">
+        <button type="button" onClick={closeMobileThread} aria-label="Back"
+          className="lg:hidden w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0">
+          <ArrowLeft className="w-6 h-6" />
+        </button>
+        {avatar(selectedConversation)}
+        <div className="min-w-0 flex-1">
+          <p className="text-white font-heading font-bold text-[1.05rem] truncate">{selectedConversation.name}</p>
+          <p className="text-forest-200/60 text-xs truncate">{selectedConversation.image ? 'Restaurant' : (selectedConversation.email || 'Conversation')}</p>
+        </div>
+      </div>
+
+      {/* Order / subject strip */}
+      {selectedConversation.latest?.subject && (
+        <div className="px-3 sm:px-4 pt-3 flex-shrink-0">
+          <div className="glass rounded-2xl px-3 py-2.5 flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-ember-500/15 text-ember-400 flex items-center justify-center flex-shrink-0">
+              <MessageSquare className="w-4 h-4" />
+            </div>
+            <p className="text-white text-sm font-semibold truncate">{selectedConversation.latest.subject.replace(/^(Re:\s*)+/i, '')}</p>
+          </div>
+        </div>
+      )}
+
+      {/* Bubbles */}
+      <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-3 scrollbar-hide"
+        onClick={() => setActionId(null)}>
+        {thread.map(message => {
+          const mine = message.box === 'sent';
+          const at = message.created_at || message.createdAt;
+          const edited = message.updated_at && message.updated_at !== message.created_at;
+          if (editing?.id === message.id) {
+            return (
+              <form key={message.id} onSubmit={saveEdit} onClick={e => e.stopPropagation()}
+                className="ml-auto max-w-[85%] glass rounded-3xl p-3 space-y-2">
+                <textarea value={editing.body} onChange={e => setEditing(edit => ({ ...edit, body: e.target.value }))}
+                  rows={3} autoFocus className="w-full input-glass py-2 text-sm resize-none" placeholder="Message" />
+                <div className="flex justify-end gap-2">
+                  <button type="button" onClick={cancelEdit} className="glass text-forest-100 text-xs font-semibold px-3 py-2 rounded-full">Cancel</button>
+                  <button type="submit" disabled={!editing.body.trim() || savingEdit}
+                    className="btn-glow-orange text-white text-xs font-bold px-3 py-2 rounded-full flex items-center gap-1 disabled:opacity-50">
+                    <Check className="w-3.5 h-3.5" /> Save
+                  </button>
+                </div>
+              </form>
+            );
+          }
+          return (
+            <div key={message.id} className={`flex items-start gap-2 ${mine ? 'justify-end' : ''}`}>
+              {!mine && avatar(selectedConversation, 'w-8 h-8')}
+              <div className={`max-w-[78%] flex flex-col ${mine ? 'items-end' : 'items-start'}`}>
+                <button type="button" onClick={e => { e.stopPropagation(); setActionId(id => id === message.id ? null : message.id); }}
+                  className={`chat-bubble ${mine ? 'chat-bubble-mine' : 'chat-bubble-theirs'}`}>
+                  {message.body}
+                </button>
+                <p className="text-forest-200/45 text-[11px] mt-1 px-1 flex items-center gap-1">
+                  {formatTime(at)}{edited ? ' · edited' : ''}
+                  {mine && <CheckCheck className="w-3.5 h-3.5 text-ember-400" />}
+                </p>
+                {actionId === message.id && (
+                  <div className="flex gap-1.5 mt-1" onClick={e => e.stopPropagation()}>
+                    {mine && (
+                      <button type="button" onClick={() => { startEdit(message); setActionId(null); }}
+                        className="glass text-forest-100 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1">
+                        <Pencil className="w-3 h-3" /> Edit
+                      </button>
+                    )}
+                    <button type="button" onClick={() => { setActionId(null); deleteMessage(message.id); }}
+                      className="glass text-red-300 text-xs font-semibold px-3 py-1.5 rounded-full flex items-center gap-1">
+                      <Trash2 className="w-3 h-3" /> Delete
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          );
+        })}
+        <div ref={threadEndRef} />
+      </div>
+
+      {/* Composer */}
+      <form onSubmit={sendReply} className="flex items-center gap-2 px-3 sm:px-4 pt-2 pb-[max(.75rem,env(safe-area-inset-bottom))] flex-shrink-0">
+        <input value={reply} onChange={e => setReply(e.target.value)}
+          placeholder="Type your message..." aria-label={`Reply to ${selectedConversation.name}`}
+          className="flex-1 min-w-0 input-glass rounded-full px-5 py-3 text-sm" />
+        <button type="submit" disabled={!reply.trim() || sendingReply} aria-label="Send"
+          className="w-12 h-12 rounded-full btn-glow-orange text-white flex items-center justify-center flex-shrink-0 disabled:opacity-60">
+          <Send className="w-5 h-5 -ml-0.5" />
+        </button>
+      </form>
+    </>
+  ) : (
+    <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
+      <MessageSquare className="w-14 h-14 text-forest-300/25 mb-3" />
+      <p className="text-white font-semibold">Select a message</p>
+      <p className="text-forest-200/45 text-sm mt-1">Open a message to view the conversation.</p>
+    </div>
+  );
+
   return (
-    <div className={`h-full flex flex-col animate-fade-up space-y-3 sm:space-y-4 ${mobileThreadOpen ? 'pb-0' : 'pb-20'} lg:pb-0`}>
-      <div className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} items-center justify-between gap-3`}>
-        <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">Messages</h1>
+    <div className="h-full flex flex-col animate-fade-up gap-4 pb-24 lg:pb-0">
+      <div className="flex items-center justify-between gap-3">
+        <div>
+          <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">Messages</h1>
+          <p className="text-forest-200/55 text-sm mt-1">{conversations.length} conversation{conversations.length === 1 ? '' : 's'}</p>
+        </div>
         <button onClick={() => setShowComposer(true)}
-          className="btn-glow-orange text-white text-sm px-4 sm:px-4 py-3 sm:py-2.5 rounded-2xl sm:rounded-xl font-semibold flex items-center gap-1.5 whitespace-nowrap">
-          <Plus className="w-4 h-4" /> <span className="hidden min-[380px]:inline">Create Message</span><span className="min-[380px]:hidden">Create</span>
+          className="btn-glow-orange text-white text-sm px-4 py-3 sm:py-2.5 rounded-full font-semibold flex items-center gap-1.5 whitespace-nowrap">
+          <Plus className="w-4 h-4" /> <span className="hidden min-[380px]:inline">New Message</span><span className="min-[380px]:hidden">New</span>
         </button>
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-0 lg:min-h-[calc(100vh-13rem)]">
-        <section className={`${mobileThreadOpen ? 'hidden lg:flex' : 'flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col min-h-[calc(100vh-14rem)] lg:min-h-0`}>
-          <div className="p-4 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
-            <div className="flex items-center gap-2">
-              <Inbox className="w-4 h-4 text-forest-300" />
-              <p className="text-white font-semibold">Inbox</p>
-            </div>
-            <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full">{conversations.length}</span>
-          </div>
-
+      <div className="grid grid-cols-1 lg:grid-cols-[22rem_1fr] gap-4 min-h-0 lg:h-[calc(100vh-11rem)]">
+        {/* Inbox: one floating card per conversation */}
+        <section className="flex flex-col gap-3 min-h-0 lg:overflow-y-auto scrollbar-hide lg:pr-1">
           {loading ? (
-            <div className="p-4 space-y-3">
-              {[1,2,3].map(i => <div key={i} className="glass rounded-2xl h-20 animate-pulse" />)}
-            </div>
+            [1,2,3].map(i => <div key={i} className="glass rounded-3xl h-20 animate-pulse" />)
           ) : conversations.length === 0 ? (
-            <div className="flex-1 flex items-center justify-center py-20 px-6 text-center">
+            <div className="glass rounded-3xl flex items-center justify-center py-16 px-6 text-center">
               <div className="flex flex-col items-center gap-3">
                 <MessageSquare className="w-14 h-14 text-forest-300/30" />
                 <p className="text-white font-semibold">No messages yet</p>
                 <p className="text-forest-200/50 text-sm">Create a message for a restaurant or support.</p>
               </div>
             </div>
-          ) : (
-            <div className="divide-y divide-white/5 overflow-auto">
-              {conversations.map(conversation => {
-                const active = selectedConversation?.key === conversation.key;
-                const latest = conversation.latest;
-                return (
-                  <button key={conversation.key} onClick={() => openConversation(conversation)}
-                    className={`w-full p-4 sm:p-4 text-left transition-all flex gap-3 ${active ? 'glass-green' : 'hover:glass'}`}>
-                    <div className="w-12 h-12 sm:w-10 sm:h-10 btn-glow-green rounded-2xl sm:rounded-xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-                      {conversation.image
-                        ? <img src={conversation.image} alt={conversation.name} className="w-full h-full object-cover" />
-                        : <User className="w-4 h-4 text-white" />}
-                    </div>
-                    <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3 mb-1">
-                        <p className="text-white text-sm font-semibold truncate">{conversation.name}</p>
-                        {conversation.unread && <span className="w-2 h-2 rounded-full bg-ember-400 flex-shrink-0 mt-1.5" />}
-                      </div>
-                      <p className="text-forest-200/65 text-sm sm:text-xs truncate">{latest.box === 'sent' ? 'You: ' : ''}{latest.body}</p>
-                      <p className="text-forest-200/40 text-xs mt-1">{new Date(latest.created_at || latest.createdAt).toLocaleString('en-PH')}</p>
-                    </div>
-                  </button>
-                );
-              })}
-            </div>
-          )}
-        </section>
-
-        <section className={`${mobileThreadOpen ? 'flex' : 'hidden lg:flex'} glass rounded-[2rem] sm:rounded-3xl overflow-hidden flex-col h-[calc(100vh-8.5rem)] min-h-0 lg:h-auto lg:min-h-0`}>
-          {selectedConversation ? (
-            <>
-              <div className="p-4 sm:p-5 flex items-center gap-3" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
-                <button type="button" onClick={closeMobileThread}
-                  className="lg:hidden w-10 h-10 glass rounded-2xl flex items-center justify-center text-forest-100 flex-shrink-0">
-                  <ArrowLeft className="w-5 h-5" />
-                </button>
-                <div className="w-11 h-11 btn-glow-green rounded-2xl flex items-center justify-center flex-shrink-0 overflow-hidden">
-                  {selectedConversation.image
-                    ? <img src={selectedConversation.image} alt={selectedConversation.name} className="w-full h-full rounded-2xl object-cover" />
-                    : <User className="w-5 h-5 text-white" />}
-                </div>
-                <div className="min-w-0">
-                  <p className="text-white font-heading font-bold truncate">{selectedConversation.name}</p>
-                  <p className="text-forest-200/55 text-sm">Conversation</p>
-                </div>
-              </div>
-
-              <div className="flex-1 min-h-0 p-3 sm:p-5 overflow-y-auto overscroll-contain space-y-3 sm:space-y-4 scrollbar-hide">
-                {thread.map(message => (
-                  <div key={message.id} className={`rounded-3xl sm:rounded-2xl p-4 border border-white/5 max-w-[92%] sm:max-w-[85%] ${message.box === 'sent' ? 'ml-auto glass-green' : 'glass-dark'}`}>
-                    {editing?.id === message.id ? (
-                      <form onSubmit={saveEdit} className="space-y-3">
-                        <input value={editing.subject} onChange={e => setEditing(edit => ({ ...edit, subject: e.target.value }))}
-                          className="w-full input-glass py-2 text-sm" placeholder="Subject" />
-                        <textarea value={editing.body} onChange={e => setEditing(edit => ({ ...edit, body: e.target.value }))}
-                          rows={4} className="w-full input-glass py-2 text-sm resize-none" placeholder="Message" />
-                        <div className="flex justify-end gap-2">
-                          <button type="button" onClick={cancelEdit} className="glass text-forest-100 text-xs font-semibold px-3 py-2 rounded-lg">Cancel</button>
-                          <button type="submit" disabled={!editing.body.trim() || savingEdit}
-                            className="btn-glow-green text-white text-xs font-bold px-3 py-2 rounded-lg flex items-center gap-1 disabled:opacity-50">
-                            <Check className="w-3.5 h-3.5" /> Save
-                          </button>
-                        </div>
-                      </form>
-                    ) : (
-                      <>
-                        <div className="flex flex-col sm:flex-row sm:items-start sm:justify-between gap-3">
-                          <p className="text-forest-100/80 text-sm leading-relaxed whitespace-pre-wrap flex-1">{message.body}</p>
-                          <div className="flex items-center justify-end gap-2 flex-shrink-0">
-                            {message.box === 'sent' && (
-                              <button type="button" onClick={() => startEdit(message)} className="w-9 h-9 sm:w-7 sm:h-7 glass rounded-xl sm:rounded-lg flex items-center justify-center text-forest-100 hover:glass-green" title="Edit message">
-                                <Pencil className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                              </button>
-                            )}
-                            <button type="button" onClick={() => deleteMessage(message.id)} className="w-9 h-9 sm:w-7 sm:h-7 glass rounded-xl sm:rounded-lg flex items-center justify-center text-forest-100 hover:glass-orange" title="Delete message">
-                              <Trash2 className="w-4 h-4 sm:w-3.5 sm:h-3.5" />
-                            </button>
-                          </div>
-                        </div>
-                        <p className="text-forest-200/40 text-[11px] sm:text-xs mt-3 leading-relaxed">
-                          {message.box === 'sent' ? 'You' : (restaurantNameFrom(message) || message.sender_name || 'Sender')} · {new Date(message.created_at || message.createdAt).toLocaleString('en-PH')}
-                          {message.updated_at && message.updated_at !== message.created_at ? ' · edited' : ''}
-                        </p>
-                      </>
-                    )}
+          ) : conversations.map(conversation => {
+            const active = isDesktop && selectedConversation?.key === conversation.key;
+            const latest = conversation.latest;
+            return (
+              <button key={conversation.key} onClick={() => openConversation(conversation)}
+                className={`inbox-card w-full p-3.5 text-left flex items-center gap-3 ${active ? 'is-active' : ''}`}>
+                {avatar(conversation, 'w-12 h-12')}
+                <div className="min-w-0 flex-1">
+                  <div className="flex items-baseline justify-between gap-2">
+                    <p className={`text-white text-[.95rem] truncate ${conversation.unread ? 'font-bold' : 'font-semibold'}`}>{conversation.name}</p>
+                    <p className={`text-[11px] flex-shrink-0 ${conversation.unread ? 'text-ember-400 font-semibold' : 'text-forest-200/45'}`}>{formatTime(latest.created_at || latest.createdAt)}</p>
                   </div>
-                ))}
-              </div>
-
-              <form onSubmit={sendReply} className="p-4 space-y-3" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
-                <div className="flex items-center gap-2 text-forest-200/60 text-xs font-semibold uppercase tracking-wide">
-                  <Reply className="w-3.5 h-3.5" /> Reply to {selectedConversation.name}
+                  <div className="flex items-center justify-between gap-2 mt-0.5">
+                    <p className={`text-sm truncate ${conversation.unread ? 'text-forest-100' : 'text-forest-200/60'}`}>{latest.box === 'sent' ? 'You: ' : ''}{latest.body}</p>
+                    {conversation.unread && <span className="w-2.5 h-2.5 rounded-full bg-ember-500 flex-shrink-0" />}
+                  </div>
                 </div>
-                <textarea value={reply} onChange={e => setReply(e.target.value)} rows={4}
-                  placeholder="Write your reply..."
-                  className="w-full input-glass py-3 text-sm resize-none min-h-28 sm:min-h-0" />
-                <button type="submit" disabled={!reply.trim() || sendingReply}
-                  className="w-full sm:w-auto btn-glow-orange text-white text-sm font-bold px-4 py-3 sm:py-2.5 rounded-2xl sm:rounded-xl flex items-center justify-center gap-2 disabled:opacity-50 sm:ml-auto">
-                  <Send className="w-4 h-4" /> {sendingReply ? 'Sending...' : 'Send Reply'}
-                </button>
-              </form>
-            </>
-          ) : (
-            <div className="flex-1 flex flex-col items-center justify-center text-center p-8">
-              <MessageSquare className="w-14 h-14 text-forest-300/25 mb-3" />
-              <p className="text-white font-semibold">Select a message</p>
-              <p className="text-forest-200/45 text-sm mt-1">Open a message to view the conversation.</p>
-            </div>
-          )}
+              </button>
+            );
+          })}
         </section>
+
+        {/* Desktop: conversation beside the list */}
+        {isDesktop && (
+          <section className="glass rounded-3xl overflow-hidden flex flex-col min-h-0">
+            {threadView}
+          </section>
+        )}
       </div>
+
+      {/* Phone: the conversation opens over the whole screen */}
+      {!isDesktop && mobileThreadOpen && selectedConversation && createPortal(
+        <div className="chat-screen fixed inset-0 z-[60] flex flex-col animate-fade-up">
+          {threadView}
+        </div>,
+        document.body
+      )}
 
       {showComposer && (
         <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"

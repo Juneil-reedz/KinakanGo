@@ -2,12 +2,13 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Home as HomeIcon, ShoppingBag, ShoppingCart, Heart, Clock } from 'lucide-react';
 
-const ITEMS = [
-  { key: 'dashboard',     icon: HomeIcon,     path: '/' },
-  { key: 'food-order',    icon: ShoppingBag,  path: '/restaurants' },
-  { key: 'cart',          icon: ShoppingCart, path: '/cart' },
-  { key: 'favorite',      icon: Heart,        path: '/favorites' },
-  { key: 'order-history', icon: Clock,        path: '/orders' },
+// Left two, the raised cart in the middle, right two (like the reference)
+const SIDE_ITEMS = [
+  { key: 'dashboard',     label: 'Home',      icon: HomeIcon,    path: '/' },
+  { key: 'food-order',    label: 'Food',      icon: ShoppingBag, path: '/restaurants' },
+  null,
+  { key: 'favorite',      label: 'Favorites', icon: Heart,       path: '/favorites' },
+  { key: 'order-history', label: 'Orders',    icon: Clock,       path: '/orders' },
 ];
 
 // Only highlight a tab when we're in that section (not on Profile, Settings, etc.)
@@ -15,7 +16,8 @@ const getActiveKey = (pathname) => {
   if (pathname === '/') return 'dashboard';
   if (pathname.startsWith('/restaurants') || pathname.startsWith('/restaurant/') || pathname === '/search') return 'food-order';
   if (pathname.startsWith('/order-')) return 'order-history';
-  const match = ITEMS.find(i => i.path !== '/' && pathname === i.path);
+  if (pathname === '/cart') return 'cart';
+  const match = SIDE_ITEMS.find(i => i && i.path !== '/' && pathname === i.path);
   return match ? match.key : null;
 };
 
@@ -26,25 +28,35 @@ export default function CustomerBottomNav({ fixed = true }) {
   const { pathname } = useLocation();
   const { cartItems } = useCart();
   const activeKey = getActiveKey(pathname);
+  const cartActive = activeKey === 'cart';
 
   return (
-    <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-30' : ''} lg:hidden glass-dark bottom-nav`}
-      style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)' }}>
-      <div className="flex items-center justify-around px-2 py-2">
-        {ITEMS.map(({ key, icon: Icon, path }) => {
+    <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-30' : ''} lg:hidden bottom-nav nav-dock`}>
+      <div className="grid grid-cols-5 items-end px-2 pt-2 pb-[max(.6rem,env(safe-area-inset-bottom))]">
+        {SIDE_ITEMS.map((item, i) => {
+          if (!item) {
+            return (
+              <div key="cart" className="flex justify-center">
+                <button onClick={() => navigate('/cart')} aria-label="Cart"
+                  className={`nav-dock-cart ${cartActive ? 'is-active' : ''}`}>
+                  <ShoppingCart className="w-6 h-6" />
+                  {cartItems.length > 0 && (
+                    <span className="absolute -top-0.5 -right-0.5 min-w-5 h-5 px-1 rounded-full bg-white text-ember-600 text-[10px] flex items-center justify-center font-bold shadow">
+                      {cartItems.length}
+                    </span>
+                  )}
+                </button>
+              </div>
+            );
+          }
+          const { key, label, icon: Icon, path } = item;
           const isAct = key === activeKey;
-          const badge = key === 'cart' ? cartItems.length : 0;
           return (
-            <button key={key} onClick={() => navigate(path)}
-              className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 relative transition-all
-                ${isAct ? 'clay-active' : 'text-forest-200/60 hover:text-forest-100'}`}>
-              <Icon className="w-5 h-5" />
-              {badge > 0 && (
-                <span className="absolute top-1 right-1/2 translate-x-2 w-4 h-4 btn-glow-orange rounded-full text-white text-[9px] flex items-center justify-center font-bold">
-                  {badge}
-                </span>
-              )}
-              {isAct && <div className="w-1 h-1 rounded-full bg-ember-500 mt-1" />}
+            <button key={key || i} onClick={() => navigate(path)} aria-label={label}
+              aria-current={isAct ? 'page' : undefined}
+              className={`nav-dock-item ${isAct ? 'is-active' : ''}`}>
+              <Icon className="w-[1.35rem] h-[1.35rem]" fill={isAct && key === 'favorite' ? 'currentColor' : 'none'} />
+              <span>{label}</span>
             </button>
           );
         })}
