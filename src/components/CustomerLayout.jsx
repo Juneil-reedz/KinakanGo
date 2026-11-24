@@ -128,7 +128,7 @@ export default function CustomerLayout() {
           LEFT SIDEBAR
       ══════════════════════════════ */}
       <aside className={`
-        flex flex-col glass-dark z-50 h-full transition-all duration-300
+        flex flex-col glass-dark clay-forest-bar z-50 h-full transition-all duration-300
         ${collapsed ? 'w-20' : 'w-64'}
         fixed lg:relative
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
@@ -165,18 +165,18 @@ export default function CustomerLayout() {
                   relative w-full flex items-center ${collapsed ? 'justify-center' : 'gap-3'}
                   px-3 py-2.5 rounded-xl font-medium text-sm transition-all duration-200
                   ${isActive
-                    ? 'btn-glow-orange text-white shadow-lg'
+                    ? 'clay-active'
                     : 'text-forest-100/70 hover:text-white hover:glass-green'}
                 `}>
-                <Icon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-white' : ''}`} />
+                <Icon className="w-5 h-5 flex-shrink-0" />
                 {!collapsed && <span className="truncate">{label}</span>}
                 {key === 'notification' && unreadNotifications > 0 && (
                   <span className={`${collapsed ? 'absolute top-1 right-1' : 'ml-auto'} min-w-5 h-5 px-1.5 rounded-full text-[10px] font-bold flex items-center justify-center
-                    ${isActive ? 'bg-white/90 text-ember-700' : 'btn-glow-orange text-white'}`}>
+                    btn-glow-orange text-white`}>
                     {unreadNotifications > 9 ? '9+' : unreadNotifications}
                   </span>
                 )}
-                {!collapsed && isActive && !(key === 'notification' && unreadNotifications > 0) && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-white/80" />}
+                {!collapsed && isActive && !(key === 'notification' && unreadNotifications > 0) && <div className="ml-auto w-1.5 h-1.5 rounded-full bg-ember-500" />}
               </button>
             );
           })}
@@ -240,7 +240,7 @@ export default function CustomerLayout() {
 
         {/* Header — dashboard only */}
         {active === 'dashboard' && (
-          <header className="glass-dark flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
+          <header className="glass-dark clay-forest-bar flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
             style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
 
             {/* Mobile menu btn */}

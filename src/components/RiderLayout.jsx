@@ -63,7 +63,7 @@ export default function RiderLayout({ children }) {
         {NAV.map(({ path, label, icon:Icon }) => (
           <button key={path} onClick={() => goTo(path)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left
-              ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:glass hover:text-white'}`}>
+              ${isActive(path) ? 'clay-active' : 'text-forest-100/70 hover:glass hover:text-white'}`}>
             <Icon className="w-4 h-4 flex-shrink-0" /><span>{label}</span>
           </button>
         ))}
@@ -97,20 +97,20 @@ export default function RiderLayout({ children }) {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {mobileOpen && <button aria-label="Close menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/60 z-40 lg:hidden" />}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark transform transition-transform duration-300 lg:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark clay-forest-bar transform transition-transform duration-300 lg:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <SidebarContent mobile />
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block lg:w-64 glass-dark flex-shrink-0" style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
+      <aside className="hidden lg:block lg:w-64 glass-dark clay-forest-bar flex-shrink-0" style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <SidebarContent />
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="glass-dark px-5 py-3 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
+        <header className="glass-dark clay-forest-bar px-5 py-3 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
               <Menu className="w-4 h-4" />
@@ -131,7 +131,7 @@ export default function RiderLayout({ children }) {
           {NAV.map(({ path, label, icon:Icon }) => (
             <button key={path} onClick={() => goTo(path)}
               className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
-                ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-200/55'}`}>
+                ${isActive(path) ? 'clay-active' : 'text-forest-200/70'}`}>
               <Icon className="w-4 h-4" />{label}
             </button>
           ))}

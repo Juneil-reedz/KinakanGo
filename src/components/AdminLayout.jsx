@@ -39,7 +39,7 @@ export default function AdminLayout({ children }) {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className={`glass-dark flex-shrink-0 fixed top-0 left-0 h-screen z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
+      <aside className={`glass-dark clay-forest-bar flex-shrink-0 fixed top-0 left-0 h-screen z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
         style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -64,7 +64,7 @@ export default function AdminLayout({ children }) {
               <Link key={path} to={path} title={collapsed ? label : ''}
                 className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
                   ${collapsed ? 'justify-center' : ''}
-                  ${isActive(path) ? 'btn-glow-green text-white' : 'text-forest-100/60 hover:glass hover:text-white'}`}>
+                  ${isActive(path) ? 'clay-active' : 'text-forest-100/70 hover:glass hover:text-white'}`}>
                 <Icon className="w-5 h-5 flex-shrink-0" />
                 {!collapsed && <span>{label}</span>}
               </Link>
@@ -96,7 +96,7 @@ export default function AdminLayout({ children }) {
       {/* Main content */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Top bar */}
-        <header className="glass-dark sticky top-0 z-30 px-5 py-3 flex items-center justify-between"
+        <header className="glass-dark clay-forest-bar sticky top-0 z-30 px-5 py-3 flex items-center justify-between"
           style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <h2 className="text-white font-heading font-bold">
             {NAV.find(n => isActive(n.path))?.label || 'Dashboard'}

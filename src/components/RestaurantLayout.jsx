@@ -89,7 +89,7 @@ export default function RestaurantLayout({ children }) {
                 <Link key={path} to={path} title={collapsed ? label : ''}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all
                     ${collapsed ? 'justify-center' : ''}
-                    ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:glass hover:text-white'}`}>
+                    ${isActive(path) ? 'clay-active' : 'text-forest-100/70 hover:glass hover:text-white'}`}>
                   <Icon className="w-5 h-5 flex-shrink-0" />
                   {!collapsed && <span>{label}</span>}
                 </Link>
@@ -134,13 +134,13 @@ export default function RestaurantLayout({ children }) {
     <div className="min-h-screen flex">
       {/* Phone drawer */}
       {mobileOpen && <button aria-label="Close menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/60 z-40 xl:hidden" />}
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark transform transition-transform duration-300 xl:hidden overflow-y-auto ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
-        style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)', background:'var(--panel-bg)' }} aria-hidden={!mobileOpen}>
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark clay-forest-bar transform transition-transform duration-300 xl:hidden overflow-y-auto ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+        style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }} aria-hidden={!mobileOpen}>
         {sidebarContent(true)}
       </aside>
 
       {/* Desktop / tablet sidebar */}
-      <aside className={`hidden xl:block glass-dark flex-shrink-0 relative transition-all duration-300 ${collapsedDesktop ? 'w-20' : 'w-64'}`}
+      <aside className={`hidden xl:block glass-dark clay-forest-bar flex-shrink-0 relative transition-all duration-300 ${collapsedDesktop ? 'w-20' : 'w-64'}`}
         style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         {sidebarContent(false)}
         {/* Collapse toggle */}
@@ -153,7 +153,7 @@ export default function RestaurantLayout({ children }) {
       {/* Main */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Top bar */}
-        <header className="glass-dark px-4 py-3 xl:px-6 xl:py-4 flex items-center justify-between gap-2 flex-shrink-0 sticky top-0 z-30 xl:static"
+        <header className="glass-dark clay-forest-bar px-4 py-3 xl:px-6 xl:py-4 flex items-center justify-between gap-2 flex-shrink-0 sticky top-0 z-30 xl:static"
           style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <div className="flex items-center gap-3 min-w-0">
             <button onClick={() => setMobileOpen(true)} aria-label="Open menu"
@@ -186,13 +186,13 @@ export default function RestaurantLayout({ children }) {
           {BOTTOM.map(({ path, label, icon:Icon }) => (
             <Link key={path} to={path}
               className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
-                ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-200/60'}`}>
+                ${isActive(path) ? 'clay-active' : 'text-forest-200/70'}`}>
               <Icon className="w-4 h-4" />{label}
             </Link>
           ))}
           <button onClick={() => setMobileOpen(true)}
             className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
-              ${BOTTOM.some(n => isActive(n.path)) ? 'text-forest-200/60' : 'btn-glow-orange text-white'}`}>
+              ${BOTTOM.some(n => isActive(n.path)) ? 'text-forest-200/70' : 'clay-active'}`}>
             <Menu className="w-4 h-4" />More
           </button>
         </nav>

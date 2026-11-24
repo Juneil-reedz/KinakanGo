@@ -29,7 +29,7 @@ export default function CustomerBottomNav({ fixed = true }) {
 
   return (
     <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-30' : ''} lg:hidden glass-dark`}
-      style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)', boxShadow: '0 -4px 24px rgba(0,0,0,.4)' }}>
+      style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)' }}>
       <div className="flex items-center justify-around px-2 py-2">
         {ITEMS.map(({ key, icon: Icon, path }) => {
           const isAct = key === activeKey;
@@ -37,14 +37,14 @@ export default function CustomerBottomNav({ fixed = true }) {
           return (
             <button key={key} onClick={() => navigate(path)}
               className={`flex flex-col items-center justify-center p-2 rounded-xl flex-1 relative transition-all
-                ${isAct ? 'text-ember-400' : 'text-forest-200/50 hover:text-forest-100'}`}>
+                ${isAct ? 'clay-active' : 'text-forest-200/60 hover:text-forest-100'}`}>
               <Icon className="w-5 h-5" />
               {badge > 0 && (
                 <span className="absolute top-1 right-1/2 translate-x-2 w-4 h-4 btn-glow-orange rounded-full text-white text-[9px] flex items-center justify-center font-bold">
                   {badge}
                 </span>
               )}
-              {isAct && <div className="w-1 h-1 rounded-full bg-ember-400 mt-1" />}
+              {isAct && <div className="w-1 h-1 rounded-full bg-ember-500 mt-1" />}
             </button>
           );
         })}
