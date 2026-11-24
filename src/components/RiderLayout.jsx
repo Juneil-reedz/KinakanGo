@@ -126,7 +126,7 @@ export default function RiderLayout({ children }) {
             <NotificationBell to="/rider/notifications" />
           </div>
         </header>
-        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
+        <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6"><div key={location.pathname} className="page-enter">{children}</div></main>
         <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark bottom-nav px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
           {NAV.map(({ path, label, icon:Icon }) => (
             <button key={path} onClick={() => goTo(path)}

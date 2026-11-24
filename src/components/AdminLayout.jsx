@@ -114,7 +114,7 @@ export default function AdminLayout({ children }) {
         </header>
 
         {/* Page content */}
-        <main className="flex-1 p-4 md:p-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 md:p-6 overflow-auto"><div key={location.pathname} className="page-enter">{children}</div></main>
 
         <footer className="glass-dark px-5 py-3 text-center text-forest-200/40 text-xs"
           style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>

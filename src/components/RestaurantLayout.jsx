@@ -178,7 +178,7 @@ export default function RestaurantLayout({ children }) {
             </div>
           </div>
         </header>
-        <main className="flex-1 p-4 pb-24 xl:p-6 xl:pb-6 overflow-auto">{children}</main>
+        <main className="flex-1 p-4 pb-24 xl:p-6 xl:pb-6 overflow-auto"><div key={location.pathname} className="page-enter">{children}</div></main>
 
         {/* Phone bottom bar */}
         <nav aria-label="Main" className="xl:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark bottom-nav px-2 py-2 grid grid-cols-5 gap-1"
