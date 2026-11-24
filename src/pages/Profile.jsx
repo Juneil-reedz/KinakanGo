@@ -151,7 +151,11 @@ export default function Profile() {
       {/* Tabs */}
       <div className="glass rounded-2xl p-1 flex gap-1">
         {[{id:'profile',label:'Profile'},{id:'orders',label:'Order History'}].map(({id,label}) => (
-          <button key={id} onClick={() => setActiveTab(id)}
+          <button key={id} onClick={() => {
+            setActiveTab(id);
+            // Remember the tab in this history entry so Back from an order returns here
+            navigate(location.pathname + location.search, { replace: true, state: { ...(location.state || {}), tab: id } });
+          }}
             className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-all
               ${activeTab === id ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:text-white'}`}>
             {label}
