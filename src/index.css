@@ -234,6 +234,56 @@
 }
 :root:not(.light) :is(.glass-green, .glass-teal) { box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 0 0 1px rgb(247 147 30 / .35), 0 14px 30px -16px rgb(0 0 0 / .75); }
 
+/* Customer bottom dock: rounded top, raised cart in the middle, the active tab lifts */
+.nav-dock {
+  background: var(--glass-dark-bg);
+  -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
+  border-radius: 1.6rem 1.6rem 0 0;
+  box-shadow: 0 -12px 30px -18px rgb(0 0 0 / .8), inset 0 1px 0 rgb(255 255 255 / .07);
+}
+.nav-dock-item {
+  display: flex; flex-direction: column; align-items: center; gap: .2rem;
+  padding: .35rem 0 .15rem; color: rgba(var(--fg-rgb),.5);
+  font-size: .68rem; font-weight: 600;
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1), color .2s;
+}
+.nav-dock-item:hover { color: rgba(var(--fg-rgb),.8); }
+.nav-dock-item.is-active { color: var(--color-ember-500); transform: translateY(-5px); }
+.nav-dock-item span { transition: font-weight .2s; }
+.nav-dock-item.is-active span { font-weight: 800; }
+.nav-dock-cart {
+  position: relative; width: 3.6rem; height: 3.6rem; margin-top: -1.9rem;
+  border-radius: 9999px; display: flex; align-items: center; justify-content: center;
+  color: #fff; background: linear-gradient(160deg, #ffa53d 0%, #f7931e 45%, #e0730a 100%);
+  box-shadow: 0 0 0 5px var(--app-bg), 0 10px 22px -8px rgb(247 147 30 / .7);
+  transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+}
+.nav-dock-cart.is-active { transform: translateY(-5px); }
+.nav-dock-cart:active { transform: scale(.94); }
+:root.light-nav .nav-dock-cart { box-shadow: 0 0 0 5px #faf7f3, 0 10px 22px -8px rgb(247 147 30 / .7); }
+:root.light-nav .nav-dock-item { color: #8a7a6c; }
+:root.light-nav .nav-dock-item.is-active { color: #e0730a; }
+
+/* Messages: floating inbox cards and a full-screen chat on phones */
+.inbox-card {
+  border-radius: 1.4rem;
+  background: rgba(255,255,255,.055);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 0 0 1px rgb(255 255 255 / .06), 0 14px 26px -18px rgb(0 0 0 / .9);
+  transition: transform .2s, background .2s, box-shadow .2s;
+}
+.inbox-card:hover { background: rgba(255,255,255,.08); transform: translateY(-1px); }
+.inbox-card:active { transform: scale(.985); }
+.inbox-card.is-active { background: rgba(247,147,30,.12); box-shadow: inset 0 1px 0 rgb(255 255 255 / .1), 0 0 0 1px rgb(247 147 30 / .45), 0 14px 26px -18px rgb(0 0 0 / .9); }
+.chat-screen { background: var(--app-bg); }
+.chat-header { background: rgba(255,255,255,.05); border-bottom: 1px solid rgba(255,255,255,.06); }
+.chat-screen .chat-header { border-radius: 0 0 1.4rem 1.4rem; padding-top: max(.75rem, env(safe-area-inset-top)); border-bottom: 0; box-shadow: 0 10px 24px -18px rgb(0 0 0 / .9); }
+.chat-bubble {
+  text-align: left; white-space: pre-wrap; word-break: break-word;
+  font-size: .9rem; line-height: 1.45; padding: .7rem 1rem; border-radius: 1.25rem;
+}
+.chat-bubble-theirs { background: rgba(255,255,255,.09); color: #f3ece5; border-bottom-left-radius: .35rem; }
+.chat-bubble-mine { background: linear-gradient(160deg, #ffa53d 0%, #f7931e 50%, #e57b0c 100%); color: #fff; border-bottom-right-radius: .35rem; box-shadow: 0 8px 18px -12px rgb(247 147 30 / .8); }
+
 /* Light mode only lightens the bottom navigation bar; the rest stays dark */
 :root.light-nav .bottom-nav {
   background: #faf7f3;
