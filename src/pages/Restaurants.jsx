@@ -4,20 +4,19 @@ import { getRestaurants, getAllMenuItems } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import Loader from '../components/Loader';
-import { Utensils, Store, Plus, Check, Heart, Star, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
+import { Utensils, Hamburger, Pizza, Fish, Soup, Salad, CakeSlice, CupSoda, Store, Plus, Check, Heart, Star, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
 import { foodRating } from '../utils/foodRating';
 
-const CAT_IMG = (f) => `${import.meta.env.BASE_URL}categories/${f}.webp`;
 const CATEGORIES = [
-  { id:'all',      label:'All',      img: CAT_IMG('all') },
-  { id:'pizza',    label:'Pizza',    img: CAT_IMG('pizza') },
-  { id:'burgers',  label:'Burgers',  img: CAT_IMG('burger') },
-  { id:'sushi',    label:'Sushi',    img: CAT_IMG('sushi') },
-  { id:'pasta',    label:'Pasta',    img: CAT_IMG('pasta') },
-  { id:'salads',   label:'Salads',   img: CAT_IMG('salad') },
-  { id:'desserts', label:'Desserts', img: CAT_IMG('dessert') },
-  { id:'drinks',   label:'Drinks',   img: CAT_IMG('drinks') },
+  { id:'all',      label:'All',      Icon: Utensils },
+  { id:'pizza',    label:'Pizza',    Icon: Pizza },
+  { id:'burgers',  label:'Burgers',  Icon: Hamburger },
+  { id:'sushi',    label:'Sushi',    Icon: Fish },
+  { id:'pasta',    label:'Pasta',    Icon: Soup },
+  { id:'salads',   label:'Salads',   Icon: Salad },
+  { id:'desserts', label:'Desserts', Icon: CakeSlice },
+  { id:'drinks',   label:'Drinks',   Icon: CupSoda },
 ];
 
 export default function Restaurants() {
@@ -136,12 +135,11 @@ export default function Restaurants() {
 
       {/* Categories */}
       <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
-        {CATEGORIES.map(({id, label, img}) => (
-          <button key={id} onClick={() => handleCat(id)}
-            aria-label={label} title={label} aria-pressed={selectedCat===id}
-            className={`category-pill category-photo flex-shrink-0
-              ${selectedCat===id ? 'active text-white' : 'glass text-forest-100/60 hover:text-white hover:glass-green'}`}>
-            <img src={img} alt="" width="160" height="160" loading="lazy" decoding="async" draggable="false" />
+        {CATEGORIES.map(({id, label, Icon}) => (
+          <button key={id} onClick={() => handleCat(id)} aria-pressed={selectedCat===id}
+            className={`category-pill category-tile flex-shrink-0 ${selectedCat===id ? 'active' : 'glass'}`}>
+            <Icon aria-hidden="true" />
+            <span>{label}</span>
           </button>
         ))}
       </div>
