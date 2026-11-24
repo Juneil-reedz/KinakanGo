@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
 import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -97,6 +98,14 @@ export default function Home() {
   const filteredFood = cat === 'All'
     ? popularItems
     : popularItems.filter(f => f.category_name?.toLowerCase() === cat.toLowerCase());
+
+  // Tap a popular food: open its food page, the photo flying into place where supported
+  const openFood = (item) => {
+    const morph = !!document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const go = () => navigate(`/food/${item.id}`, { state: { foodItem: item, morph } });
+    if (morph) document.startViewTransition(() => flushSync(go));
+    else go();
+  };
 
   const handleAddToCart = item => {
     addToCart(
@@ -197,9 +206,9 @@ export default function Home() {
         </div>
 
         {loading ? (
-          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-4">
+          <div className="flex gap-3 overflow-hidden pt-12">
             {[1,2,3].map(i => (
-              <div key={i} className="glass rounded-2xl h-48 animate-pulse" />
+              <div key={i} className="food-card flex-shrink-0 w-[10.5rem] h-52 animate-pulse" />
             ))}
           </div>
         ) : filteredFood.length === 0 ? (
@@ -211,40 +220,36 @@ export default function Home() {
             </button>
           </div>
         ) : (
-          <div className="grid grid-cols-1 xs:grid-cols-2 md:grid-cols-3 gap-4">
+          /* One row you swipe sideways, with the same round-photo cards as Food Order */
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-4 -mx-4 px-4 pt-12 pb-3">
             {filteredFood.map((item, idx) => (
-              <div key={item.id} className="restaurant-card card-3d glass group animate-fade-up"
-                style={{ animationDelay: `${idx * 80}ms` }}>
-                <div className="relative h-40 overflow-hidden">
+              <div key={item.id} role="button" tabIndex={0}
+                onClick={() => openFood(item)}
+                onKeyDown={e => { if (e.key === 'Enter') openFood(item); }}
+                className="food-card relative flex-shrink-0 w-[10.5rem] snap-start cursor-pointer animate-fade-up text-center px-3 pb-4 pt-[4.6rem]"
+                style={{ animationDelay: `${idx * 60}ms` }}>
+                <div className="food-card-photo" style={{ viewTransitionName: `food-${item.id}` }}>
                   {item.image_url
-                    ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    : <div className="w-full h-full glass flex items-center justify-center"><UtensilsCrossed className="w-10 h-10 text-forest-300/40" /></div>
-                  }
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
-
-                  <button onClick={() => toggleFavorite(item)}
-                    className="absolute top-3 right-3 w-7 h-7 glass rounded-full flex items-center justify-center hover:glass-orange transition-all">
-                    <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
-                  </button>
-
-                  <div className="absolute bottom-3 left-3">
-                    <p className="text-white font-heading font-bold text-lg text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
-                  </div>
+                    ? <img src={item.image_url} alt="" loading="lazy" />
+                    : <div className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-forest-300/40" /></div>}
                 </div>
-
-                <div className="p-3">
-                  <p className="text-white font-semibold text-sm truncate">{item.name}</p>
-                  <p className="text-forest-200/60 text-xs truncate mb-2">{item.restaurant_name}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3.5 h-3.5 fill-ember-400 text-ember-400" />
-                      <span className="text-ember-300 text-xs font-medium">{foodRating(item)}</span>
-                    </div>
-                    <button onClick={() => handleAddToCart(item)}
-                      className="w-7 h-7 btn-glow-orange rounded-lg flex items-center justify-center">
-                      <Plus className="w-3.5 h-3.5 text-white" />
-                    </button>
-                  </div>
+                <button onClick={e => { e.stopPropagation(); toggleFavorite(item); }}
+                  aria-label={isFavorite(item.id) ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`}
+                  className="absolute top-10 right-1.5 w-7 h-7 rounded-full flex items-center justify-center bg-white/5">
+                  <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/60'}`} />
+                </button>
+                <p className="text-white font-heading font-bold text-[.95rem] leading-snug truncate">{item.name}</p>
+                <p className="text-forest-200/50 text-xs truncate mt-0.5">{item.restaurant_name}</p>
+                <p className="flex items-center justify-center gap-1 text-ember-400 text-[11px] font-semibold mt-1.5">
+                  <Star className="w-3 h-3 fill-current" /> {foodRating(item)}
+                </p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <p className="text-white font-heading font-extrabold text-xl"><span className="text-ember-500 text-sm mr-0.5">₱</span>{Number(item.price).toFixed(2)}</p>
+                  <button onClick={e => { e.stopPropagation(); handleAddToCart(item); }}
+                    aria-label={`Add ${item.name} to cart`}
+                    className="w-7 h-7 btn-glow-orange rounded-full flex items-center justify-center flex-shrink-0">
+                    <Plus className="w-3.5 h-3.5 text-white" />
+                  </button>
                 </div>
               </div>
             ))}
