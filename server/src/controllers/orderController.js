@@ -2,6 +2,7 @@ const { promoDiscount, promoAudienceOk } = require('./promoController');
 const { APPROVED_RIDER_SQL, isApprovedRider } = require('../utils/riders');
 const crypto = require('crypto');
 const pool = require('../config/db');
+const { firstImageError } = require('../utils/image');
 const { sendEmail } = require('../utils/email');
 const { notify } = require('../utils/notify');
 const storeCredit = require('../utils/storeCredit');
@@ -242,6 +243,8 @@ async function consumeOrderCode(userId, restaurantId, items, code) {
 async function placeOrder(req, res) {
   const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage, contactInfo } = req.body;
   const customerId = req.user.id;
+  const badProof = firstImageError({ 'GCash proof': proofImage });
+  if (badProof) return res.status(400).json({ error: badProof });
 
   // Basic cart checks before anything else
   if (!Array.isArray(items) || !items.length) {
@@ -534,6 +537,8 @@ async function updateStatus(req, res) {
   if (status === 'delivered' && !deliveryProof) {
     return res.status(400).json({ error: 'Proof of delivery is required' });
   }
+  const badProof = firstImageError({ 'Delivery proof': deliveryProof });
+  if (badProof) return res.status(400).json({ error: badProof });
 
   const { rows: beforeRows } = await pool.query(
     `SELECT o.status, o.rider_id, o.delivery_fee, o.customer_id, o.payment_method, r.owner_id
@@ -589,6 +594,8 @@ async function updateStatus(req, res) {
     refund = await refundCancelledOrder(req.params.id, {
       method: isCustomer && !isOwner ? refundMethod : 'gcash',
       gcash: isCustomer && !isOwner ? refundGcash : null,
+      // Only the restaurant (or admin) can say whether the GCash money arrived
+      paymentReceived: (isOwner || isAdmin) && typeof req.body.paymentReceived === 'boolean' ? req.body.paymentReceived : null,
     });
   }
 

@@ -7,6 +7,7 @@ import { createOrder, ordersApi } from '../services/api';
 import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone, ShieldCheck } from 'lucide-react';
 import useGoBack from '../hooks/useGoBack';
 import useCartTotals from '../hooks/useCartTotals';
+import { fileToImage } from '../utils/image';
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -15,9 +16,7 @@ function pickImage(onPick) {
   input.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => onPick(ev.target.result);
-    reader.readAsDataURL(file);
+    fileToImage(file).then(onPick).catch(err => console.warn(err.message));
   };
   input.click();
 }

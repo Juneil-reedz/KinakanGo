@@ -2,48 +2,42 @@ import { useState, useEffect } from 'react';
 import { DollarSign, Package, TrendingUp, Users, BarChart2, ShoppingBag } from 'lucide-react';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 
-function groupByPeriod(orders, range) {
-  const rows = [];
+// What the restaurant actually earned from an order: the food (after any promo
+// discount), minus refunds it gave. The delivery fee is the rider's and the 8% tax
+// is not income, so neither counts as sales.
+const orderSales = (o, refunds) => Number(o.subtotal || 0) - (refunds[o.id] || 0);
+const when = (o) => new Date(o.delivered_at || o.created_at);
+
+function groupByPeriod(orders, range, refunds) {
   const now = new Date();
+  const add = (row, o) => { row.sales += orderSales(o, refunds); row.orders++; };
 
   if (range === 'week') {
     const days = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
-    const map = {};
+    const rows = [];
     for (let i = 6; i >= 0; i--) {
       const d = new Date(now); d.setDate(d.getDate() - i);
-      const key = days[d.getDay()];
-      map[key] = { day: key, sales: 0, orders: 0 };
+      rows.push({ day: i === 0 ? 'Today' : days[d.getDay()], date: d.toDateString(), sales: 0, orders: 0 });
     }
-    orders.forEach(o => {
-      const d = new Date(o.created_at);
-      const diff = Math.floor((now - d) / 86400000);
-      if (diff <= 6) { const k = days[d.getDay()]; if (map[k]) { map[k].sales += +o.total; map[k].orders++; } }
-    });
-    return Object.values(map);
+    orders.forEach(o => { const row = rows.find(r => r.date === when(o).toDateString()); if (row) add(row, o); });
+    return rows;
   }
 
   if (range === 'month') {
-    const weeks = ['Week 1','Week 2','Week 3','Week 4'];
-    const map = { 'Week 1':{ day:'Week 1',sales:0,orders:0 }, 'Week 2':{ day:'Week 2',sales:0,orders:0 }, 'Week 3':{ day:'Week 3',sales:0,orders:0 }, 'Week 4':{ day:'Week 4',sales:0,orders:0 } };
+    // The last 4 weeks, oldest first, counted back from today
+    const rows = ['3 wks ago', '2 wks ago', 'Last week', 'This week'].map(day => ({ day, sales: 0, orders: 0 }));
     orders.forEach(o => {
-      const d = new Date(o.created_at);
-      const diff = Math.floor((now - d) / 86400000);
-      if (diff <= 30) { const w = weeks[Math.min(3, Math.floor(d.getDate() / 8))]; map[w].sales += +o.total; map[w].orders++; }
+      const diff = Math.floor((now - when(o)) / 86400000);
+      if (diff >= 0 && diff < 28) add(rows[3 - Math.floor(diff / 7)], o);
     });
-    return Object.values(map);
+    return rows;
   }
 
   // year
   const months = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
-  const map = {};
-  months.forEach(m => { map[m] = { day: m, sales: 0, orders: 0 }; });
-  orders.forEach(o => {
-    const d = new Date(o.created_at);
-    if (d.getFullYear() === now.getFullYear()) {
-      const m = months[d.getMonth()]; map[m].sales += +o.total; map[m].orders++;
-    }
-  });
-  return Object.values(map);
+  const rows = months.map(day => ({ day, sales: 0, orders: 0 }));
+  orders.forEach(o => { const d = when(o); if (d.getFullYear() === now.getFullYear()) add(rows[d.getMonth()], o); });
+  return rows;
 }
 
 function topItems(orders) {
@@ -67,6 +61,7 @@ export default function RestaurantReports() {
   const [range, setRange]   = useState('week');
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [refunds, setRefunds] = useState({}); // order id -> refunds given
 
   useEffect(() => {
     if (!restaurant?.id) return;
@@ -75,10 +70,22 @@ export default function RestaurantReports() {
       .then(res => setOrders(res.data || res.orders || res || []))
       .catch(() => setOrders([]))
       .finally(() => setLoading(false));
+    // Refunds the restaurant gave (sent, received or as store credit) reduce its sales
+    restaurantRequest('/issues/restaurant')
+      .then(res => {
+        const map = {};
+        (res.data || []).forEach(i => {
+          if (['credited', 'sent', 'received', 'not_received'].includes(i.refund_status) && i.refund_approved) {
+            map[i.order_id] = (map[i.order_id] || 0) + Number(i.refund_approved);
+          }
+        });
+        setRefunds(map);
+      })
+      .catch(() => setRefunds({}));
   }, [restaurant?.id]);
 
   const delivered = orders.filter(o => o.status === 'delivered');
-  const rows   = groupByPeriod(delivered, range);
+  const rows   = groupByPeriod(delivered, range, refunds);
   const top    = topItems(delivered);
   const max    = Math.max(...rows.map(r => r.sales), 1);
 
@@ -87,7 +94,7 @@ export default function RestaurantReports() {
   const avg         = totalOrders > 0 ? totalSales / totalOrders : 0;
 
   const uniqueCustomers = new Set(delivered.map(o => o.customer_id)).size;
-  const allTime = { sales: delivered.reduce((s, o) => s + +o.total, 0), orders: delivered.length };
+  const allTime = { sales: delivered.reduce((s, o) => s + orderSales(o, refunds), 0), orders: delivered.length };
 
   if (loading) return (
     <div className="space-y-4 animate-fade-up">
@@ -152,7 +159,8 @@ export default function RestaurantReports() {
 
       {/* Sales chart */}
       <div className="glass rounded-2xl p-5">
-        <p className="text-white font-semibold mb-5">Sales Overview</p>
+        <p className="text-white font-semibold">Sales Overview</p>
+        <p className="text-forest-200/50 text-xs mb-5">Food sales from delivered orders, after promo discounts and refunds. Delivery fees (the rider's) and the 8% tax are not included.</p>
         {totalOrders === 0 ? (
           <div className="flex flex-col items-center gap-2 py-10">
             <BarChart2 className="w-10 h-10 text-forest-300/20" />
@@ -166,7 +174,7 @@ export default function RestaurantReports() {
                   <span className="text-forest-200/70 text-xs font-medium w-14 flex-shrink-0">{row.day}</span>
                   <div className="flex-1 mx-3 h-2.5 glass rounded-full overflow-hidden">
                     <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
-                      style={{ width: `${(row.sales / max) * 100}%` }} />
+                      style={{ width: `${Math.max(0, row.sales / max) * 100}%` }} />
                   </div>
                   <div className="text-right min-w-[120px] flex-shrink-0">
                     <span className="text-white text-xs font-bold">₱{row.sales.toFixed(2)}</span>

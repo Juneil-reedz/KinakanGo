@@ -1,9 +1,12 @@
 const pool = require('../config/db');
+const { firstImageError } = require('../utils/image');
 const { notify } = require('../utils/notify');
 
 async function submitRequest(req, res) {
   const { plan, amount, payment_method, reference_number, proof_image, notes } = req.body;
   const userId = req.user.id;
+  const badImage = firstImageError({ 'Payment proof': proof_image });
+  if (badImage) return res.status(400).json({ error: badImage });
 
   if (!plan) {
     return res.status(400).json({ error: 'Plan is required' });

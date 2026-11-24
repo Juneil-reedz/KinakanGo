@@ -17,6 +17,7 @@ METHOD_LABEL.gcash = 'to GCash';
 
 // What the restaurant needs to do about a report, and how it is shown
 function stage(i) {
+  if (i.payment_check && i.handler === 'restaurant' && i.status === 'pending') return { key: 'answer', check: true, label: 'Check your GCash', cls: 'glass-orange text-ember-200' };
   if (i.handler === 'restaurant' && i.status === 'pending') return { key: 'answer', label: 'Needs your answer', cls: 'glass-orange text-ember-200' };
   if (['to_send', 'not_received'].includes(i.refund_status)) {
     return { key: 'send', label: i.refund_status === 'not_received' ? "Customer didn't get the refund" : 'Send the refund', cls: 'bg-red-500/20 text-red-300' };
@@ -46,7 +47,7 @@ export default function RestaurantIssues() {
   const open = (issue, mode) => {
     setModal({ issue, mode });
     setAmount(mode === 'approve' && issue.refund_requested ? String(Number(issue.refund_requested)) : '');
-    setNote('');
+    setNote(mode === 'decline' && issue.payment_check ? 'The GCash payment never arrived in our account.' : '');
   };
   const close = () => setModal(null);
 
@@ -131,7 +132,7 @@ export default function RestaurantIssues() {
                         <p className="text-forest-100/80">{peso(i.order_total)} · {i.payment_method === 'gcash' ? 'GCash' : 'Cash'}</p>
                       </div>
                     </div>
-                    {i.refund_requested && st.key === 'answer' && (
+                    {i.refund_requested && st.key === 'answer' && !st.check && (
                       <p className="glass-orange rounded-xl px-3 py-2 mt-2 text-ember-200 text-xs font-semibold">
                         Asks for a refund of {peso(i.refund_requested)} {METHOD_LABEL[i.refund_method] || ''}
                       </p>
@@ -147,7 +148,17 @@ export default function RestaurantIssues() {
                     {i.escalation_reason && <p className="text-forest-200/60 text-xs mt-2">Customer to KinakanGo: "{i.escalation_reason}"</p>}
                     {i.resolution_notes && <p className="text-forest-200/60 text-xs mt-1 italic">Answer: "{i.resolution_notes}"</p>}
 
-                    {st.key === 'answer' && (
+                    {st.check && (
+                      <div className="flex gap-2 flex-wrap mt-3">
+                        <button onClick={() => open(i, 'approve')} className="btn-glow-green text-white text-xs font-semibold px-3 py-2 rounded-xl">
+                          It arrived · refund {peso(i.refund_requested)} {METHOD_LABEL[i.refund_method] || ''}
+                        </button>
+                        <button onClick={() => open(i, 'decline')} className="glass text-red-300 text-xs font-medium px-3 py-2 rounded-xl">
+                          It never arrived
+                        </button>
+                      </div>
+                    )}
+                    {st.key === 'answer' && !st.check && (
                       <div className="flex gap-2 flex-wrap mt-3">
                         <button onClick={() => open(i, 'approve')} className="btn-glow-green text-white text-xs font-semibold px-3 py-2 rounded-xl">
                           Accept
@@ -175,7 +186,9 @@ export default function RestaurantIssues() {
           <div className="glass rounded-3xl p-6 w-full max-w-sm space-y-3">
             <div className="flex items-center justify-between">
               <p className="text-white font-semibold">
-                {modal.mode === 'approve' ? 'Accept this report' : modal.mode === 'decline' ? 'Decline this report' : 'Refund sent'}
+                {modal.issue.payment_check && modal.mode === 'approve' ? 'The GCash payment arrived'
+                  : modal.issue.payment_check && modal.mode === 'decline' ? 'The GCash payment never arrived'
+                  : modal.mode === 'approve' ? 'Accept this report' : modal.mode === 'decline' ? 'Decline this report' : 'Refund sent'}
               </p>
               <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center"><X className="w-4 h-4 text-forest-200" /></button>
             </div>
@@ -191,6 +204,9 @@ export default function RestaurantIssues() {
                   ))}
                 </div>
               </div>
+            )}
+            {modal.issue.payment_check && modal.mode === 'decline' && (
+              <p className="text-forest-200/70 text-xs">Only choose this if you checked your GCash history and the money is not there. The customer can ask KinakanGo to review it with their GCash receipt.</p>
             )}
             {modal.mode === 'approve' && modal.issue.refund_method === 'credit' && (
               <p className="text-forest-200/70 text-xs">The customer chose store credit, so the amount is added to their credit here right away. They use it on their next order with you.</p>

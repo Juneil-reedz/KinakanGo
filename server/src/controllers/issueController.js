@@ -21,7 +21,7 @@ const RESTAURANT_WAIT_HOURS = 24;
 const ISSUE_COLS = `i.id, i.order_id, i.type, i.status, i.priority, i.description, i.handler,
   i.refund_requested, i.refund_approved, i.refund_status, i.refund_sent_note, i.refund_sent_at,
   i.refund_received_at, i.resolution_notes, i.escalated_at, i.escalation_reason, i.refund_method, i.refund_gcash,
-  i.created_at, i.resolved_at`;
+  i.created_at, i.resolved_at, i.payment_check`;
 
 const parseAmount = (v, max) => {
   const n = Number(v);
@@ -258,6 +258,8 @@ async function restaurantResolve(req, res) {
       return res.status(409).json({ error: 'This report was already answered or is with KinakanGo' });
     }
     if (asCredit) await creditRefund(client, issue, amount);
+    // Approving a GCash check means the money did arrive
+    else if (issue.payment_check && amount) await client.query("UPDATE orders SET payment_status = 'paid' WHERE id = $1", [issue.order_id]);
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');

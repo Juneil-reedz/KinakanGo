@@ -5,6 +5,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import { fileToImage } from '../../utils/image';
 import {
   Store, MapPin, Phone, Navigation, ArrowLeft,
   CheckCircle2, Package, ChevronRight, AlertTriangle, Loader2,
@@ -172,13 +173,7 @@ export default function RiderDelivery() {
       addNotification('Please upload an image file', 'error');
       return;
     }
-    if (file.size > 4 * 1024 * 1024) {
-      addNotification('Proof image must be under 4 MB', 'error');
-      return;
-    }
-    const reader = new FileReader();
-    reader.onload = ev => setDeliveryProof(ev.target.result);
-    reader.readAsDataURL(file);
+    fileToImage(file).then(setDeliveryProof).catch(err => addNotification(err.message, 'error'));
   };
 
   const proofInputProps = {

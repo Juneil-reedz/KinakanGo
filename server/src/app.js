@@ -163,6 +163,7 @@ pool.query(`
 `)).then(() => pool.query(`
   ALTER TABLE issues
     ADD COLUMN IF NOT EXISTS refund_method VARCHAR(10) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS payment_check BOOLEAN NOT NULL DEFAULT false,
     ADD COLUMN IF NOT EXISTS refund_gcash  VARCHAR(30) DEFAULT NULL
 `)).catch(err => console.warn('store credit init warning:', err.message));
 

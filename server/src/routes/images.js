@@ -24,9 +24,13 @@ router.get('/:kind/:id', async (req, res) => {
     res.set('Cross-Origin-Resource-Policy', 'cross-origin');
 
     const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(src);
-    if (!match) return res.redirect(src);
+    if (!match) return /^https?:\/\//i.test(src) ? res.redirect(src) : res.status(404).end();
 
     const [, mime = 'application/octet-stream', isBase64, data] = match;
+    // Pictures only: never serve a stored web page or script from the API
+    if (!/^image\/(png|jpe?g|webp|gif)$/i.test(mime)) return res.status(404).end();
+    res.set('X-Content-Type-Options', 'nosniff');
+    res.set('Content-Security-Policy', "default-src 'none'; sandbox");
     const body = isBase64 ? Buffer.from(data, 'base64') : Buffer.from(decodeURIComponent(data));
     // URLs carry ?v=<updated_at>, so a changed image gets a new URL
     res.set('Cache-Control', 'public, max-age=604800, immutable');

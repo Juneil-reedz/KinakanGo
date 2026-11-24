@@ -31,6 +31,7 @@ export default function RestaurantOrders() {
   const [detailLoading, setDetailLoading] = useState(false);
   const [rejectReason, setRejectReason]   = useState('');
   const [rejecting, setRejecting]         = useState(false);
+  const [paymentArrived, setPaymentArrived] = useState(null); // GCash orders: did the money arrive?
 
   const load = useCallback(async (silent = false) => {
     if (!restaurant?.id) return;
@@ -66,7 +67,8 @@ export default function RestaurantOrders() {
     }
   };
 
-  const closeDetail = () => { setDetail(null); setRejectReason(''); setRejecting(false); };
+  const closeDetail = () => { setDetail(null); setRejectReason(''); setRejecting(false); setPaymentArrived(null); };
+  const gcashPaid = (o) => o && o.payment_method === 'gcash' && Number(o.total) > Number(o.credit_used || 0);
 
   const advance = async (id, nextStatus, msg) => {
     try {
@@ -81,12 +83,17 @@ export default function RestaurantOrders() {
 
   const reject = async () => {
     if (!rejectReason.trim() || !detail) return;
+    if (gcashPaid(detail) && paymentArrived === null) { addNotification('Say whether the GCash payment arrived', 'error'); return; }
     try {
-      await restaurantRequest(`/orders/${detail.id}/status`, { method: 'PATCH', body: JSON.stringify({ status: 'cancelled', cancelledReason: rejectReason }) });
+      await restaurantRequest(`/orders/${detail.id}/status`, { method: 'PATCH', body: JSON.stringify({
+        status: 'cancelled', cancelledReason: rejectReason,
+        ...(gcashPaid(detail) ? { paymentReceived: paymentArrived } : {}),
+      }) });
       setOrders(prev => prev.map(o => o.id === detail.id ? { ...o, status: 'cancelled' } : o));
       setDetail(d => ({ ...d, status: 'cancelled' }));
-      addNotification('Order rejected.', 'success');
-      setRejecting(false); setRejectReason('');
+      addNotification(gcashPaid(detail) && paymentArrived
+        ? 'Order rejected. Send the GCash refund from your Problems page.' : 'Order rejected.', 'success');
+      setRejecting(false); setRejectReason(''); setPaymentArrived(null);
     } catch {
       addNotification('Failed to reject order', 'error');
     }
@@ -446,6 +453,17 @@ export default function RestaurantOrders() {
                     <textarea value={rejectReason} onChange={e => setRejectReason(e.target.value)}
                       className="w-full input-glass py-2.5 text-sm h-20 resize-none"
                       placeholder="e.g., Item out of stock, Too busy…" />
+                    {gcashPaid(detail) && (
+                      <div className="space-y-1.5">
+                        <p className="text-forest-100 text-xs">The customer says they paid ₱{(Number(detail.total) - Number(detail.credit_used || 0)).toFixed(2)} by GCash. Check your GCash: did it arrive?</p>
+                        {[[true, 'Yes, it arrived', "You'll send it back from your Problems page"], [false, 'No, it never arrived', 'Nothing to refund. The customer can ask KinakanGo to review']].map(([v, label, hint]) => (
+                          <label key={label} className={`flex items-start gap-2 rounded-xl p-2 text-xs cursor-pointer ${paymentArrived === v ? 'glass-green' : 'glass'}`}>
+                            <input type="radio" name="gcash-arrived" checked={paymentArrived === v} onChange={() => setPaymentArrived(v)} className="mt-0.5" />
+                            <span className="text-forest-100">{label}<span className="block text-forest-200/60">{hint}</span></span>
+                          </label>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex gap-2">
                       <button onClick={() => { setRejecting(false); setRejectReason(''); }}
                         className="flex-1 glass hover:glass-green text-forest-200 text-sm font-medium py-2.5 rounded-xl transition-all">

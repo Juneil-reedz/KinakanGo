@@ -16,9 +16,10 @@ const peso = (n) => `₱${Number(n || 0).toFixed(2)}`;
 // How cancelling works (the server enforces the same rules):
 // - Only while the restaurant hasn't accepted the order yet.
 // - Cash: nothing was paid, so nothing to refund.
-// - GCash: the money was already sent to the restaurant, so it comes back either
-//   as store credit at that restaurant (right away) or by GCash (the restaurant
-//   sends it and the customer confirms).
+// - GCash: the customer says they sent the money to the restaurant. The restaurant
+//   first checks that it arrived (a screenshot can be fake), then it comes back
+//   as store credit at that restaurant or by GCash (the restaurant sends it and
+//   the customer confirms).
 // - Store credit used on the order always comes back as store credit.
 export function cancelSummary(order) {
   const credit = Number(order?.credit_used || 0);
@@ -46,9 +47,11 @@ export default function CancelOrderDialog({ order, onClose, onCancelled }) {
       });
       addNotification(
         paidGcash > 0
-          ? method === 'credit'
-            ? `Order cancelled. ${peso(paidGcash)} was added to your store credit.`
-            : `Order cancelled. The restaurant will send ${peso(paidGcash)} back to your GCash.`
+          ? res?.refund?.state === 'approved'
+            ? method === 'credit'
+              ? `Order cancelled. ${peso(paidGcash)} was added to your store credit.`
+              : `Order cancelled. The restaurant will send ${peso(paidGcash)} back to your GCash.`
+            : `Order cancelled. The restaurant will check that your ${peso(paidGcash)} arrived, then return it.`
           : 'Your order was cancelled',
         'success'
       );
@@ -88,9 +91,9 @@ export default function CancelOrderDialog({ order, onClose, onCancelled }) {
 
         {paidGcash > 0 ? (
           <div className="space-y-2">
-            <p className="text-forest-100 text-sm">You paid <span className="font-bold">{peso(paidGcash)}</span> by GCash. How do you want it back?</p>
+            <p className="text-forest-100 text-sm">You paid <span className="font-bold">{peso(paidGcash)}</span> by GCash. The restaurant first checks that it arrived. How do you want it back?</p>
             {[
-              ['credit', 'Store credit', `Added right away. Use it on your next order at ${order.restaurant_name || 'this restaurant'}.`],
+              ['credit', 'Store credit', `Added as soon as the restaurant confirms. Use it on your next order at ${order.restaurant_name || 'this restaurant'}.`],
               ['gcash',  'Back to my GCash', 'The restaurant sends it to your GCash. You confirm when it arrives.'],
             ].map(([id, label, hint]) => (
               <label key={id} className={`flex items-start gap-2 rounded-xl p-2.5 text-sm cursor-pointer ${method === id ? 'glass-green' : 'glass'}`}>

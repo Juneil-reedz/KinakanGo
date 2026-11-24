@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { firstImageError, unlessOwn } = require('../utils/image');
 
 async function listAll(req, res) {
   const { category, search, sortBy } = req.query;
@@ -101,6 +102,8 @@ async function createItem(req, res) {
   if (bad) return res.status(400).json({ error: bad });
   const { name, description, price, image, imageUrl, category, categoryId, isVegetarian, prepTimeMins } = req.body;
   const imgUrl = image || imageUrl || null;
+  const badImage = firstImageError({ 'Food photo': imgUrl });
+  if (badImage) return res.status(400).json({ error: badImage });
 
   // Resolve or create category row from text name
   let catId = await ownCategory(categoryId, req.params.restaurantId);
@@ -136,7 +139,9 @@ async function updateItem(req, res) {
   const bad = validateItem(req.body, false);
   if (bad) return res.status(400).json({ error: bad });
   const { name, description, price, image, imageUrl, category, categoryId, isVegetarian, prepTimeMins, isAvailable } = req.body;
-  const imgUrl = image !== undefined ? image : imageUrl;
+  const imgUrl = unlessOwn(image !== undefined ? image : imageUrl);
+  const badImage = firstImageError({ 'Food photo': imgUrl });
+  if (badImage) return res.status(400).json({ error: badImage });
 
   // Resolve or create category row from text name
   let catId = await ownCategory(categoryId, req.params.restaurantId);
