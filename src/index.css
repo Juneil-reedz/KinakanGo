@@ -736,3 +736,71 @@
   .card-3d:hover, .clay-lift:hover, .restaurant-card:hover, .category-pill:hover,
   :is(.btn-glow-green, .btn-glow-teal, .btn-glow-orange, .clay-btn):hover { transform: none !important; }
 }
+
+/* ── Food list: floating cards with a round photo sitting on top ── */
+.food-card {
+  border-radius: 1.75rem;
+  background: rgba(255,255,255,.055);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 0 0 1px rgb(255 255 255 / .06), 0 18px 30px -20px rgb(0 0 0 / .9);
+  transition: transform .25s cubic-bezier(.34,1.56,.64,1), background .2s;
+}
+.food-card:hover { transform: translateY(-3px); background: rgba(255,255,255,.075); }
+.food-card:active { transform: scale(.97); }
+.food-card-photo {
+  position: absolute; left: 50%; top: -3rem; translate: -50% 0;
+  width: 7.25rem; height: 7.25rem; border-radius: 9999px; overflow: hidden;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / .06), 0 16px 26px -12px rgb(0 0 0 / .85);
+  background: #2a221d;
+}
+.food-card-photo img { width: 100%; height: 100%; object-fit: cover; transition: transform .5s; }
+.food-card:hover .food-card-photo img { transform: scale(1.06) rotate(-6deg); }
+
+/* ── Food page: the plate lands on the right, facts slide in from the left ── */
+.food-detail { background: radial-gradient(120% 70% at 100% 35%, rgb(247 147 30 / .16), transparent 60%), var(--app-bg); }
+.fd-plate-wrap {
+  position: absolute; z-index: 0; top: 1.25rem; right: calc(-1 * min(42vw, 13rem));
+  width: min(92vw, 30rem); aspect-ratio: 1;
+}
+.fd-plate {
+  width: 100%; height: 100%; border-radius: 9999px; overflow: hidden;
+  box-shadow: 0 0 0 10px rgb(255 255 255 / .04), 0 30px 60px -20px rgb(0 0 0 / .9);
+  animation: fd-plate-in .9s cubic-bezier(.22,1,.36,1) both;
+}
+.fd-plate img { width: 100%; height: 100%; object-fit: cover; transition: transform .6s cubic-bezier(.34,1.56,.64,1); }
+@keyframes fd-plate-in {
+  from { transform: translateX(-38%) scale(.45) rotate(-140deg); opacity: 0; }
+  60%  { opacity: 1; }
+  to   { transform: none; opacity: 1; }
+}
+.fd-fact {
+  display: flex; align-items: center; justify-content: space-between; gap: .6rem;
+  padding: .55rem .55rem .55rem .9rem; border-radius: 1.1rem;
+  background: rgba(30,24,20,.72); -webkit-backdrop-filter: blur(10px); backdrop-filter: blur(10px);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .07), 0 0 0 1px rgb(255 255 255 / .06);
+}
+.fd-fact-badge { width: 2.2rem; height: 2.2rem; border-radius: 9999px; display: flex; align-items: center; justify-content: center; flex-shrink: 0; }
+.fact-amber  { background: rgb(247 147 30 / .2);  color: #ffb45c; }
+.fact-rose   { background: rgb(244 114 182 / .2); color: #f9a8d4; }
+.fact-violet { background: rgb(167 139 250 / .2); color: #c4b5fd; }
+.fact-teal   { background: rgb(45 212 191 / .18); color: #5eead4; }
+.fd-qty {
+  display: inline-flex; align-items: center; gap: .25rem; align-self: flex-start;
+  padding: .25rem; border-radius: 9999px; background: rgba(30,24,20,.72);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .07), 0 0 0 1px rgb(255 255 255 / .08);
+}
+.fd-slide { animation: fd-slide-in .55s cubic-bezier(.22,1,.36,1) both; }
+.fd-fade  { animation: fd-fade-in .5s ease both; }
+.fd-rise  { animation: fd-rise-in .6s cubic-bezier(.22,1,.36,1) both; }
+@keyframes fd-slide-in { from { opacity: 0; transform: translateX(-2.5rem); } to { opacity: 1; transform: none; } }
+@keyframes fd-fade-in  { from { opacity: 0; } to { opacity: 1; } }
+@keyframes fd-rise-in  { from { opacity: 0; transform: translateY(1.5rem); } to { opacity: 1; transform: none; } }
+
+/* Arriving by a view transition: the browser flies the photo in, we only spin it */
+.fd-plate.fd-plate-morph { animation: none; }
+.fd-plate.fd-plate-morph img { animation: fd-spin .9s cubic-bezier(.22,1,.36,1) both; }
+@keyframes fd-spin { from { rotate: -140deg; } to { rotate: 0deg; } }
+/* Shared photo flight between the list and the food page */
+::view-transition-group(*) { animation-duration: .55s; animation-timing-function: cubic-bezier(.22,1,.36,1); }
+@media (prefers-reduced-motion: reduce) {
+  .fd-plate, .fd-plate img, .fd-slide, .fd-fade, .fd-rise { animation: none; }
+}
