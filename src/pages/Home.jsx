@@ -4,19 +4,18 @@ import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed } from 'lucide-react';
+import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed, Utensils, Hamburger, Pizza, Fish, Drumstick, CupSoda, Croissant, Shrimp } from 'lucide-react';
 import { foodRating } from '../utils/foodRating';
 
-const CAT_IMG = (f) => `${import.meta.env.BASE_URL}categories/${f}.webp`;
 const CATEGORIES = [
-  { name: 'All',      img: CAT_IMG('all') },
-  { name: 'Burger',   img: CAT_IMG('burger') },
-  { name: 'Pizza',    img: CAT_IMG('pizza') },
-  { name: 'Sushi',    img: CAT_IMG('sushi') },
-  { name: 'Chicken',  img: CAT_IMG('chicken') },
-  { name: 'Beverage', img: CAT_IMG('drinks') },
-  { name: 'Bakery',   img: CAT_IMG('bakery') },
-  { name: 'Seafood',  img: CAT_IMG('seafood') },
+  { name: 'All',      Icon: Utensils },
+  { name: 'Burger',   Icon: Hamburger },
+  { name: 'Pizza',    Icon: Pizza },
+  { name: 'Sushi',    Icon: Fish },
+  { name: 'Chicken',  Icon: Drumstick },
+  { name: 'Beverage', Icon: CupSoda },
+  { name: 'Bakery',   Icon: Croissant },
+  { name: 'Seafood',  Icon: Shrimp },
 ];
 
 const PROMO_STYLES = [
@@ -137,15 +136,11 @@ export default function Home() {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-          {CATEGORIES.map(({ name, img }) => (
-            <button key={name} onClick={() => setCat(name)}
-              aria-label={name} title={name} aria-pressed={cat === name}
-              className={`category-pill category-photo flex-shrink-0 ${
-                cat === name
-                  ? 'active text-white'
-                  : 'glass text-forest-100/70 hover:text-white hover:glass-green'
-              }`}>
-              <img src={img} alt="" width="160" height="160" loading="lazy" decoding="async" draggable="false" />
+          {CATEGORIES.map(({ name, Icon }) => (
+            <button key={name} onClick={() => setCat(name)} aria-pressed={cat === name}
+              className={`category-pill category-tile flex-shrink-0 ${cat === name ? 'active' : 'glass'}`}>
+              <Icon aria-hidden="true" />
+              <span>{name}</span>
             </button>
           ))}
         </div>
