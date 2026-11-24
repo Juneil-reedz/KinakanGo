@@ -44,9 +44,14 @@ export default function AdminRestaurants() {
 
   const confirmDelete = async () => {
     try {
-      await adminApi.restaurants.remove(selectedRestaurant.id);
-      setList(prev => prev.filter(r => r.id !== selectedRestaurant.id));
-      addNotification("Restaurant removed", "success");
+      const res = await adminApi.restaurants.remove(selectedRestaurant.id);
+      if (res?.suspended) {
+        setList(prev => prev.map(r => r.id === selectedRestaurant.id ? { ...r, approved: false, is_approved: false, isOpen: false, is_open: false } : r));
+        addNotification(res.message, "success");
+      } else {
+        setList(prev => prev.filter(r => r.id !== selectedRestaurant.id));
+        addNotification("Restaurant removed", "success");
+      }
       close();
     } catch {
       addNotification("Failed to remove restaurant", "error");

@@ -3,7 +3,7 @@ const pool = require('../config/db');
 async function listAll(req, res) {
   const { category, search, sortBy } = req.query;
   const limit  = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 200);
-  const where  = ['m.is_available = true', 'r.is_approved = true', 'r.is_open = true'];
+  const where  = ['m.is_available = true', 'm.is_archived = false', 'r.is_approved = true', 'r.is_open = true'];
   const params = [];
   let   idx    = 1;
 
@@ -49,7 +49,7 @@ async function getItem(req, res) {
      FROM menu_items m
      JOIN restaurants r ON m.restaurant_id = r.id
      LEFT JOIN menu_categories c ON m.category_id = c.id
-     WHERE m.id = $1 AND r.is_approved = true`,
+     WHERE m.id = $1 AND r.is_approved = true AND m.is_archived = false`,
     [id]
   );
   if (!rows.length) return res.status(404).json({ error: 'Item not found' });
@@ -65,7 +65,7 @@ async function listItems(req, res) {
      FROM menu_items m
      JOIN restaurants r ON r.id = m.restaurant_id
      LEFT JOIN menu_categories c ON m.category_id = c.id
-     WHERE m.restaurant_id = $1
+     WHERE m.restaurant_id = $1 AND m.is_archived = false
        AND ($2 = true OR r.is_open = true)
      ORDER BY c.sort_order, m.name`,
     [restaurantId, includeClosed]
@@ -73,12 +73,37 @@ async function listItems(req, res) {
   res.json(rows);
 }
 
+// A food needs a name and a price from ₱0 to ₱100,000 (on create; on update only what is sent)
+function validateItem(body, creating) {
+  if (creating || body.name !== undefined) {
+    if (!String(body.name || '').trim()) return 'Enter the food name';
+  }
+  if (creating || (body.price !== undefined && body.price !== null)) {
+    const p = Number(body.price);
+    if (body.price === '' || body.price === null || !Number.isFinite(p) || p < 0 || p > 100000) {
+      return 'Enter a price from ₱0 to ₱100,000';
+    }
+  }
+  return null;
+}
+
+// A category id sent by the page must belong to this restaurant
+async function ownCategory(categoryId, restaurantId) {
+  if (categoryId == null || categoryId === '') return null;
+  const { rows } = await pool.query(
+    'SELECT id FROM menu_categories WHERE id = $1 AND restaurant_id = $2', [parseInt(categoryId) || 0, restaurantId]
+  );
+  return rows[0]?.id ?? null;
+}
+
 async function createItem(req, res) {
+  const bad = validateItem(req.body, true);
+  if (bad) return res.status(400).json({ error: bad });
   const { name, description, price, image, imageUrl, category, categoryId, isVegetarian, prepTimeMins } = req.body;
   const imgUrl = image || imageUrl || null;
 
   // Resolve or create category row from text name
-  let catId = categoryId || null;
+  let catId = await ownCategory(categoryId, req.params.restaurantId);
   if (!catId && category) {
     const { rows: ex } = await pool.query(
       'SELECT id FROM menu_categories WHERE restaurant_id = $1 AND LOWER(name) = LOWER($2)',
@@ -100,7 +125,7 @@ async function createItem(req, res) {
        (restaurant_id, category_id, name, description, price, image_url, is_vegetarian, prep_time_mins)
      VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
      RETURNING *`,
-    [req.params.restaurantId, catId, name, description || null,
+    [req.params.restaurantId, catId, String(name).trim(), description || null,
      price, imgUrl, isVegetarian || false, prepTimeMins ?? 15]
   );
   // Attach category name so frontend can display it immediately
@@ -108,11 +133,13 @@ async function createItem(req, res) {
 }
 
 async function updateItem(req, res) {
+  const bad = validateItem(req.body, false);
+  if (bad) return res.status(400).json({ error: bad });
   const { name, description, price, image, imageUrl, category, categoryId, isVegetarian, prepTimeMins, isAvailable } = req.body;
   const imgUrl = image !== undefined ? image : imageUrl;
 
   // Resolve or create category row from text name
-  let catId = categoryId ?? null;
+  let catId = await ownCategory(categoryId, req.params.restaurantId);
   if (catId === null && category) {
     const { rows: ex } = await pool.query(
       'SELECT id FROM menu_categories WHERE restaurant_id = $1 AND LOWER(name) = LOWER($2)',
@@ -139,20 +166,36 @@ async function updateItem(req, res) {
        is_vegetarian  = COALESCE($6, is_vegetarian),
        prep_time_mins = COALESCE($7, prep_time_mins),
        is_available   = COALESCE($8, is_available)
-     WHERE id = $9 AND restaurant_id = $10
+     WHERE id = $9 AND restaurant_id = $10 AND is_archived = false
      RETURNING *`,
-    [name ?? null, description ?? null, price ?? null, imgUrl ?? null, catId,
+    [name != null ? String(name).trim() : null, description ?? null, price ?? null, imgUrl ?? null, catId,
      isVegetarian ?? null, prepTimeMins ?? null, isAvailable ?? null,
      req.params.itemId, req.params.restaurantId]
   );
+  if (!rows.length) return res.status(404).json({ error: 'Food not found' });
   res.json({ ...rows[0], category_name: category || null });
 }
 
+// A food that was ever ordered can't be deleted (old orders and ratings point to it),
+// so it is archived instead: hidden everywhere and no longer orderable.
 async function deleteItem(req, res) {
-  await pool.query(
+  const { rows: used } = await pool.query(
+    'SELECT 1 FROM order_items WHERE menu_item_id = $1 LIMIT 1', [req.params.itemId]
+  );
+  if (used.length) {
+    const { rowCount } = await pool.query(
+      `UPDATE menu_items SET is_archived = true, is_available = false
+       WHERE id = $1 AND restaurant_id = $2`,
+      [req.params.itemId, req.params.restaurantId]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Food not found' });
+    return res.json({ message: 'Removed from your menu. Past orders still show it.', archived: true });
+  }
+  const { rowCount } = await pool.query(
     'DELETE FROM menu_items WHERE id = $1 AND restaurant_id = $2',
     [req.params.itemId, req.params.restaurantId]
   );
+  if (!rowCount) return res.status(404).json({ error: 'Food not found' });
   res.json({ message: 'Deleted' });
 }
 

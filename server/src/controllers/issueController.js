@@ -180,6 +180,39 @@ async function received(req, res) {
   res.json({ message: 'Thanks for confirming' });
 }
 
+// Customer takes a refund that hasn't been sent yet as store credit instead (instant)
+async function toCredit(req, res) {
+  const issue = await loadIssue(req.params.id);
+  if (!issue || issue.customer_id !== req.user.id) return res.status(404).json({ error: 'Report not found' });
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rows } = await client.query(
+      `UPDATE issues SET refund_status = 'credited', refund_method = 'credit', refund_received_at = NOW()
+       WHERE id = $1 AND refund_status = 'to_send' AND refund_approved > 0
+       RETURNING refund_approved`,
+      [issue.id]
+    );
+    if (!rows.length) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'This refund can no longer be changed to store credit' });
+    }
+    await creditRefund(client, issue, Number(rows[0].refund_approved));
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+  await notify(issue.owner_id, {
+    audience: 'restaurant', type: 'info', link: '/owner/issues',
+    title: `No need to send the refund for order #${issue.order_id}`,
+    message: `The customer took ${peso(issue.refund_approved)} as store credit at your restaurant instead.`,
+  });
+  res.json({ message: 'Added as store credit' });
+}
+
 // ── Restaurant owner ─────────────────────────────────────────────────────────
 
 async function restaurantList(req, res) {
@@ -394,7 +427,7 @@ async function deny(req, res) {
 }
 
 module.exports = {
-  submit, mine, escalate, received,
+  submit, mine, escalate, received, toCredit,
   restaurantList, restaurantResolve, restaurantDeny, refundSent,
   list, resolve, deny,
 };

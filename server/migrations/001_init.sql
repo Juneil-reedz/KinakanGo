@@ -146,6 +146,7 @@ CREATE TABLE menu_items (
   category_id    INT DEFAULT NULL REFERENCES menu_categories(id) ON DELETE SET NULL,
   name           VARCHAR(160) NOT NULL,
   description    TEXT         DEFAULT NULL,
+  is_archived    BOOLEAN      NOT NULL DEFAULT false,  -- removed from the menu but kept for past orders
   price          DECIMAL(8,2) NOT NULL,
   image_url      VARCHAR(500) DEFAULT NULL,
   is_available   BOOLEAN      NOT NULL DEFAULT TRUE,
