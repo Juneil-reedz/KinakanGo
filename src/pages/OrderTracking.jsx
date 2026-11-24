@@ -1,12 +1,12 @@
 import { useState, useEffect, useRef } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 import { ordersApi, storage, request } from '../services/api';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import CancelOrderDialog from '../components/CancelOrderDialog';
 import {
-  Clock, Package, ChevronRight,
+  Clock, Package, ChevronRight, ChevronDown,
   ClipboardList, ChefHat, PackageCheck, Bike, Navigation, CheckCircle2,
   ArrowRight, Store, RefreshCw, UtensilsCrossed, Phone, MapPin,
 } from 'lucide-react';
@@ -101,6 +101,15 @@ export default function OrderTracking() {
   const [lastLiveAt, setLastLiveAt] = useState(null);
   const pollLocRef = useRef(null);
   const [cancelOrder, setCancelOrder] = useState(null);
+  // Orders show as a compact list; tapping one opens its progress, map and items.
+  // /orders?order=27 opens that one straight away.
+  const [params] = useSearchParams();
+  const [openIds, setOpenIds] = useState(() => new Set([parseInt(params.get('order'))].filter(Boolean)));
+  const toggleOpen = (id) => setOpenIds(prev => {
+    const next = new Set(prev);
+    if (next.has(id)) next.delete(id); else next.add(id);
+    return next;
+  });
   const ordersRef = useRef([]);
   const detailsRef = useRef({}); // { [orderId]: { key, data } } — cached getOne results
 
@@ -236,11 +245,11 @@ export default function OrderTracking() {
   );
 
   return (
-    <div className="space-y-5 pb-20 lg:pb-0 animate-fade-up">
+    <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-white">Track Orders</h1>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1.5 glass-green text-forest-200 text-xs px-3 py-2 rounded-xl">
+          <div className="hidden sm:flex items-center gap-1.5 glass-green text-forest-200 text-xs px-3 py-2 rounded-xl whitespace-nowrap flex-shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-forest-400 animate-pulse" />
             Live{lastLiveAt ? ` · ${lastLiveAt.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}` : ''}
           </div>
@@ -256,13 +265,17 @@ export default function OrderTracking() {
         const curIdx = Math.max(0, getStatusIdx(order.status));
         const isDone = order.status === 'delivered';
         const isCancelled = ['cancelled','refunded'].includes(order.status);
+        const isOpen = openIds.has(order.id);
 
         return (
           <div key={order.id} className="glass rounded-3xl overflow-hidden">
 
-            {/* Order header */}
-            <div className="p-5 flex flex-wrap items-start justify-between gap-4"
-              style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
+            {/* Order row: tap to show or hide the progress */}
+            <div role="button" tabIndex={0} aria-expanded={isOpen} aria-controls={`order-body-${order.id}`}
+              onClick={() => toggleOpen(order.id)}
+              onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(order.id); } }}
+              className="p-5 flex flex-wrap items-start justify-between gap-4 cursor-pointer select-none"
+              style={isOpen ? { borderBottom:'1px solid rgba(var(--fg-rgb),.07)' } : undefined}>
               <div className="space-y-1">
                 <div className="flex items-center gap-2.5">
                   <p className="text-white font-bold text-base">Order #{order.id}</p>
@@ -293,7 +306,22 @@ export default function OrderTracking() {
                   </p>
                 )}
               </div>
+              {/* Collapsed: a small progress bar and a hint */}
+              <div className="w-full flex items-center gap-3">
+                {!isCancelled && (
+                  <div className="flex-1 h-2 rounded-full clay-sunk overflow-hidden" aria-hidden="true">
+                    <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
+                      style={{ width:`${Math.max(8, (curIdx / (STATUSES.length - 1)) * 100)}%` }} />
+                  </div>
+                )}
+                <span className={`text-forest-300 text-xs font-semibold flex items-center gap-1 flex-shrink-0 ${isCancelled ? 'ml-auto' : ''}`}>
+                  {isOpen ? 'Hide' : 'See progress'}
+                  <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
+                </span>
+              </div>
             </div>
+
+            {isOpen && (<div id={`order-body-${order.id}`} className="animate-fade-up">
 
             {order.status === 'pending' && (
               <div className="px-5 pt-4 flex items-center justify-between gap-3">
@@ -508,6 +536,7 @@ export default function OrderTracking() {
                 </button>
               )}
             </div>
+            </div>)}
           </div>
         );
       })}
