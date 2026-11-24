@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { flushSync } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
 import { getRestaurants, getAllMenuItems } from '../services/api';
 import { useCart } from '../context/CartContext';
@@ -19,7 +20,21 @@ const CATEGORIES = [
   { id:'drinks',   label:'Drinks',   Icon: CupSoda },
 ];
 
+// 2 columns on phones, more on wider screens
+const COLUMN_QUERIES = [['(min-width: 64rem)', 4], ['(min-width: 37.5rem)', 3]];
+const pickColumns = () => {
+  if (typeof window === 'undefined') return 2;
+  const hit = COLUMN_QUERIES.find(([q]) => window.matchMedia(q).matches);
+  return hit ? hit[1] : 2;
+};
+
 export default function Restaurants() {
+  const [columns, setColumns] = useState(pickColumns);
+  useEffect(() => {
+    const onResize = () => setColumns(pickColumns());
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, []);
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const { addToCart } = useCart();
@@ -96,8 +111,17 @@ export default function Restaurants() {
     setTimeout(() => setJustAdded(id => (id === item.id ? null : id)), 1200);
   };
 
+  // Open the food page; where the browser supports it, the round photo
+  // flies from the card into place (a shared-element view transition)
+  const openFood = (item) => {
+    const morph = !!document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const go = () => navigate(`/food/${item.id}`, { state: { foodItem: item, morph } });
+    if (morph) document.startViewTransition(() => flushSync(go));
+    else go();
+  };
+
   return (
-    <div className="space-y-5 pb-20 lg:pb-0 animate-fade-up">
+    <div className="space-y-5 pb-24 lg:pb-0 animate-fade-up">
       {/* Header */}
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-white">Food Order</h1>
@@ -147,38 +171,46 @@ export default function Restaurants() {
       {/* Loading */}
       {loading && <Loader size="lg" />}
 
-      {/* Food grid */}
+      {/* Food: staggered columns of floating cards with a round photo */}
       {!loading && viewMode === 'food' && (
         foodItems.length > 0 ? (
-          <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
-            {foodItems.map((item, idx) => (
-              <div key={item.id} onClick={() => navigate(`/food/${item.id}`, { state:{ foodItem:item } })}
-                className="restaurant-card card-3d glass cursor-pointer group animate-fade-up"
-                style={{ animationDelay:`${idx*40}ms` }}>
-                <div className="relative aspect-square overflow-hidden">
-                  <img src={item.image_url || item.image} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                  <button onClick={e => { e.stopPropagation(); toggleFavorite(item); }}
-                    className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center">
-                    <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
-                  </button>
-                  <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
-                </div>
-                <div className="p-2.5">
-                  <p className="text-white font-semibold text-xs truncate">{item.name}</p>
-                  <p className="text-forest-200/50 text-xs truncate mb-2">{item.restaurant_name || item.restaurant?.name}</p>
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-1">
-                      <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
-                      <span className="text-ember-300 text-xs">{foodRating(item)}</span>
+          <div className="flex gap-3 items-start">
+            {Array.from({ length: columns }, (_, col) => (
+              <div key={col} className={`flex-1 min-w-0 flex flex-col gap-3 ${columns > 2 && col % 2 === 1 ? 'pt-14' : ''}`}>
+                {col === 0 && (
+                  <p className="font-heading font-bold text-white text-[1.6rem] leading-tight px-1 pt-1 pb-8">
+                    Found<br />{foodItems.length} result{foodItems.length === 1 ? '' : 's'}
+                  </p>
+                )}
+                {foodItems.filter((_, i) => i % columns === col).map((item, idx) => (
+                  <div key={item.id} role="button" tabIndex={0}
+                    onClick={() => openFood(item)}
+                    onKeyDown={e => { if (e.key === 'Enter') openFood(item); }}
+                    className="food-card relative cursor-pointer animate-fade-up text-center px-3 pb-4 pt-[4.6rem] mt-12"
+                    style={{ animationDelay: `${(idx * columns + col) * 50}ms` }}>
+                    <div className="food-card-photo" style={{ viewTransitionName: `food-${item.id}` }}>
+                      <img src={item.image_url || item.image} alt="" loading="lazy" />
                     </div>
-                    <button onClick={e => { e.stopPropagation(); addItem(item); }}
-                      aria-label={`Add ${item.name} to cart`}
-                      className="w-8 h-8 btn-glow-orange rounded-lg flex items-center justify-center">
-                      {justAdded === item.id ? <Check className="w-4 h-4 text-white" /> : <Plus className="w-4 h-4 text-white" />}
+                    <button onClick={e => { e.stopPropagation(); toggleFavorite(item); }}
+                      aria-label={isFavorite(item.id) ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`}
+                      className="absolute top-10 right-1.5 w-7 h-7 rounded-full flex items-center justify-center bg-white/5">
+                      <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/60'}`} />
                     </button>
+                    <p className="text-white font-heading font-bold text-[.95rem] leading-snug line-clamp-2">{item.name}</p>
+                    <p className="text-forest-200/50 text-xs truncate mt-0.5">{item.restaurant_name || item.restaurant?.name}</p>
+                    <p className="flex items-center justify-center gap-1 text-ember-400 text-[11px] font-semibold mt-1.5">
+                      <Star className="w-3 h-3 fill-current" /> {foodRating(item)}
+                    </p>
+                    <div className="flex items-center justify-center gap-2 mt-2">
+                      <p className="text-white font-heading font-extrabold text-xl"><span className="text-ember-500 text-sm mr-0.5">₱</span>{Number(item.price).toFixed(2)}</p>
+                      <button onClick={e => { e.stopPropagation(); addItem(item); }}
+                        aria-label={`Add ${item.name} to cart`}
+                        className="w-7 h-7 btn-glow-orange rounded-full flex items-center justify-center flex-shrink-0">
+                        {justAdded === item.id ? <Check className="w-3.5 h-3.5 text-white" /> : <Plus className="w-3.5 h-3.5 text-white" />}
+                      </button>
+                    </div>
                   </div>
-                </div>
+                ))}
               </div>
             ))}
           </div>
