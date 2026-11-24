@@ -275,7 +275,7 @@ export default function CustomerLayout() {
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6">
-          <Outlet />
+          <div key={location.pathname} className="page-enter"><Outlet /></div>
         </div>
       </main>
 
