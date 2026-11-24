@@ -279,7 +279,10 @@ export default function Profile() {
             </div>
           ) : (
             orders.map((order, idx) => (
-              <div key={order.id} className="glass card-3d rounded-2xl p-5 animate-fade-up" style={{ animationDelay:`${idx * 60}ms` }}>
+              <div key={order.id} role="button" tabIndex={0}
+                onClick={() => navigate(`/order-receipt/${order.id}`)}
+                onKeyDown={e => { if (e.key === 'Enter') navigate(`/order-receipt/${order.id}`); }}
+                className="glass card-3d rounded-2xl p-5 animate-fade-up cursor-pointer hover:glass-green transition-all" style={{ animationDelay:`${idx * 60}ms` }}>
                 <div className="flex items-start justify-between mb-3">
                   <div>
                     <p className="text-white font-semibold">Order #{order.id}</p>
@@ -294,7 +297,11 @@ export default function Profile() {
                   </div>
                 </div>
 
-                <div className="flex gap-2 flex-wrap">
+                <div className="flex gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                  <Link to={`/order-receipt/${order.id}`}
+                    className="flex items-center gap-1.5 btn-glow-orange text-white text-xs px-3 py-2 rounded-xl transition-all">
+                    <Receipt className="w-3.5 h-3.5" /> Details
+                  </Link>
                   <button onClick={() => handleReorder(order)}
                     className="flex items-center gap-1.5 glass hover:glass-orange text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
                     <RotateCcw className="w-3.5 h-3.5" /> Reorder
