@@ -127,7 +127,7 @@ export default function RiderLayout({ children }) {
           </div>
         </header>
         <main className="flex-1 p-4 pb-24 md:p-6 md:pb-6">{children}</main>
-        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
+        <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-30 glass-dark bottom-nav px-4 py-3 grid grid-cols-3 gap-2" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
           {NAV.map(({ path, label, icon:Icon }) => (
             <button key={path} onClick={() => goTo(path)}
               className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all

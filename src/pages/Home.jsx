@@ -4,7 +4,7 @@ import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed, Utensils, Hamburger, Pizza, Fish, Drumstick, CupSoda, Croissant, Shrimp } from 'lucide-react';
+import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed, Utensils, Hamburger, Pizza, Fish, Drumstick, CupSoda, Croissant, Shrimp, Search, SlidersHorizontal } from 'lucide-react';
 import { foodRating } from '../utils/foodRating';
 
 const CATEGORIES = [
@@ -43,6 +43,7 @@ export default function Home() {
   const [cat, setCat]               = useState('All');
   const [promo, setPromo]           = useState(0);
   const [activePromos, setActivePromos] = useState([]);
+  const [search, setSearch]           = useState('');
   const [restaurants, setRestaurants] = useState([]);
   const [popularItems, setPopularItems] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -150,6 +151,21 @@ export default function Home() {
         </div>
         )}
       </section>}
+
+      {/* ── Search (under the promo) ─────────────────── */}
+      <form role="search" className="flex items-center gap-2.5"
+        onSubmit={e => { e.preventDefault(); const q = search.trim(); navigate(q ? `/restaurants?search=${encodeURIComponent(q)}` : '/restaurants'); }}>
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300" aria-hidden="true" />
+          <input value={search} onChange={e => setSearch(e.target.value)} type="search"
+            placeholder="Search food or restaurants…" aria-label="Search food or restaurants"
+            className="w-full input-glass pl-11 pr-4 py-3 text-sm rounded-2xl" />
+        </div>
+        <button type="button" onClick={() => navigate('/restaurants')} aria-label="Filters"
+          className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-forest-100 flex-shrink-0">
+          <SlidersHorizontal className="w-5 h-5" />
+        </button>
+      </form>
 
       {/* ── Categories ───────────────────────────────── */}
       <section>

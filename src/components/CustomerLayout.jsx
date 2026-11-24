@@ -6,14 +6,12 @@ import { useRestaurant } from '../context/RestaurantContext';
 import { useRider } from '../context/RiderContext';
 import {
   Home as HomeIcon, ShoppingBag, Heart, MessageCircle, Clock,
-  Settings, Search, Bell, ShoppingCart, Menu,
+  Settings, Bell, ShoppingCart, Menu,
   ChevronLeft, CreditCard, MapPin, Plus, Minus, X,
   Crown, Utensils, Star, Zap, User, Store, Bike, Loader2, LogOut
 } from 'lucide-react';
 
 import CustomerBottomNav from './CustomerBottomNav';
-import ThemeToggle from './ThemeToggle';
-import NotificationBell from './NotificationBell';
 import { useNotificationFeed } from '../context/NotificationFeed';
 
 const NAV = [
@@ -35,7 +33,6 @@ export default function CustomerLayout() {
   const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
   const [collapsed, setCollapsed]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
-  const [searchQuery, setSearchQuery]   = useState('');
   const [dashLoading, setDashLoading]   = useState(false);
 
   const goToRestaurantDashboard = async () => {
@@ -89,7 +86,6 @@ export default function CustomerLayout() {
   };
   const navKey = getNavKey();
 
-  const bellButton = <NotificationBell to="/notifications" />;
   const { unread: unreadNotifications = 0 } = useNotificationFeed() || {};
 
   const handleNav = (path) => { navigate(path); setMobileOpen(false); };
@@ -240,50 +236,34 @@ export default function CustomerLayout() {
 
         {/* Header — dashboard only */}
         {active === 'dashboard' && (
-          <header className="glass-dark clay-forest-bar flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
-            style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
+          <header className="glass-dark clay-forest-bar flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3" style={{ background: 'transparent', boxShadow: 'none' }}>
 
-            {/* Mobile menu btn */}
-            <button onClick={() => setMobileOpen(!mobileOpen)}
-              className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
-              <Menu className="w-5 h-5" />
+            {/* Profile (left) · KinakanGo (centre) · menu (right), like the reference */}
+            <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })} aria-label="Profile"
+              className="w-10 h-10 rounded-full overflow-hidden border-2 border-ember-400/60 hover:border-ember-400 transition-all flex items-center justify-center glass flex-shrink-0">
+              {user?.avatar
+                ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                : <User className="w-5 h-5 text-forest-100" />
+              }
             </button>
 
-            <div className="hidden lg:flex items-center gap-2 min-w-0">
-              <span className="text-forest-100/60 text-sm">Hello,</span>
-              <span className="text-white font-semibold text-sm truncate">{user?.name || 'Patricia'}</span>
-            </div>
+            <h1 className="brand-wordmark flex-1 text-center text-white text-2xl leading-none select-none">
+              Kinakan<span className="text-ember-500">Go</span>
+            </h1>
 
-            {/* Search */}
-            <div className="flex-1 min-w-0 max-w-md relative">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/60" />
-              <input
-                value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
-                onKeyDown={e => { if (e.key==='Enter' && searchQuery.trim()) { navigate(`/restaurants?search=${encodeURIComponent(searchQuery)}`); setSearchQuery(''); } }}
-                placeholder="Search food or restaurants…"
-                className="w-full input-glass pl-10 pr-4 py-2 text-sm"
-              />
-            </div>
-
-            <div className="ml-auto flex items-center gap-2">
-              <ThemeToggle />
-              <button onClick={() => navigate('/cart')} className="relative hidden lg:flex w-9 h-9 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all">
-                <ShoppingCart className="w-5 h-5" />
-                {cartItems.length > 0 && (
-                  <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
-                    {cartItems.length}
-                  </span>
-                )}
-              </button>
-              <div className="hidden xs:block">{bellButton}</div>
-              <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })}
-                className="w-9 h-9 rounded-full overflow-hidden border-2 border-ember-400/50 hover:border-ember-400 transition-all flex items-center justify-center glass-dark">
-                {user?.avatar
-                  ? <img src={user.avatar} alt="user" className="w-full h-full object-cover" />
-                  : <User className="w-5 h-5 text-forest-300/70" />
-                }
-              </button>
-            </div>
+            <button onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu"
+              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <Menu className="w-6 h-6" />
+            </button>
+            <button onClick={() => navigate('/cart')} aria-label="Cart"
+              className="relative hidden lg:flex w-10 h-10 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all flex-shrink-0">
+              <ShoppingCart className="w-5 h-5" />
+              {cartItems.length > 0 && (
+                <span className="absolute -top-1 -right-1 w-4 h-4 btn-glow-orange rounded-full text-white text-[10px] flex items-center justify-center font-bold">
+                  {cartItems.length}
+                </span>
+              )}
+            </button>
           </header>
         )}
 
