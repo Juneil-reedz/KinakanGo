@@ -6,6 +6,7 @@ import { useFavorites } from '../context/FavoritesContext';
 import Loader from '../components/Loader';
 import { Utensils, Store, Plus, Check, Heart, Star, Search, SlidersHorizontal, ChevronRight } from 'lucide-react';
 import { useNotification } from '../context/NotificationContext';
+import { foodRating } from '../utils/foodRating';
 
 const CATEGORIES = [
   { id:'all',      label:'All',      emoji:'🍽️' },
@@ -157,7 +158,7 @@ export default function Restaurants() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
-                      <span className="text-ember-300 text-xs">{item.rating || '4.8'}</span>
+                      <span className="text-ember-300 text-xs">{foodRating(item)}</span>
                     </div>
                     <button onClick={e => { e.stopPropagation(); addItem(item); }}
                       aria-label={`Add ${item.name} to cart`}

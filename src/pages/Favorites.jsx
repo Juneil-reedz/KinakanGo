@@ -2,6 +2,7 @@
 import { Heart, Star, Plus, Trash2 } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
+import { foodRating } from '../utils/foodRating';
 
 export default function Favorites() {
   const navigate      = useNavigate();
@@ -57,9 +58,8 @@ export default function Favorites() {
                 <p className="text-forest-200/50 text-xs truncate mb-3">{item.restaurant}</p>
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className={`w-3 h-3 ${i < item.rating ? 'fill-ember-400 text-ember-400' : 'text-forest-700'}`} />
-                    ))}
+                    <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
+                    <span className="text-ember-300 text-xs">{foodRating(item)}</span>
                   </div>
                   <button onClick={e => { e.stopPropagation(); addItem(item); }}
                     className="w-7 h-7 btn-glow-orange rounded-lg flex items-center justify-center">
