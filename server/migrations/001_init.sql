@@ -310,6 +310,7 @@ CREATE TABLE reviews (
   restaurant_id INT NOT NULL REFERENCES restaurants(id),
   rider_id      INT DEFAULT NULL REFERENCES users(id),
   food_rating   SMALLINT     NOT NULL CHECK (food_rating BETWEEN 1 AND 5),
+  restaurant_rating SMALLINT DEFAULT NULL CHECK (restaurant_rating BETWEEN 1 AND 5),
   rider_rating  SMALLINT     DEFAULT NULL,
   comment       TEXT         DEFAULT NULL,
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()

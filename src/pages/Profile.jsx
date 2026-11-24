@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import { ordersApi } from '../services/api';
+import StarRating from '../components/StarRating';
 import {
   ArrowRight, X, Mail, Edit2, Package, Heart, Phone, MapPin,
   LogOut, Settings, RotateCcw, Receipt, Star, Store, Check, User, Camera
@@ -297,7 +298,18 @@ export default function Profile() {
                   </div>
                 </div>
 
+                {order.status === 'delivered' && order.food_rating && (
+                  <div className="flex items-center gap-2 mb-3 text-xs text-forest-200/60">
+                    <span>You rated</span><StarRating value={order.food_rating} size="w-3.5 h-3.5" />
+                  </div>
+                )}
                 <div className="flex gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
+                  {order.status === 'delivered' && !order.food_rating && (
+                    <Link to={`/order-receipt/${order.id}#rate`}
+                      className="flex items-center gap-1.5 glass-orange text-ember-200 text-xs px-3 py-2 rounded-xl transition-all">
+                      <Star className="w-3.5 h-3.5" /> Rate
+                    </Link>
+                  )}
                   <Link to={`/order-receipt/${order.id}`}
                     className="flex items-center gap-1.5 btn-glow-orange text-white text-xs px-3 py-2 rounded-xl transition-all">
                     <Receipt className="w-3.5 h-3.5" /> Details

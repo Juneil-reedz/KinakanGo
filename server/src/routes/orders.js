@@ -11,6 +11,8 @@ router.get('/:id',                   ctrl.getOrder);
 router.patch('/:id/status',          ctrl.updateStatus);
 router.patch('/:id/assign-rider',    requireRole('admin'), ctrl.assignRider);
 router.patch('/:id/rider-response',  ctrl.riderResponse);
+router.post('/:id/review',           requireRole('customer'), ctrl.submitReview);
+router.post('/:id/receipt',          ctrl.emailReceipt);
 
 // Return the assigned rider's current GPS location for a given order.
 // Customers and restaurant owners poll this while the order is in transit.
