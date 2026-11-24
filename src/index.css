@@ -80,7 +80,8 @@
 [class*="bg-red-500"], [class*="bg-red-600"], .bg-rose-500, .bg-forest-500, .bg-forest-600, .bg-forest-700,
 [class*="from-forest-"], [class*="from-red-"],
 :has(> [class*="from-black"]) {
-  --app-bg: radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
+  --app-bg: var(--map-lines),
+            radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
             linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
   --app-text: #eef9f9;
   --fg-rgb: 255,255,255;
@@ -136,7 +137,8 @@
 :root.light {
   color-scheme: light;
   /* the teal "table" the clay sits on */
-  --app-bg: radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.16) 0%, transparent 50%),
+  --app-bg: var(--map-lines),
+            radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.16) 0%, transparent 50%),
             radial-gradient(ellipse at 100% 100%, rgba(0,40,44,.35) 0%, transparent 60%),
             linear-gradient(170deg, #0a7a80 0%, #016a70 50%, #015c61 100%);
   --app-text: #fff;
@@ -211,6 +213,8 @@
     inset -2px -2px 4px rgb(var(--clay-hi) / calc(var(--clay-hi-a) * .5));
   --clay-sheen: radial-gradient(120% 80% at 20% 0%, rgb(var(--clay-hi) / calc(var(--clay-hi-a) * .45)), transparent 60%);
   --clay-ease: cubic-bezier(.22,1,.36,1);
+  /* faint map lines, used on the page background and the header bars */
+  --map-lines: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M0 60 L70 40 L130 90 L240 70'/%3E%3Cpath d='M0 170 L60 150 L110 200 L180 160 L240 185'/%3E%3Cpath d='M70 40 L60 150'/%3E%3Cpath d='M130 90 L180 160 L170 240'/%3E%3Cpath d='M30 0 L70 40'/%3E%3Cpath d='M200 0 L190 70'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Mustard surfaces always carry ink, in both modes */
@@ -346,7 +350,7 @@
      like the hotel reference; the white clay cards float below them */
   .glass-dark.clay-forest-bar {
     background:
-      url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M0 60 L70 40 L130 90 L240 70'/%3E%3Cpath d='M0 170 L60 150 L110 200 L180 160 L240 185'/%3E%3Cpath d='M70 40 L60 150'/%3E%3Cpath d='M130 90 L180 160 L170 240'/%3E%3Cpath d='M30 0 L70 40'/%3E%3Cpath d='M200 0 L190 70'/%3E%3C/g%3E%3C/svg%3E"),
+      var(--map-lines),
       linear-gradient(165deg, #035c61 0%, #014e53 55%, #01454a 100%);
     box-shadow: 0 16px 34px -20px rgb(0 30 33 / .8);
     color: #fff;

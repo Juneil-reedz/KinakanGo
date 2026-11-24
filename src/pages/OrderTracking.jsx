@@ -249,7 +249,7 @@ export default function OrderTracking() {
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-white">Track Orders</h1>
         <div className="flex items-center gap-2">
-          <div className="hidden sm:flex items-center gap-1.5 glass-green text-forest-200 text-xs px-3 py-2 rounded-xl whitespace-nowrap">
+          <div className="hidden sm:flex items-center gap-1.5 glass-green text-forest-200 text-xs px-3 py-2 rounded-xl whitespace-nowrap flex-shrink-0">
             <span className="w-1.5 h-1.5 rounded-full bg-forest-400 animate-pulse" />
             Live{lastLiveAt ? ` · ${lastLiveAt.toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}` : ''}
           </div>
