@@ -1,31 +1,32 @@
 @import "tailwindcss";
 
 @theme {
-  /* "forest" = KinakanGo teal #016A70 scale (class names kept so every page follows) */
-  --color-forest-950: #00191b;
-  --color-forest-900: #002a2d;
-  --color-forest-800: #013d41;
-  --color-forest-700: #015257;
-  --color-forest-600: #016a70;
-  --color-forest-500: #0f8389;
-  --color-forest-400: #2f9da2;
-  --color-forest-300: #66bcc0;
-  --color-forest-200: #a3d9db;
-  --color-forest-100: #d2eeef;
-  --color-forest-50:  #eef9f9;
+  /* "forest" = warm neutrals for text (50-300) and the orange accent (400-700),
+     charcoal for the deepest shades. Class names kept so every page follows. */
+  --color-forest-950: #0e0b09;
+  --color-forest-900: #17120f;
+  --color-forest-800: #241b15;
+  --color-forest-700: #b85f06;
+  --color-forest-600: #e57b0c;
+  --color-forest-500: #f7931e;
+  --color-forest-400: #fba94c;
+  --color-forest-300: #c9b8a8;
+  --color-forest-200: #ddd0c3;
+  --color-forest-100: #efe7df;
+  --color-forest-50:  #faf6f2;
 
-  /* "ember" = mustard #E8B52A */
-  --color-ember-950: #3a2a04;
-  --color-ember-900: #5e4407;
-  --color-ember-800: #80600c;
-  --color-ember-700: #a67c12;
-  --color-ember-600: #c9981d;
-  --color-ember-500: #e8b52a;
-  --color-ember-400: #efc552;
-  --color-ember-300: #f4d57f;
-  --color-ember-200: #f8e4ad;
-  --color-ember-100: #fbf0d4;
-  --color-ember-50:  #fdf8ec;
+  /* "ember" = the orange accent #F7931E */
+  --color-ember-950: #3a1d03;
+  --color-ember-900: #5c2e05;
+  --color-ember-800: #864208;
+  --color-ember-700: #b85f06;
+  --color-ember-600: #e57b0c;
+  --color-ember-500: #f7931e;
+  --color-ember-400: #fba94c;
+  --color-ember-300: #fdbf78;
+  --color-ember-200: #fed6a6;
+  --color-ember-100: #ffe9cf;
+  --color-ember-50:  #fff6ea;
 
   /* Tawi-Tawi Teal #07ACA2 */
   --color-tawi-teal: #07aca2;
@@ -43,7 +44,7 @@
 
   /* Typography */
   --font-sans: Inter, system-ui, sans-serif;
-  --font-heading: Fraunces, Georgia, serif;
+  --font-heading: Inter, system-ui, sans-serif;
 
   --font-size-xs:   clamp(0.7rem,  0.66rem + 0.2vw,  0.75rem);
   --font-size-sm:   clamp(0.8rem,  0.75rem + 0.25vw, 0.875rem);
@@ -81,28 +82,31 @@
 [class*="from-forest-"], [class*="from-red-"],
 :has(> [class*="from-black"]) {
   --app-bg:
-            radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
-            linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
-  --app-text: #eef9f9;
+            radial-gradient(ellipse at 85% 0%, rgba(247,147,30,.11) 0%, transparent 50%),
+            radial-gradient(ellipse at 0% 60%, rgba(229,123,12,.06) 0%, transparent 55%),
+            radial-gradient(ellipse at 100% 100%, rgba(184,95,6,.08) 0%, transparent 55%),
+            linear-gradient(170deg, #1a1613 0%, #120f0d 55%, #0c0a09 100%);
+  --app-text: #f6f0ea;
   --fg-rgb: 255,255,255;
 
   --clay-ink: 0 0 0;            /* shadow colour, as r g b */
   --clay-hi: 255 255 255;       /* highlight colour */
-  --clay-hi-a: .10;
+  --clay-hi-a: .08;
 
-  --glass-base-bg:   linear-gradient(160deg, #0d5257 0%, #0a464a 100%);
-  --glass-green-bg:  linear-gradient(160deg, #13666b 0%, #0f585c 100%);
-  --glass-orange-bg: linear-gradient(160deg, #57501f 0%, #4a431a 100%);
-  --glass-dark-bg:   #033f43;
-  --glass-teal-bg:   linear-gradient(160deg, #13666b 0%, #0f585c 100%);
-  --glass-blue-bg:   linear-gradient(160deg, #26405a 0%, #1f364d 100%);
+  /* frosted dark glass */
+  --glass-base-bg:   linear-gradient(160deg, rgba(255,255,255,.10) 0%, rgba(255,255,255,.04) 100%);
+  --glass-green-bg:  linear-gradient(160deg, rgba(247,147,30,.24) 0%, rgba(247,147,30,.10) 100%);
+  --glass-orange-bg: linear-gradient(160deg, rgba(247,147,30,.30) 0%, rgba(229,123,12,.16) 100%);
+  --glass-dark-bg:   rgba(20,16,13,.94);
+  --glass-teal-bg:   linear-gradient(160deg, rgba(247,147,30,.24) 0%, rgba(247,147,30,.10) 100%);
+  --glass-blue-bg:   linear-gradient(160deg, rgba(120,150,200,.18) 0%, rgba(120,150,200,.08) 100%);
   --glass-base-border: none; --glass-green-border: none; --glass-orange-border: none;
   --glass-dark-border: none; --glass-teal-border: none;  --glass-blue-border: none;
 
-  --input-bg: #02353a;
-  --input-border: transparent;
-  --input-placeholder: rgba(210,238,239,.45);
-  --panel-bg: #0b4a4e;
+  --input-bg: rgba(255,255,255,.06);
+  --input-border: rgba(255,255,255,.08);
+  --input-placeholder: rgba(239,231,223,.45);
+  --panel-bg: #1a1511;
 }
 
 /* Inside a dark scope, put back the palette that light mode remaps */
@@ -115,83 +119,71 @@
 ) {
   color-scheme: dark;
   --color-white: #fff;
-  --color-forest-50: #f2fbfb;  --color-forest-100: #e0f4f4; --color-forest-200: #bfe6e7;
-  --color-forest-300: #9fd6d8; --color-forest-400: #7cc5c8;
-  --color-ember-50: #fdf8ec;   --color-ember-100: #fbf0d4;  --color-ember-200: #f8e4ad;
-  --color-ember-300: #f4d57f;  --color-ember-400: #efc552;
+  --color-forest-50: #faf6f2;  --color-forest-100: #efe7df; --color-forest-200: #ddd0c3;
+  --color-forest-300: #c9b8a8; --color-forest-400: #fba94c;
+  --color-ember-50: #fff6ea;   --color-ember-100: #ffe9cf;  --color-ember-200: #fed6a6;
+  --color-ember-300: #fdbf78;  --color-ember-400: #fba94c;
   --color-red-200: oklch(88.5% 0.062 18.334);  --color-red-300: oklch(80.8% 0.114 19.571);
   --color-red-400: oklch(70.4% 0.191 22.216);
   --color-teal-200: oklch(91% 0.096 180.426);  --color-teal-300: oklch(85.5% 0.138 181.071);
   --color-teal-400: oklch(77.7% 0.152 181.912);
   --color-rose-400: oklch(71.2% 0.194 13.428);
   --color-purple-300: oklch(82.7% 0.119 306.383);
-  --clay-ink: 0 22 24; --clay-hi: 255 255 255; --clay-hi-a: .18;
+  --clay-ink: 20 10 4; --clay-hi: 255 255 255; --clay-hi-a: .18;
   --glass-base-bg: linear-gradient(160deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.06) 100%);
-  --glass-green-bg: linear-gradient(160deg, rgba(160,220,222,.3) 0%, rgba(160,220,222,.16) 100%);
+  --glass-green-bg: linear-gradient(160deg, rgba(247,147,30,.3) 0%, rgba(247,147,30,.16) 100%);
   --glass-dark-bg: rgba(0,0,0,.18);
   --input-bg: rgba(0,0,0,.18);
-  --input-placeholder: rgba(226,235,225,.55);
+  --input-placeholder: rgba(239,231,223,.55);
   --app-text: #fff;
 }
 
 :root.light {
   color-scheme: light;
-  /* the teal "table" the clay sits on */
+  /* a warm cocoa page the white cards sit on */
   --app-bg:
-            radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.16) 0%, transparent 50%),
-            radial-gradient(ellipse at 100% 100%, rgba(0,40,44,.35) 0%, transparent 60%),
-            linear-gradient(170deg, #0a7a80 0%, #016a70 50%, #015c61 100%);
+            radial-gradient(ellipse at 85% 0%, rgba(247,147,30,.35) 0%, transparent 50%),
+            radial-gradient(ellipse at 0% 100%, rgba(0,0,0,.30) 0%, transparent 60%),
+            linear-gradient(170deg, #4a2e1c 0%, #3a2316 50%, #2b1a10 100%);
   --app-text: #fff;
   --fg-rgb: 255,255,255;
 
-  --clay-ink: 0 38 42;          /* cards cast deep-teal shadows on the table */
+  --clay-ink: 30 14 4;          /* cards cast warm shadows */
   --clay-hi: 255 255 255;
   --clay-hi-a: .9;
 
   /* raised clay: white into warm ivory */
   --glass-base-bg:   linear-gradient(160deg, #ffffff 0%, #fdfcfa 45%, #f1ece3 100%);
-  --glass-green-bg:  linear-gradient(160deg, #e6f4f4 0%, #d2eaea 100%);
-  --glass-orange-bg: linear-gradient(160deg, #fbedc4 0%, #f5dd97 100%);
+  --glass-green-bg:  linear-gradient(160deg, #fff3e4 0%, #fde3c4 100%);
+  --glass-orange-bg: linear-gradient(160deg, #ffe3c0 0%, #fcc98c 100%);
   --glass-dark-bg:   #faf9f6;
-  --glass-teal-bg:   linear-gradient(160deg, #e6f4f4 0%, #d2eaea 100%);
+  --glass-teal-bg:   linear-gradient(160deg, #fff3e4 0%, #fde3c4 100%);
   --glass-blue-bg:   linear-gradient(160deg, #eef1f6 0%, #dfe5ee 100%);
 
   --input-bg: #ede8de;
   --input-border: transparent;
-  --input-placeholder: rgba(37,53,46,.45);
+  --input-placeholder: rgba(42,33,27,.45);
   --panel-bg: #faf9f6;
 
-  /* Text straight on the teal page: white and pale teal */
+  /* Text straight on the cocoa page: white and warm cream */
   --color-white: #fff;
-  --color-forest-50: #f2fbfb;  --color-forest-100: #e0f4f4; --color-forest-200: #bfe6e7;
-  --color-forest-300: #9fd6d8; --color-forest-400: #7cc5c8;
-  --color-ember-50: #fdf8ec;   --color-ember-100: #fbf0d4;  --color-ember-200: #f8e4ad;
-  --color-ember-300: #f4d57f;  --color-ember-400: #efc552;
-}
-
-/* Dark mode ("dim"): the cards stay white clay; only the page and bars go deeper */
-:root.light.dim {
-  color-scheme: dark;
-  --app-bg:
-            radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
-            linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
-  --clay-ink: 0 0 0;
-}
-:root.dim .glass-dark.clay-forest-bar {
-  background: url("./assets/food-pattern-faint.svg") 0 0 / 260px 260px, linear-gradient(165deg, #012f33 0%, #01272a 55%, #002024 100%);
+  --color-forest-50: #faf6f2;  --color-forest-100: #efe7df; --color-forest-200: #ddd0c3;
+  --color-forest-300: #c9b8a8; --color-forest-400: #fba94c;
+  --color-ember-50: #fff6ea;   --color-ember-100: #ffe9cf;  --color-ember-200: #fed6a6;
+  --color-ember-300: #fdbf78;  --color-ember-400: #fba94c;
 }
 
 /* "Paper": light clay surfaces on the teal page. Inside them text is ink. */
 :root.light :is(.glass, .glass-green, .glass-orange, .glass-teal, .glass-blue, .clay-card, .card-3d,
                 .clay-modal, .input-glass, .clay-input, .glass-dark:not(.clay-forest-bar)):not(:is(.keep-dark, .clay-forest, .clay-forest-bar, [class*="from-forest-"], [class*="from-red-"]) *) {
-  --app-text: #25352e;
-  --fg-rgb: 37,53,46;
-  --clay-ink: 40 62 60;
-  --color-white: #25352e;
-  --color-forest-50: #15292a;  --color-forest-100: #25352e; --color-forest-200: #34494a;
-  --color-forest-300: #016a70; --color-forest-400: #01595e;
-  --color-ember-50: #6e4f05;   --color-ember-100: #6e4f05;  --color-ember-200: #7a5806;
-  --color-ember-300: #8a6407;  --color-ember-400: #9a6f08;
+  --app-text: #2a211b;
+  --fg-rgb: 42,33,27;
+  --clay-ink: 60 36 20;
+  --color-white: #2a211b;
+  --color-forest-50: #1d1712;  --color-forest-100: #2a211b; --color-forest-200: #4a3d33;
+  --color-forest-300: #c2620a; --color-forest-400: #a35208;
+  --color-ember-50: #8a4505;   --color-ember-100: #8a4505;  --color-ember-200: #9a4d06;
+  --color-ember-300: #b25a07;  --color-ember-400: #c2620a;
   --color-red-200: #991b1b;    --color-red-300: #b91c1c;    --color-red-400: #dc2626;
   --color-teal-200: #0f766e;   --color-teal-300: #0d7f76;   --color-teal-400: #0b8a80;
   --color-rose-400: #e11d48;
@@ -228,14 +220,22 @@
   /* faint map lines, used on the page background and the header bars */
 }
 
-/* Mustard surfaces always carry ink, in both modes */
+/* Orange surfaces always carry white text, in both modes */
 :root :is(.btn-glow-orange, .category-pill.active, .clay-mustard, .bg-ember-300, .bg-ember-400, .bg-ember-500) {
-  --color-white: #25352e;
-  --color-forest-100: #25352e; --color-forest-200: #34493f; --color-forest-300: #016a70; --color-forest-400: #01595e;
-  --color-ember-50: #4a3604; --color-ember-100: #4a3604; --color-ember-200: #4a3604; --color-ember-300: #4a3604; --color-ember-400: #4a3604;
-  --clay-ink: 120 82 6;
-  color: #25352e;
+  --color-white: #fff;
+  --color-forest-100: #fff8f0; --color-forest-200: #ffeedd; --color-forest-300: #fff; --color-forest-400: #fff;
+  --color-ember-50: #fff; --color-ember-100: #fff; --color-ember-200: #fff; --color-ember-300: #fff; --color-ember-400: #fff;
+  --clay-ink: 120 50 4;
+  color: #fff;
 }
+
+/* Dark theme: frosted glass, a hairline edge and a soft drop shadow */
+:root:not(.light) :is(.glass, .glass-green, .glass-orange, .glass-teal, .glass-blue, .clay-card, .card-3d, .clay-modal, .clay-btn) {
+  -webkit-backdrop-filter: blur(16px) saturate(140%);
+  backdrop-filter: blur(16px) saturate(140%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .10), 0 0 0 1px rgb(255 255 255 / .07), 0 14px 30px -16px rgb(0 0 0 / .75);
+}
+:root:not(.light) :is(.glass-green, .glass-teal) { box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 0 0 1px rgb(247 147 30 / .35), 0 14px 30px -16px rgb(0 0 0 / .75); }
 
 /* Solid white (toggle knobs, dots) stays white; only translucent white tints flip */
 :root.light .bg-white { background-color: #fff; }
@@ -371,13 +371,12 @@
 
   /* Featured forest panel */
   .clay-forest {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .16), transparent 60%), linear-gradient(160deg, #0a7a80 0%, #016a70 60%, #015459 100%);
-    box-shadow: inset 0 2px 1px rgb(255 255 255 / .18), inset 6px 8px 14px -8px rgb(255 255 255 / .14),
-                inset -8px -10px 18px -10px rgb(0 0 0 / .45), 0 2px 3px rgb(0 38 42 / .2), 10px 18px 34px -14px rgb(0 38 42 / .6);
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .16), transparent 60%), linear-gradient(160deg, #2a211b 0%, #1d1712 60%, #15110e 100%);
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .10), 0 0 0 1px rgb(255 255 255 / .06), 10px 18px 34px -14px rgb(0 0 0 / .6);
     color: #fff;
   }
   .clay-mustard {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .5), transparent 60%), linear-gradient(160deg, #f0c64a 0%, #e8b52a 100%);
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .5), transparent 60%), linear-gradient(160deg, #fba94c 0%, #f7931e 55%, #e57b0c 100%);
     box-shadow: var(--clay-raise);
   }
 
@@ -386,16 +385,15 @@
   .glass-dark.clay-forest-bar {
     background:
       url("./assets/food-pattern-faint.svg") 0 0 / 260px 260px,
-      linear-gradient(165deg, #035c61 0%, #014e53 55%, #01454a 100%);
-    box-shadow: 0 16px 34px -20px rgb(0 30 33 / .8);
+      linear-gradient(165deg, #211a15 0%, #1a1511 55%, #15110e 100%);
+    box-shadow: 0 16px 34px -20px rgb(0 0 0 / .8);
     color: #fff;
   }
   :root:not(.light) .glass-dark.clay-forest-bar { box-shadow: 0 16px 34px -18px rgb(0 0 0 / .7); }
 
   /* Top headers: the same colour as the page behind them (fixed so the
      gradient lines up exactly), just a soft shadow to separate them */
-  header.glass-dark.clay-forest-bar,
-  :root.dim header.glass-dark.clay-forest-bar {
+  header.glass-dark.clay-forest-bar {
     background: var(--app-bg);
     background-attachment: fixed;
     box-shadow: 0 10px 24px -22px rgb(0 0 0 / .6);
@@ -404,6 +402,7 @@
   /* Bars and sidebars: a flatter slab, so the floating cards stand out */
   .glass-dark {
     background: var(--glass-dark-bg);
+    -webkit-backdrop-filter: blur(18px); backdrop-filter: blur(18px);
     box-shadow: 0 12px 30px -20px rgb(var(--clay-ink) / .45), inset 0 -1px 0 rgb(var(--clay-ink) / .06);
   }
 
@@ -416,18 +415,18 @@
 
   /* Buttons: forest (green/teal names), mustard (orange name) */
   .btn-glow-green, .btn-glow-teal, .clay-btn-primary {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .22), transparent 60%), linear-gradient(160deg, #0d8389 0%, #016a70 55%, #015a5f 100%);
-    box-shadow: inset 0 2px 1px rgb(255 255 255 / .3), inset -5px -6px 12px -6px rgb(0 30 33 / .5),
-                0 2px 3px rgb(0 38 42 / .2), 6px 12px 22px -10px rgb(0 38 42 / .6);
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .22), transparent 60%), linear-gradient(160deg, #fba94c 0%, #f7931e 50%, #e57b0c 100%);
+    box-shadow: inset 0 1px 1px rgb(255 255 255 / .45), inset -4px -5px 10px -6px rgb(120 50 4 / .45),
+                0 2px 3px rgb(120 50 4 / .2), 0 10px 24px -10px rgb(247 147 30 / .55);
     color: #fff;
     letter-spacing: .02em;
   }
-  .btn-glow-teal { background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .18), transparent 60%), linear-gradient(160deg, #2f9da2 0%, #0f8389 100%); }
+  .btn-glow-teal { background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .18), transparent 60%), linear-gradient(160deg, #fdbf78 0%, #f7931e 100%); }
   .btn-glow-orange, .clay-btn-accent {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .55), transparent 60%), linear-gradient(160deg, #f0c64a 0%, #e8b52a 100%);
-    box-shadow: inset 0 2px 1px rgb(255 255 255 / .75), inset -5px -6px 12px -6px rgb(120 82 6 / .45),
-                0 2px 3px rgb(120 82 6 / .18), 6px 12px 22px -10px rgb(120 82 6 / .5);
-    color: #25352e;
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .55), transparent 60%), linear-gradient(160deg, #fba94c 0%, #f7931e 50%, #e57b0c 100%);
+    box-shadow: inset 0 1px 1px rgb(255 255 255 / .45), inset -4px -5px 10px -6px rgb(120 50 4 / .45),
+                0 2px 3px rgb(120 50 4 / .2), 0 10px 24px -10px rgb(247 147 30 / .55);
+    color: #fff;
   }
   .btn-glow-green, .btn-glow-teal, .btn-glow-orange, .clay-btn, .clay-btn-primary, .clay-btn-accent {
     transition: transform .16s var(--clay-ease), box-shadow .2s var(--clay-ease), filter .2s ease;
@@ -443,7 +442,7 @@
     transform: translateY(1px) scale(.97); box-shadow: inset 3px 4px 9px rgb(0 0 0 / .45);
   }
   :is(.btn-glow-orange, .clay-btn-accent):active:not(:disabled) {
-    transform: translateY(1px) scale(.97); box-shadow: inset 3px 4px 9px rgb(120 82 6 / .45);
+    transform: translateY(1px) scale(.97); box-shadow: inset 3px 4px 9px rgb(120 50 4 / .45);
   }
   .clay-btn:active:not(:disabled) { transform: translateY(1px) scale(.97); box-shadow: var(--clay-press); }
   /* Small clay controls (icon buttons, chips) press in too */
@@ -458,12 +457,12 @@
 
   /* Selected navigation / tabs: pressed into the surface */
   .clay-active {
-    background: linear-gradient(160deg, #cfe8e8 0%, #e3f3f3 100%) !important;
+    background: linear-gradient(160deg, #ffe9cf 0%, #fff4e6 100%) !important;
     box-shadow: var(--clay-sunk) !important;
-    color: #016a70 !important;
+    color: #c2620a !important;
     font-weight: 700;
   }
-  :root:not(.light) .clay-active { background: #012a2d !important; color: #efc552 !important; }
+  :root:not(.light) .clay-active { background: linear-gradient(160deg, rgba(247,147,30,.28), rgba(247,147,30,.12)) !important; color: #fba94c !important; box-shadow: inset 0 0 0 1px rgba(247,147,30,.35) !important; }
 
   .clay-input, .clay-sunk {
     background: var(--input-bg);
@@ -484,11 +483,11 @@
     background: var(--input-bg); box-shadow: var(--clay-sunk);
     transition: background .3s var(--clay-ease);
   }
-  .clay-toggle[aria-checked="true"] { background: linear-gradient(160deg, #0f8389, #016a70); box-shadow: inset 3px 4px 8px rgb(0 0 0 / .35); }
+  .clay-toggle[aria-checked="true"] { background: linear-gradient(160deg, #fba94c, #f7931e); box-shadow: inset 2px 3px 6px rgb(120 50 4 / .35); }
   .clay-toggle::after {
     content: ''; position: absolute; top: .22rem; left: .22rem; width: 1.4rem; height: 1.4rem; border-radius: 999px;
     background: radial-gradient(120% 80% at 30% 15%, #fff, #f2ede4 70%);
-    box-shadow: inset -2px -3px 5px rgb(0 38 42 / .2), 0 3px 6px rgb(0 0 0 / .25);
+    box-shadow: inset -2px -3px 5px rgb(60 36 20 / .2), 0 3px 6px rgb(0 0 0 / .25);
     transition: transform .32s var(--clay-ease);
   }
   .clay-toggle[aria-checked="true"]::after { transform: translateX(1.4rem); }
@@ -516,6 +515,7 @@
     position: absolute;
     z-index: -1;           /* glow behind the content, never a tint over the white cards */
   }
+  :root:not(.light) .orb { opacity: .3; }
 
   /* Food category pill */
   .category-pill {
@@ -532,9 +532,9 @@
     transform: translateY(-4px) scale(1.05);
   }
   .category-pill.active {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .55), transparent 60%), linear-gradient(160deg, #f0c64a 0%, #e8b52a 100%);
-    box-shadow: inset 0 2px 1px rgb(255 255 255 / .75), inset -5px -6px 12px -6px rgb(120 82 6 / .45), 6px 12px 22px -10px rgb(120 82 6 / .5);
-    color: #25352e;
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .35), transparent 60%), linear-gradient(160deg, #fba94c 0%, #f7931e 55%, #e57b0c 100%);
+    box-shadow: inset 0 1px 1px rgb(255 255 255 / .45), 0 10px 24px -10px rgb(247 147 30 / .55);
+    color: #fff;
   }
 
   /* Image-only category tiles: a real food photo on a white clay tile
@@ -544,8 +544,12 @@
     width: 4.5rem;
     height: 4.5rem;
     justify-content: center;
-    background: var(--clay-sheen), linear-gradient(160deg, #ffffff 0%, #fbfaf7 100%) !important;
-    box-shadow: inset 0 -3px 6px -3px rgb(0 38 42 / .12), 0 2px 3px rgb(0 38 42 / .12), 6px 12px 22px -12px rgb(0 30 33 / .5) !important;
+    background: linear-gradient(160deg, rgba(255,255,255,.12) 0%, rgba(255,255,255,.04) 100%) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), 0 0 0 1px rgb(255 255 255 / .08), 0 10px 22px -14px rgb(0 0 0 / .7) !important;
+  }
+  :root.light .category-photo {
+    background: #fff !important;
+    box-shadow: 0 2px 3px rgb(30 14 4 / .12), 6px 12px 22px -12px rgb(20 10 4 / .5) !important;
   }
   .category-photo img {
     width: 100%;
@@ -557,7 +561,8 @@
     user-select: none;
   }
   .category-photo.active {
-    box-shadow: 0 0 0 3px #e8b52a, 6px 12px 22px -12px rgb(0 30 33 / .5) !important;
+    background: linear-gradient(160deg, rgba(251,169,76,.55) 0%, rgba(229,123,12,.35) 100%) !important;
+    box-shadow: inset 0 1px 0 rgb(255 255 255 / .3), 0 0 0 1.5px #f7931e, 0 10px 24px -10px rgb(247 147 30 / .6) !important;
   }
   .category-photo.active img { transform: scale(1.06); }
 
@@ -584,8 +589,8 @@
   .input-glass::placeholder { color: var(--input-placeholder); }
   .input-glass:focus {
     outline: none;
-    border-color: rgba(1,106,112,.4);
-    box-shadow: var(--clay-sunk), 0 0 0 3px rgba(232,181,42,.35);
+    border-color: rgba(247,147,30,.5);
+    box-shadow: var(--clay-sunk), 0 0 0 3px rgba(247,147,30,.28);
   }
 
   /* Scrollbar utility */
@@ -666,7 +671,7 @@
 
 /* Keyboard focus: a mustard ring that reads on every clay colour */
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
-  outline: 3px solid #e8b52a; outline-offset: 3px;
+  outline: 3px solid #f7931e; outline-offset: 3px;
 }
 
 /* Respect reduced motion: no lifts, presses or rising dialogs */

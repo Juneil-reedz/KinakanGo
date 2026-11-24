@@ -67,7 +67,7 @@ export function ClayModal({ open, onClose, title, labelledBy, className = '', ch
   if (!open) return null;
   return createPortal(
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center p-4"
-      style={{ background: 'rgba(16,40,32,.45)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
+      style={{ background: 'rgba(8,6,5,.6)', backdropFilter: 'blur(4px)' }} onClick={onClose}>
       <div role="dialog" aria-modal="true" aria-labelledby={labelledBy}
         className={cx('clay-modal w-full max-w-sm p-6 space-y-3', className)} onClick={e => e.stopPropagation()}>
         {title && (

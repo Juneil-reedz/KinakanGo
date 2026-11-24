@@ -136,10 +136,10 @@ export default function AdminRiders() {
           </div>
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
             className="input-glass py-1.5 text-xs rounded-xl flex-shrink-0">
-            <option value="name" style={{ background:"#0d2b1a" }}>Sort: Name</option>
-            <option value="rating" style={{ background:"#0d2b1a" }}>Sort: Rating</option>
-            <option value="deliveries" style={{ background:"#0d2b1a" }}>Sort: Deliveries</option>
-            <option value="earnings" style={{ background:"#0d2b1a" }}>Sort: Earnings</option>
+            <option value="name" style={{ background:"#1a1511" }}>Sort: Name</option>
+            <option value="rating" style={{ background:"#1a1511" }}>Sort: Rating</option>
+            <option value="deliveries" style={{ background:"#1a1511" }}>Sort: Deliveries</option>
+            <option value="earnings" style={{ background:"#1a1511" }}>Sort: Earnings</option>
           </select>
         </div>
       </div>

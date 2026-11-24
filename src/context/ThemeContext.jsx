@@ -1,20 +1,20 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext(null);
-const STORAGE_KEY = 'kkg_mode'; // new key: everyone starts on the light clay theme
+const STORAGE_KEY = 'kkg_theme'; // new key: everyone starts on the dark glass theme
 
 // index.html applies the saved theme before React loads (no flash);
-// this reads that initial state and keeps <html> in sync. Cards stay white in
-// both modes (class "light" is always on); dark mode adds "dim", which only
-// deepens the page background and the header/sidebar bars.
-const readTheme = () => (document.documentElement.classList.contains('dim') ? 'dark' : 'light');
+// this reads that initial state and keeps <html class="light"> in sync.
+// Dark (frosted glass on charcoal, orange accents) is the default; light
+// puts white cards on a warm cocoa page.
+const readTheme = () => (document.documentElement.classList.contains('light') ? 'light' : 'dark');
 
 export function ThemeProvider({ children }) {
   const [theme, setTheme] = useState(readTheme);
 
   useEffect(() => {
-    document.documentElement.classList.add('light');
-    document.documentElement.classList.toggle('dim', theme === 'dark');
+    document.documentElement.classList.toggle('light', theme === 'light');
+    document.documentElement.classList.remove('dim');
     try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* storage unavailable */ }
   }, [theme]);
 
