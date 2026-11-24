@@ -35,8 +35,9 @@ const FAQS = [
   { id:9,  category:'account',  question:'I forgot my password. What should I do?',    answer:'Tap "Forgot password" on the login page and enter your email. We\'ll email you a 6-digit code to set a new password.' },
   { id:10, category:'account',  question:'How do I update my profile?',                 answer:'Go to Profile, edit your name, phone or photo, and save. Manage delivery addresses under Addresses.' },
   { id:11, category:'account',  question:'How do I become a rider or restaurant owner?', answer:'Open the Upgrade page from the menu and apply. An admin reviews your application and you\'ll get a notification when it\'s approved.' },
-  { id:12, category:'refunds',  question:'How do I report a problem or ask for a refund?', answer:'Go to Profile → Order History, open the order and tap "Report a problem". Choose what went wrong, describe it, and tick "Ask for a refund" if you want your money back. You\'ll get a notification when it\'s reviewed, and the order page shows the status.' },
-  { id:13, category:'refunds',  question:'What if my food arrived wrong or damaged?',   answer:'Report it from the order page ("Report a problem") as soon as you can and explain what was wrong. An admin reviews every report.' },
+  { id:12, category:'refunds',  question:'How do I report a problem or ask for a refund?', answer:'Go to Profile → Order History, open the order and tap "Report a problem". Choose what went wrong, describe it, and tick "Ask for a refund" if you want your money back. The restaurant reviews it and, if it approves a refund, sends the money back to you (GCash or cash) and tells you how. Tap "I got it" on the order page once it arrives. Delivery problems go to KinakanGo instead.' },
+  { id:15, category:'refunds',  question:'What if the restaurant declines or doesn\'t answer?', answer:'Open the order and tap "Ask KinakanGo to review". You can do this if the restaurant declines your report, doesn\'t answer within a day, or the refund never arrives. KinakanGo then decides, and if a refund is approved the restaurant is told to send it.' },
+  { id:13, category:'refunds',  question:'What if my food arrived wrong or damaged?',   answer:'Report it from the order page ("Report a problem") as soon as you can and explain what was wrong. The restaurant reviews it first, and you can ask KinakanGo to review if you disagree.' },
   { id:14, category:'account',  question:'How do I save my favorite food?',             answer:'Tap the heart on any food. You\'ll find it again under Favorites.' },
 ];
 
@@ -191,7 +192,7 @@ export default function CustomerService() {
       <div className="max-w-4xl mx-auto mt-10">
         <div className="glass-green rounded-2xl p-8 text-center">
           <h3 className="text-white font-heading font-bold text-2xl mb-2">Still need help?</h3>
-          <p className="text-forest-200/60 mb-6">Open the order in your Order History and tap "Report a problem". Our team reviews every report and you'll get a notification with the answer.</p>
+          <p className="text-forest-200/60 mb-6">Open the order in your Order History and tap "Report a problem". The restaurant reviews it and you'll get a notification with the answer. If you disagree, you can ask KinakanGo to review.</p>
           <div className="flex flex-wrap gap-3 justify-center">
             <Link to="/profile" state={{ tab: 'orders' }} className="btn-glow-orange text-white font-semibold px-6 py-3 rounded-xl text-sm">
               Report a problem

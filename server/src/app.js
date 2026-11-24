@@ -129,6 +129,19 @@ pool.query(`
   )
 `).catch(err => console.warn('order_rider_declines init warning:', err.message));
 
+// Order problem reports: the restaurant handles them first (it holds the money);
+// the customer can escalate to the admin. Older reports stay with the admin.
+pool.query(`
+  ALTER TABLE issues
+    ADD COLUMN IF NOT EXISTS handler            VARCHAR(12) NOT NULL DEFAULT 'admin',
+    ADD COLUMN IF NOT EXISTS refund_status      VARCHAR(14) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS refund_sent_note   TEXT        DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS refund_sent_at     TIMESTAMPTZ DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS refund_received_at TIMESTAMPTZ DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS escalated_at       TIMESTAMPTZ DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS escalation_reason  TEXT        DEFAULT NULL
+`).catch(err => console.warn('issues refund columns warning:', err.message));
+
 pool.query(`
   ALTER TABLE promo_codes
     ADD COLUMN IF NOT EXISTS owner_id     INT          DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,

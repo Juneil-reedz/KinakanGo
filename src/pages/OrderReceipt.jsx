@@ -117,7 +117,31 @@ const ISSUE_TYPES = [
   { id: 'payment', label: 'Payment problem' },
   { id: 'refund',  label: 'Other / I want a refund' },
 ];
-const ISSUE_STATUS = { pending: 'Being reviewed', resolved: 'Resolved', denied: 'Declined' };
+
+// Where a report stands, in the customer's words. The restaurant reviews it first
+// and sends any refund itself; KinakanGo steps in for delivery problems or when
+// the customer asks for a review.
+const hoursSince = (t) => (t ? (Date.now() - new Date(t).getTime()) / 3600e3 : 0);
+function reportState(r, waitHours = 24) {
+  const amt = r.refund_approved ? peso(r.refund_approved) : '';
+  const byAdmin = r.handler === 'admin';
+  if (r.refund_status === 'received') return { text: `Refund of ${amt} received`, tone: 'good' };
+  if (r.refund_status === 'sent') return { text: `The restaurant sent your ${amt} refund`, tone: 'good', confirm: true };
+  if (r.refund_status === 'not_received') return { text: `You told us the ${amt} refund didn't arrive. KinakanGo is checking with the restaurant.`, tone: 'wait' };
+  if (r.refund_status === 'to_send') return {
+    text: `Refund of ${amt} approved. The restaurant will send it to you.`, tone: 'good',
+    escalate: !byAdmin && hoursSince(r.resolved_at) >= waitHours ? "I still haven't received it" : null,
+  };
+  if (r.status === 'pending') return byAdmin
+    ? { text: r.escalated_at ? 'KinakanGo is reviewing your report' : 'KinakanGo is reviewing this delivery problem', tone: 'wait' }
+    : { text: 'The restaurant is reviewing your report', tone: 'wait',
+        escalate: hoursSince(r.created_at) >= waitHours ? 'No answer yet? Ask KinakanGo to review' : null };
+  if (r.status === 'denied') return byAdmin
+    ? { text: 'KinakanGo declined this report', tone: 'bad' }
+    : { text: 'The restaurant declined this report', tone: 'bad', escalate: 'Ask KinakanGo to review' };
+  return { text: 'Resolved', tone: 'good' };
+}
+const TONE_CLS = { good: 'text-forest-300', bad: 'text-red-300', wait: 'text-ember-300' };
 
 // Report a problem with this order (optionally asking for a refund), or show the report's status
 function ReportProblem({ order }) {
@@ -129,13 +153,29 @@ function ReportProblem({ order }) {
   const [wantRefund, setWantRefund] = useState(false);
   const [amount, setAmount] = useState('');
   const [saving, setSaving] = useState(false);
+  const [waitHours, setWaitHours] = useState(24);
+  const [busyId, setBusyId] = useState(null);
 
-  useEffect(() => {
-    issuesApi.mine(order.id).then(r => setReports(r.data || [])).catch(() => setReports([]));
-  }, [order.id]);
+  const load = () => issuesApi.mine(order.id)
+    .then(r => { setReports(r.data || []); if (r.restaurantWaitHours) setWaitHours(r.restaurantWaitHours); })
+    .catch(() => setReports([]));
+  useEffect(() => { load(); }, [order.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (reports === null) return null;
-  const pending = reports.find(r => r.status === 'pending');
+  // One open report per order: still being reviewed, or a refund still on its way
+  const pending = reports.find(r => r.status === 'pending' || ['to_send', 'sent', 'not_received'].includes(r.refund_status));
+
+  const act = async (r, fn, done) => {
+    setBusyId(r.id);
+    try { await fn(); addNotification(done, 'success'); await load(); }
+    catch (err) { addNotification(err.message || 'Something went wrong', 'error'); }
+    finally { setBusyId(null); }
+  };
+  const escalate = (r, label) => {
+    const reason = window.prompt(`${label}\n\nTell KinakanGo what happened (optional):`, '');
+    if (reason === null) return;
+    act(r, () => issuesApi.escalate(r.id, reason), "Sent to KinakanGo. We'll get back to you.");
+  };
 
   const submit = async () => {
     if (text.trim().length < 5) { addNotification('Please describe the problem', 'error'); return; }
@@ -147,7 +187,9 @@ function ReportProblem({ order }) {
       });
       setReports(r => [saved, ...r]);
       setOpen(false); setText(''); setWantRefund(false); setAmount('');
-      addNotification("Thanks, we've received your report. You'll get a notification when it's reviewed.", 'success');
+      addNotification(type === 'rider'
+        ? "Thanks, KinakanGo will review your report. You'll get a notification with the answer."
+        : "Thanks, the restaurant will review your report. You'll get a notification with the answer.", 'success');
     } catch (err) {
       addNotification(err.message || 'Could not send your report', 'error');
     } finally {
@@ -160,19 +202,35 @@ function ReportProblem({ order }) {
       <Section title="Problem with this order?">
         {reports.length > 0 && (
           <div className="space-y-2 mb-3">
-            {reports.map(r => (
-              <div key={r.id} className="glass rounded-xl px-3 py-2.5 text-sm">
-                <div className="flex items-center justify-between gap-2">
+            {reports.map(r => {
+              const st = reportState(r, waitHours);
+              const busy = busyId === r.id;
+              return (
+                <div key={r.id} className="glass rounded-xl px-3 py-2.5 text-sm">
                   <span className="text-white font-medium">{ISSUE_TYPES.find(t => t.id === r.type)?.label || 'Report'}</span>
-                  <span className={r.status === 'resolved' ? 'text-forest-300' : r.status === 'denied' ? 'text-red-300' : 'text-ember-300'}>
-                    {ISSUE_STATUS[r.status] || r.status}
-                  </span>
+                  <p className="text-forest-200/60 text-xs mt-1">{r.description}</p>
+                  <p className={`${TONE_CLS[st.tone]} text-sm font-medium mt-2`}>{st.text}</p>
+                  {r.resolution_notes && <p className="text-forest-200/60 text-xs mt-1 italic">"{r.resolution_notes}"</p>}
+                  {r.refund_sent_note && ['sent', 'received'].includes(r.refund_status) && (
+                    <p className="text-forest-200/70 text-xs mt-1">How it was sent: {r.refund_sent_note}</p>
+                  )}
+                  {st.confirm && (
+                    <div className="flex gap-2 mt-2">
+                      <button disabled={busy} onClick={() => act(r, () => issuesApi.received(r.id), 'Thanks for confirming')}
+                        className="flex-1 btn-glow-green text-white text-xs font-semibold py-2 rounded-lg disabled:opacity-50">I got it</button>
+                      <button disabled={busy} onClick={() => escalate(r, "Didn't get the refund?")}
+                        className="flex-1 glass text-forest-100 text-xs py-2 rounded-lg disabled:opacity-50">I didn't get it</button>
+                    </div>
+                  )}
+                  {st.escalate && (
+                    <button disabled={busy} onClick={() => escalate(r, st.escalate)}
+                      className="w-full glass hover:glass-orange transition-all text-forest-100 text-xs py-2 rounded-lg mt-2 disabled:opacity-50">
+                      {st.escalate}
+                    </button>
+                  )}
                 </div>
-                <p className="text-forest-200/60 text-xs mt-1">{r.description}</p>
-                {r.refund_approved && <p className="text-forest-300 text-xs mt-1">Refund approved: {peso(r.refund_approved)}</p>}
-                {r.resolution_notes && <p className="text-forest-200/60 text-xs mt-1 italic">"{r.resolution_notes}"</p>}
-              </div>
-            ))}
+              );
+            })}
           </div>
         )}
         {pending ? null : !open ? (
@@ -185,6 +243,11 @@ function ReportProblem({ order }) {
             <select value={type} onChange={e => setType(e.target.value)} className="w-full input-glass px-3 py-2.5 text-sm rounded-xl">
               {ISSUE_TYPES.map(t => <option key={t.id} value={t.id} style={{ background: '#0d2b1a' }}>{t.label}</option>)}
             </select>
+            <p className="text-forest-200/50 text-xs">
+              {type === 'rider'
+                ? 'KinakanGo reviews delivery problems.'
+                : 'The restaurant reviews this first and sends any refund to you. If you disagree with its answer, you can ask KinakanGo to review.'}
+            </p>
             <textarea value={text} onChange={e => setText(e.target.value)} maxLength={1000} rows={3}
               placeholder="What happened?" className="w-full input-glass px-3 py-2.5 text-sm rounded-xl resize-none" />
             <label className="flex items-center gap-2 text-sm text-forest-100">

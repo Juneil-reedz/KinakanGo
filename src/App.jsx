@@ -51,6 +51,7 @@ import RestaurantOrders from './pages/restaurant/RestaurantOrders';
 import RestaurantMessages from './pages/restaurant/RestaurantMessages';
 import RestaurantMenu from './pages/restaurant/RestaurantMenu';
 import RestaurantReports from './pages/restaurant/RestaurantReports';
+import RestaurantIssues from './pages/restaurant/RestaurantIssues';
 import RestaurantSettings from './pages/restaurant/RestaurantSettings';
 import RiderLogin from './pages/rider/RiderLogin';
 import RiderDashboard from './pages/rider/RiderDashboard';
@@ -189,6 +190,7 @@ function App() {
                           <Route path="notifications" element={<Notifications />} />
                           <Route path="dashboard" element={<RestaurantDashboard />} />
                           <Route path="orders" element={<RestaurantOrders />} />
+                          <Route path="issues" element={<RestaurantIssues />} />
                           <Route path="messages" element={<RestaurantMessages />} />
                           <Route path="menu" element={<RestaurantMenu />} />
                           <Route path="reports" element={<RestaurantReports />} />

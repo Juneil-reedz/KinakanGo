@@ -31,6 +31,11 @@ const normalizeIssue = (issue) => ({
   requestedRefund: issue.requestedRefund || issue.refund_requested,
   refundAmount: issue.refundAmount || issue.refund_approved,
   refundNotes: issue.refundNotes || issue.resolution_notes,
+  handler: issue.handler || 'admin',
+  refundStatus: issue.refund_status,
+  refundSentNote: issue.refund_sent_note,
+  escalationReason: issue.escalation_reason,
+  escalated: !!issue.escalated_at,
   title: issue.title || `${issue.type || 'Issue'} request`,
   createdAt: issue.createdAt || (issue.created_at ? new Date(issue.created_at).toLocaleString() : ''),
 });
@@ -86,9 +91,12 @@ export default function AdminIssues() {
     })();
   }, []);
 
+  // Reports with the restaurant aren't the admin's to decide (yet)
+  const withRestaurant = (i) => i.source === 'issue' && i.handler === 'restaurant' && i.status === 'pending';
+  const statusOf = (i) => withRestaurant(i) ? "with restaurant" : i.status;
   const filtered = issues.filter(i => {
     const matchType   = filterType   === "all" || i.type   === filterType;
-    const matchStatus = filterStatus === "all" || i.status === filterStatus;
+    const matchStatus = filterStatus === "all" || statusOf(i) === filterStatus;
     return matchType && matchStatus;
   });
 
@@ -99,8 +107,8 @@ export default function AdminIssues() {
     const amt = parseFloat(refundAmount);
     try {
       await adminApi.issues.resolve(selected.backendId, { refundApproved: amt, notes: refundNotes });
-      setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes } : i));
-      addNotification(`Refund of ₱${amt.toFixed(2)} approved for ${selected.customerName}`, "success");
+      setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", handler:"admin", refundAmount:amt, refundStatus:"to_send", refundNotes } : i));
+      addNotification(`Refund of ₱${amt.toFixed(2)} approved. ${selected.restaurantName || 'The restaurant'} was told to send it.`, "success");
       close();
     } catch {
       addNotification("Failed to approve refund", "error");
@@ -149,7 +157,7 @@ export default function AdminIssues() {
   };
 
   const TYPES    = ["all","refund","quality","payment","payout","report","rider"];
-  const STATUSES = ["all","pending","resolved","denied"];
+  const STATUSES = ["all","pending","with restaurant","resolved","denied"];
 
   return (
     <div className="space-y-5 pb-6 animate-fade-up">
@@ -164,7 +172,7 @@ export default function AdminIssues() {
       <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
         {[
           { label:"Total Issues", value:issues.length,                                icon:AlertTriangle, color:"btn-glow-green" },
-          { label:"Pending",      value:issues.filter(i=>i.status==="pending").length, icon:Clock,        color:"glass-orange" },
+          { label:"Pending",      value:issues.filter(i=>statusOf(i)==="pending").length, icon:Clock,     color:"glass-orange" },
           { label:"Resolved",     value:issues.filter(i=>i.status==="resolved").length,icon:CheckCircle,  color:"glass-green" },
           { label:"Denied",       value:issues.filter(i=>i.status==="denied").length,  icon:X,            color:"bg-red-500/30" },
         ].map(({ label, value, icon:Icon, color }) => (
@@ -199,7 +207,7 @@ export default function AdminIssues() {
               <button key={s} onClick={() => setStatus(s)}
                 className={`px-3 py-1.5 rounded-xl text-xs font-semibold transition-all capitalize
                   ${filterStatus===s ? "btn-glow-green text-white" : "glass text-forest-200/60 hover:text-forest-100"}`}>
-                {s === "all" ? `All Statuses` : `${s} (${issues.filter(i=>i.status===s).length})`}
+                {s === "all" ? `All Statuses` : `${s} (${issues.filter(i=>statusOf(i)===s).length})`}
               </button>
             ))}
           </div>
@@ -235,6 +243,12 @@ export default function AdminIssues() {
                       <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${PRIORITY_CLS[issue.priority] || "glass text-forest-200/60"}`}>
                         {(issue.priority || "low").toUpperCase()}
                       </span>
+                      {withRestaurant(issue) && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold glass text-forest-200/70">WITH RESTAURANT</span>
+                      )}
+                      {issue.escalated && (
+                        <span className="text-xs px-2 py-0.5 rounded-full font-semibold bg-red-500/20 text-red-300">CUSTOMER ASKED FOR REVIEW</span>
+                      )}
                       {issue.status !== "pending" && (
                         <span className={`text-xs px-2 py-0.5 rounded-full font-semibold ${issue.status === "resolved" ? "glass-green text-forest-200" : "bg-red-500/20 text-red-300"}`}>
                           {issue.status.toUpperCase()}
@@ -288,34 +302,41 @@ export default function AdminIssues() {
                         </p>
                       </div>
                     )}
+                    {issue.escalationReason && (
+                      <p className="text-forest-200/70 text-xs mt-2">Customer says: "{issue.escalationReason}"</p>
+                    )}
                     {issue.refundAmount && (
                       <div className="glass-green rounded-xl px-3 py-2 mt-2">
-                        <p className="text-forest-200 text-xs font-semibold">Refund Approved: ₱{Number(issue.refundAmount).toFixed(2)}</p>
+                        <p className="text-forest-200 text-xs font-semibold">
+                          Refund Approved: ₱{Number(issue.refundAmount).toFixed(2)}
+                          {issue.refundStatus && ` · ${{ to_send: 'restaurant has not sent it yet', sent: 'restaurant says it was sent', not_received: "customer says it didn't arrive", received: 'customer received it' }[issue.refundStatus] || issue.refundStatus}`}
+                        </p>
+                        {issue.refundSentNote && <p className="text-forest-200/50 text-xs mt-0.5">Sent: {issue.refundSentNote}</p>}
                         {issue.refundNotes && <p className="text-forest-200/50 text-xs mt-0.5">Note: {issue.refundNotes}</p>}
                       </div>
                     )}
 
-                    {issue.status === "pending" && (
+                    {withRestaurant(issue) && (
+                      <p className="text-forest-200/50 text-xs mt-3">The restaurant is handling this. The customer can ask you to review it if they disagree.</p>
+                    )}
+                    {issue.status === "pending" && !withRestaurant(issue) && (
                       <div className="flex gap-2 flex-wrap mt-3">
-                        {["refund","quality","payment"].includes(issue.type) && (
+                        {issue.source === 'issue' && (
                           <button onClick={() => openRefund(issue)}
                             className="btn-glow-green text-white text-xs font-semibold px-3 py-1.5 rounded-xl">
-                            Process Refund
+                            Decide Refund
                           </button>
                         )}
                         <button onClick={() => resolve(issue.id)}
                           className="glass hover:glass-green transition-all text-forest-200 text-xs font-medium px-3 py-1.5 rounded-xl">
                           Mark Resolved
                         </button>
-                        {issue.source === 'riderRequest' && (
+                        {(
                           <button onClick={() => deny(issue.id)}
                             className="glass text-red-300 text-xs font-medium px-3 py-1.5 rounded-xl hover:glass transition-all">
                             Deny
                           </button>
                         )}
-                        <button className="glass text-forest-200/60 text-xs font-medium px-3 py-1.5 rounded-xl hover:glass transition-all">
-                          Contact {issue.source === 'riderRequest' ? 'Rider' : 'Customer'}
-                        </button>
                       </div>
                     )}
                   </div>
@@ -331,7 +352,7 @@ export default function AdminIssues() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto">
           <div className="glass rounded-3xl p-6 w-full max-w-sm my-4">
             <div className="flex items-center justify-between mb-4">
-              <p className="text-white font-semibold">Process Refund</p>
+              <p className="text-white font-semibold">Decide Refund</p>
               <button onClick={close} className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
                 <X className="w-4 h-4 text-forest-200" />
               </button>
@@ -366,6 +387,8 @@ export default function AdminIssues() {
                 ))}
               </div>
             </div>
+
+            <p className="text-forest-200/50 text-xs mb-3">If you approve, {selected.restaurantName || 'the restaurant'} is told to send the money back to the customer. The order counts as refunded once the customer confirms.</p>
 
             <div className="mb-4">
               <label className="block text-forest-200/60 text-xs font-medium mb-1">Admin Notes</label>
