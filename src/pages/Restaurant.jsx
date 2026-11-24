@@ -5,6 +5,7 @@ import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, Minus, X, ArrowLeft, Clock, Truck, ChevronRight, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import useGoBack from '../hooks/useGoBack';
+import { foodRating } from '../utils/foodRating';
 
 export default function Restaurant() {
   const { id } = useParams();
@@ -143,7 +144,7 @@ export default function Restaurant() {
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1">
                     <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
-                    <span className="text-ember-300 text-xs">{Number(restaurant.rating ?? 0).toFixed(1)}</span>
+                    <span className="text-ember-300 text-xs">{foodRating(item)}</span>
                   </div>
                   <button onClick={e => { e.stopPropagation(); setSelectedItem(item); setQuantity(1); }}
                     className="w-6 h-6 btn-glow-orange rounded-lg flex items-center justify-center">

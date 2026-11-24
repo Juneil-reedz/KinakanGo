@@ -5,6 +5,7 @@ import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, Clock, Truck, Tag, ChevronRight, Flame, Zap, UtensilsCrossed } from 'lucide-react';
+import { foodRating } from '../utils/foodRating';
 
 const CATEGORIES = [
   { name: 'All' },
@@ -275,7 +276,7 @@ export default function Home() {
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-1">
                       <Star className="w-3.5 h-3.5 fill-ember-400 text-ember-400" />
-                      <span className="text-ember-300 text-xs font-medium">{Number(item.rating ?? 0).toFixed(1)}</span>
+                      <span className="text-ember-300 text-xs font-medium">{foodRating(item)}</span>
                     </div>
                     <button onClick={() => handleAddToCart(item)}
                       className="w-7 h-7 btn-glow-orange rounded-lg flex items-center justify-center">
