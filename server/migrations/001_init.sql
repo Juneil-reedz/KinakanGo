@@ -151,6 +151,8 @@ CREATE TABLE menu_items (
   is_available   BOOLEAN      NOT NULL DEFAULT TRUE,
   is_vegetarian  BOOLEAN      NOT NULL DEFAULT FALSE,
   prep_time_mins INT          NOT NULL DEFAULT 15,
+  avg_rating     DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+  rating_count   INT          NOT NULL DEFAULT 0,
   created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -314,6 +316,16 @@ CREATE TABLE reviews (
   rider_rating  SMALLINT     DEFAULT NULL,
   comment       TEXT         DEFAULT NULL,
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+);
+
+-- Per-item food ratings given with an order review
+CREATE TABLE order_item_ratings (
+  order_id     INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+  menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+  customer_id  INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  rating       SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (order_id, menu_item_id)
 );
 
 -- ─── FAVORITES (menu items) ──────────────────────────────────────────────────

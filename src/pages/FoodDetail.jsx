@@ -30,11 +30,12 @@ export default function FoodDetail() {
   const [status, setStatus]   = useState(stateItem ? 'ready' : 'loading');
 
   useEffect(() => {
-    if (stateItem) return;
-    setStatus('loading');
+    // A list item passed in state may not carry the food's own rating, so
+    // still load it quietly in the background to show the latest stars.
+    if (!stateItem) setStatus('loading');
     menuApi.getItem(id)
       .then(item => { setFetched(item); setStatus('ready'); })
-      .catch(() => setStatus('missing'));
+      .catch(() => { if (!stateItem) setStatus('missing'); });
   }, [id, stateItem]);
 
   if (status !== 'ready') {
@@ -52,7 +53,7 @@ export default function FoodDetail() {
     );
   }
 
-  const raw = stateItem || fetched;
+  const raw = stateItem ? { ...stateItem, ...(fetched && { avg_rating: fetched.avg_rating, rating_count: fetched.rating_count }) } : fetched;
   // API prices arrive as strings ("150.00"); keep the maths numeric
   const foodItem = { ...raw, price: Number(raw.price) || 0 };
 
@@ -123,7 +124,11 @@ export default function FoodDetail() {
             <div className="flex flex-wrap gap-2">
               <div className="flex items-center gap-1.5 glass-green rounded-xl px-3 py-2 text-xs">
                 <Star className="w-3.5 h-3.5 fill-ember-400 text-ember-400" />
-                <span className="text-forest-100">{foodItem.rating || '4.5'}</span>
+                <span className="text-forest-100">
+                  {Number(foodItem.rating_count) > 0
+                    ? <>{Number(foodItem.avg_rating).toFixed(1)} <span className="text-forest-200/50">({foodItem.rating_count})</span></>
+                    : 'New'}
+                </span>
               </div>
               {restaurantName && (
                 <div className="flex items-center gap-1.5 glass rounded-xl px-3 py-2 text-xs text-forest-200/70 min-w-0">

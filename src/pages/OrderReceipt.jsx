@@ -27,35 +27,57 @@ function Section({ title, children }) {
   );
 }
 
-// Rate a delivered order (food + restaurant), or show the rating already given
+// Rate a delivered order: each food item separately, plus the restaurant.
+// Shows the ratings already given once the order is rated.
 function RateOrder({ order, onRated }) {
   const { addNotification } = useNotification();
-  const [food, setFood] = useState(0);
+  // One row per distinct menu item (the same item can appear twice with different notes)
+  const foods = [];
+  for (const i of order.items || []) {
+    if (!foods.some(f => f.menu_item_id === i.menu_item_id)) foods.push(i);
+  }
+  const [stars, setStars] = useState({});
   const [rest, setRest] = useState(0);
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
+
+  const row = (label, value, onChange, aria) => (
+    <div className="flex items-center justify-between gap-3">
+      <span className={onChange ? 'text-white text-sm font-medium truncate' : 'text-forest-100/80 truncate'}>{label}</span>
+      <StarRating value={value} onChange={onChange} size={onChange ? undefined : 'w-5 h-5'} label={aria} />
+    </div>
+  );
 
   if (order.food_rating) {
     return (
       <Section title="Your rating">
         <div className="space-y-2 text-sm">
-          <div className="flex items-center justify-between"><span className="text-forest-100/80">Food</span><StarRating value={order.food_rating} size="w-5 h-5" /></div>
-          {order.restaurant_rating && (
-            <div className="flex items-center justify-between"><span className="text-forest-100/80">Restaurant</span><StarRating value={order.restaurant_rating} size="w-5 h-5" /></div>
-          )}
+          {foods.map(f => (
+            <div key={f.menu_item_id}>
+              {/* Older reviews only stored one food rating for the whole order */}
+              {row(f.name, f.my_rating || order.food_rating)}
+            </div>
+          ))}
+          {order.restaurant_rating && row(`Restaurant${order.restaurant_name ? ` · ${order.restaurant_name}` : ''}`, order.restaurant_rating)}
           {order.review_comment && <p className="text-forest-200/60 italic">"{order.review_comment}"</p>}
         </div>
       </Section>
     );
   }
 
+  const rated = foods.filter(f => stars[f.menu_item_id]);
   const submit = async () => {
-    if (!food || !rest) { addNotification('Please rate both the food and the restaurant', 'error'); return; }
+    if (!rated.length || !rest) { addNotification('Please rate at least one food item and the restaurant', 'error'); return; }
     setSaving(true);
     try {
-      await ordersApi.review(order.id, { foodRating: food, restaurantRating: rest, comment: comment.trim() || null });
+      const itemRatings = rated.map(f => ({ menuItemId: f.menu_item_id, rating: stars[f.menu_item_id] }));
+      await ordersApi.review(order.id, { itemRatings, restaurantRating: rest, comment: comment.trim() || null });
       addNotification('Thanks for your rating!', 'success');
-      onRated({ food_rating: food, restaurant_rating: rest, review_comment: comment.trim() || null });
+      const avg = Math.round(itemRatings.reduce((a, r) => a + r.rating, 0) / itemRatings.length);
+      onRated({
+        food_rating: avg, restaurant_rating: rest, review_comment: comment.trim() || null,
+        items: (order.items || []).map(i => ({ ...i, my_rating: stars[i.menu_item_id] || null })),
+      });
     } catch (err) {
       addNotification(err.message || 'Could not save your rating', 'error');
     } finally {
@@ -67,18 +89,19 @@ function RateOrder({ order, onRated }) {
     <div id="rate" className="print:hidden">
       <Section title="Rate this order">
         <div className="space-y-3">
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-white text-sm font-medium">How was the food?</span>
-            <StarRating value={food} onChange={setFood} label="Food rating" />
-          </div>
-          <div className="flex items-center justify-between gap-3">
-            <span className="text-white text-sm font-medium">How was the restaurant?</span>
-            <StarRating value={rest} onChange={setRest} label="Restaurant rating" />
+          <p className="text-forest-200/60 text-xs">Rate each food you ordered. You can skip any you didn't try.</p>
+          {foods.map(f => (
+            <div key={f.menu_item_id}>
+              {row(f.name, stars[f.menu_item_id] || 0, v => setStars(s => ({ ...s, [f.menu_item_id]: v })), `Rating for ${f.name}`)}
+            </div>
+          ))}
+          <div className="pt-2" style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)' }}>
+            {row('Restaurant', rest, setRest, 'Restaurant rating')}
           </div>
           <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={500} rows={2}
             placeholder="Anything to add? (optional)"
             className="w-full input-glass px-3 py-2.5 text-sm rounded-xl resize-none" />
-          <button onClick={submit} disabled={saving || !food || !rest}
+          <button onClick={submit} disabled={saving || !rated.length || !rest}
             className="w-full btn-glow-orange text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
             <Star className="w-4 h-4" /> {saving ? 'Saving…' : 'Submit rating'}
           </button>
@@ -124,7 +147,7 @@ export default function OrderReceipt() {
   }, [orderId]);
 
   const back = (
-    <button onClick={() => navigate(-1)}
+    <button onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/profile', { state: { tab: 'orders' } }))}
       className="glass hover:glass-green transition-all text-forest-100/80 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl flex items-center gap-2">
       <ArrowLeft className="w-4 h-4" /> Back
     </button>

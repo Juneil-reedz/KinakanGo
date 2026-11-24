@@ -158,6 +158,19 @@ pool.query(`
   )
 `).then(() => pool.query(`
   ALTER TABLE reviews ADD COLUMN IF NOT EXISTS restaurant_rating SMALLINT DEFAULT NULL CHECK (restaurant_rating BETWEEN 1 AND 5)
+`)).then(() => pool.query(`
+  CREATE TABLE IF NOT EXISTS order_item_ratings (
+    order_id     INT NOT NULL REFERENCES orders(id) ON DELETE CASCADE,
+    menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+    customer_id  INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    rating       SMALLINT NOT NULL CHECK (rating BETWEEN 1 AND 5),
+    created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    PRIMARY KEY (order_id, menu_item_id)
+  )
+`)).then(() => pool.query(`
+  ALTER TABLE menu_items
+    ADD COLUMN IF NOT EXISTS avg_rating   DECIMAL(3,2) NOT NULL DEFAULT 0.00,
+    ADD COLUMN IF NOT EXISTS rating_count INT          NOT NULL DEFAULT 0
 `)).catch(err => console.warn('reviews init warning:', err.message));
 
 const authRoutes   = require('./routes/auth');

@@ -467,9 +467,10 @@ async function getOrder(req, res) {
   resolveImageUrls(req, order, ['restaurant_image']);
 
   const { rows: items } = await pool.query(
-    `SELECT oi.*, ${imageUrlSql('mi', 'menu-items')} AS image_url
+    `SELECT oi.*, ${imageUrlSql('mi', 'menu-items')} AS image_url, oir.rating AS my_rating
      FROM order_items oi
      LEFT JOIN menu_items mi ON oi.menu_item_id = mi.id
+     LEFT JOIN order_item_ratings oir ON oir.order_id = oi.order_id AND oir.menu_item_id = oi.menu_item_id
      WHERE oi.order_id = $1`,
     [req.params.id]
   );
@@ -683,14 +684,14 @@ async function emailReceipt(req, res) {
 
 // ── Reviews ──────────────────────────────────────────────────────────────────
 
-// Customer rates a delivered order: the food and the restaurant, 1–5 stars each
+// Customer rates a delivered order once: each food item (1–5 stars, optional
+// per item) and the restaurant (1–5 stars, required), plus an optional comment.
 async function submitReview(req, res) {
-  const foodRating       = Number(req.body.foodRating);
   const restaurantRating = Number(req.body.restaurantRating);
   const comment = req.body.comment ? String(req.body.comment).trim().slice(0, 500) : null;
   const valid = (n) => Number.isInteger(n) && n >= 1 && n <= 5;
-  if (!valid(foodRating) || !valid(restaurantRating)) {
-    return res.status(400).json({ error: 'Please give the food and the restaurant 1 to 5 stars' });
+  if (!valid(restaurantRating)) {
+    return res.status(400).json({ error: 'Please give the restaurant 1 to 5 stars' });
   }
   const { rows } = await pool.query(
     'SELECT customer_id, restaurant_id, rider_id, status FROM orders WHERE id = $1', [req.params.id]
@@ -699,17 +700,43 @@ async function submitReview(req, res) {
   if (!o || o.customer_id !== req.user.id) return res.status(404).json({ error: 'Order not found' });
   if (o.status !== 'delivered') return res.status(400).json({ error: 'You can rate an order once it has been delivered' });
 
+  // Item ratings: only items that are in this order, each at most once
+  const { rows: orderItems } = await pool.query('SELECT DISTINCT menu_item_id FROM order_items WHERE order_id = $1', [req.params.id]);
+  const inOrder = new Set(orderItems.map(r => r.menu_item_id));
+  const itemRatings = new Map();
+  for (const r of Array.isArray(req.body.itemRatings) ? req.body.itemRatings : []) {
+    const itemId = parseInt(r?.menuItemId);
+    const stars  = Number(r?.rating);
+    if (!inOrder.has(itemId)) return res.status(400).json({ error: 'That item is not part of this order' });
+    if (!valid(stars)) return res.status(400).json({ error: 'Each food rating must be 1 to 5 stars' });
+    itemRatings.set(itemId, stars);
+  }
+  if (!itemRatings.size) return res.status(400).json({ error: 'Please rate at least one food item' });
+  const foodAvg = Math.round([...itemRatings.values()].reduce((a, b) => a + b, 0) / itemRatings.size);
+
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
     const { rowCount } = await client.query(
       `INSERT INTO reviews (order_id, customer_id, restaurant_id, rider_id, food_rating, restaurant_rating, comment)
        VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (order_id) DO NOTHING`,
-      [req.params.id, req.user.id, o.restaurant_id, o.rider_id, foodRating, restaurantRating, comment]
+      [req.params.id, req.user.id, o.restaurant_id, o.rider_id, foodAvg, restaurantRating, comment]
     );
     if (!rowCount) {
       await client.query('ROLLBACK');
       return res.status(409).json({ error: 'You already rated this order' });
+    }
+    for (const [itemId, stars] of itemRatings) {
+      await client.query(
+        `INSERT INTO order_item_ratings (order_id, menu_item_id, customer_id, rating) VALUES ($1,$2,$3,$4)`,
+        [req.params.id, itemId, req.user.id, stars]
+      );
+      await client.query(
+        `UPDATE menu_items SET avg_rating = sub.avg, rating_count = sub.n
+         FROM (SELECT ROUND(AVG(rating)::numeric, 2) AS avg, COUNT(*)::int AS n
+               FROM order_item_ratings WHERE menu_item_id = $1) sub
+         WHERE id = $1`, [itemId]
+      );
     }
     await client.query(
       `UPDATE restaurants SET
@@ -728,13 +755,19 @@ async function submitReview(req, res) {
     client.release();
   }
 
+  const { rows: names } = await pool.query(
+    'SELECT id, name FROM menu_items WHERE id = ANY($1::int[])', [[...itemRatings.keys()]]
+  );
+  const nameOf = Object.fromEntries(names.map(n => [n.id, n.name]));
+  const itemsText = [...itemRatings].map(([id, st]) => `${nameOf[id] || 'Item'} ${st}★`).join(', ');
   const { rows: rest } = await pool.query('SELECT owner_id FROM restaurants WHERE id = $1', [o.restaurant_id]);
   await notify(rest[0]?.owner_id, {
     audience: 'restaurant', type: 'info', link: '/owner/orders',
     title: `New rating · Order #${req.params.id}`,
-    message: `Food ${'★'.repeat(foodRating)} · Restaurant ${'★'.repeat(restaurantRating)}${comment ? ` · "${comment.slice(0, 120)}"` : ''}`,
+    message: `Restaurant ${restaurantRating}★ · ${itemsText}${comment ? ` · "${comment.slice(0, 120)}"` : ''}`,
   });
-  res.status(201).json({ message: 'Thanks for your rating!', foodRating, restaurantRating, comment });
+  res.status(201).json({ message: 'Thanks for your rating!', restaurantRating, comment,
+    itemRatings: [...itemRatings].map(([menuItemId, rating]) => ({ menuItemId, rating })) });
 }
 
 module.exports = { submitReview, emailReceipt, sendOrderReceipt, notifyOrderStatus, requestOrderCode, placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };

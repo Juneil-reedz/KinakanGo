@@ -11,6 +11,7 @@ async function listAll(req, res) {
   const { rows } = await pool.query(
     `SELECT m.id, m.name, m.description, m.price, m.image_url,
             m.is_vegetarian, m.prep_time_mins,
+            m.avg_rating, m.rating_count,
             c.name AS category_name,
             r.id AS restaurant_id, r.name AS restaurant_name, r.rating
      FROM menu_items m
@@ -31,6 +32,7 @@ async function getItem(req, res) {
   const { rows } = await pool.query(
     `SELECT m.id, m.name, m.description, m.price, m.image_url,
             m.is_vegetarian, m.is_available, m.prep_time_mins,
+            m.avg_rating, m.rating_count,
             c.name AS category_name,
             r.id AS restaurant_id, r.name AS restaurant_name, r.rating
      FROM menu_items m
