@@ -18,10 +18,7 @@ export default function Welcome() {
   };
 
   return (
-    <div className="keep-dark fixed inset-0 overflow-hidden flex items-center justify-center bg-[#001207] px-5 py-8">
-      <div className="orb w-[28rem] h-[28rem] bg-forest-600/20 top-[-8rem] left-[-10rem]" />
-      <div className="orb w-80 h-80 bg-ember-500/10 bottom-[-5rem] right-[-6rem]" />
-      <div className="orb w-72 h-72 bg-forest-400/10 bottom-20 left-1/2 -translate-x-1/2" />
+    <div className="fixed inset-0 overflow-hidden flex items-center justify-center px-5 py-8">
 
       <div className={`relative z-10 max-w-[21rem] w-full mx-auto transition-all duration-1000
         ${loading ? 'opacity-0 scale-95' : show ? 'opacity-100 scale-100' : 'opacity-0 scale-90'}`}>
@@ -32,11 +29,11 @@ export default function Welcome() {
         </div>
 
         <div className="text-center mb-7">
-          <h1 className="text-2xl font-heading font-black text-white text-glow-green tracking-tight">Tap it. Get it.</h1>
-          <p className="text-forest-200 mt-2 text-sm">Bongao Taste</p>
+          <h1 className="text-2xl font-heading font-black text-white tracking-tight">Tap it. Get it.</h1>
+          <p className="text-forest-100 mt-2 text-sm">Bongao Taste</p>
         </div>
 
-        <div className="rounded-[1.7rem] overflow-hidden shadow-2xl border border-ember-300/20 card-3d mb-7 bg-black/20">
+        <div className="rounded-[1.7rem] overflow-hidden card-3d clay-photo mb-7 bg-white">
           <video
             src={`${import.meta.env.BASE_URL}assets/sidebar-video.mp4`}
             className="w-full h-auto block"
@@ -76,7 +73,7 @@ export default function Welcome() {
           </span>
         </button>
 
-        <p className="text-center text-forest-200/35 text-xs mt-5">Serving Bongao, Tawi-Tawi</p>
+        <p className="text-center text-forest-100/70 text-xs mt-5">Serving Bongao, Tawi-Tawi</p>
       </div>
     </div>
   );
