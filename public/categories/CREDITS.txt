@@ -1,4 +1,16 @@
-Category images are adapted from Microsoft Fluent Emoji (3D set)
-https://github.com/microsoft/fluentui-emoji
-Copyright (c) Microsoft Corporation. Licensed under the MIT License.
-Resized to 160px and converted to WebP; backgrounds are transparent.
+Category photos: real food photos from Wikimedia Commons, background removed
+(cut out with rembg/IS-Net), cropped and resized to 240px WebP.
+
+all.webp: "NYC-Diner-ToGo-Gyro-Platter.jpg" by Evan-Amos, Public domain. https://commons.wikimedia.org/wiki/File:NYC-Diner-ToGo-Gyro-Platter.jpg
+burger.webp: "Cheeseburger (2).jpg" by Renee Comet (Photographer), Public domain. https://commons.wikimedia.org/wiki/File:Cheeseburger_(2).jpg
+pizza.webp: "Spinach pizza.jpg" by Agnieszka Kwiecień (Nova), CC BY 2.5. https://commons.wikimedia.org/wiki/File:Spinach_pizza.jpg
+sushi.webp: "Salmon Sushi.jpg" by Switchercat, Public domain. https://commons.wikimedia.org/wiki/File:Salmon_Sushi.jpg
+chicken.webp: "Fried-Chicken-Set.jpg" by Evan-Amos, CC0. https://commons.wikimedia.org/wiki/File:Fried-Chicken-Set.jpg
+drinks.webp: "Iced tea.jpg" by Renee Comet (Photographer), Public domain. https://commons.wikimedia.org/wiki/File:Iced_tea.jpg
+bakery.webp: "Croissant-Petr Kratochvil.jpg" by Petr Kratochvil, CC0. https://commons.wikimedia.org/wiki/File:Croissant-Petr_Kratochvil.jpg
+seafood.webp: "CSIRO ScienceImage 939 Prawn salad.jpg" by David McClenaghan, CSIRO, CC BY 3.0. https://commons.wikimedia.org/wiki/File:CSIRO_ScienceImage_939_Prawn_salad.jpg
+pasta.webp: "Ankake-spaghetti 001.jpg" by Ocdp, CC0. https://commons.wikimedia.org/wiki/File:Ankake-spaghetti_001.jpg
+salad.webp: "5aday salad.jpg" by unknown, Public domain. https://commons.wikimedia.org/wiki/File:5aday_salad.jpg
+dessert.webp: "Danish (1).jpg" by Renee Comet (Photographer), Public domain. https://commons.wikimedia.org/wiki/File:Danish_(1).jpg
+
+CC BY images: changes made (background removed, cropped, resized).

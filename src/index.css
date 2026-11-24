@@ -514,6 +514,7 @@
     filter: blur(80px);
     pointer-events: none;
     position: absolute;
+    z-index: -1;           /* glow behind the content, never a tint over the white cards */
   }
 
   /* Food category pill */
@@ -544,8 +545,7 @@
     height: 4.5rem;
     justify-content: center;
     background: var(--clay-sheen), linear-gradient(160deg, #ffffff 0%, #fbfaf7 100%) !important;
-    --clay-ink: 0 38 42; --clay-hi: 255 255 255; --clay-hi-a: .9;
-    box-shadow: var(--clay-raise);
+    box-shadow: inset 0 -3px 6px -3px rgb(0 38 42 / .12), 0 2px 3px rgb(0 38 42 / .12), 6px 12px 22px -12px rgb(0 30 33 / .5) !important;
   }
   .category-photo img {
     width: 100%;
@@ -557,7 +557,7 @@
     user-select: none;
   }
   .category-photo.active {
-    box-shadow: var(--clay-raise), 0 0 0 3px #e8b52a;
+    box-shadow: 0 0 0 3px #e8b52a, 6px 12px 22px -12px rgb(0 30 33 / .5) !important;
   }
   .category-photo.active img { transform: scale(1.06); }
 
