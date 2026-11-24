@@ -134,12 +134,15 @@ export default function CustomerLayout() {
         <div className={`flex items-center ${collapsed ? 'justify-center py-5' : 'justify-between px-4 py-3'}`}>
           {!collapsed && (
             <div className="flex items-center gap-2.5 min-w-0">
-              <div className="w-9 h-9 rounded-xl btn-glow-green flex items-center justify-center flex-shrink-0">
-                <Utensils className="w-5 h-5 text-white" />
-              </div>
+              <button onClick={() => { navigate('/profile', { state: { tab: 'profile' } }); setMobileOpen(false); }} aria-label="Profile"
+                className="w-10 h-10 rounded-full overflow-hidden border-2 border-ember-400/60 flex items-center justify-center glass flex-shrink-0">
+                {user?.avatar
+                  ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                  : <User className="w-5 h-5 text-forest-100" />}
+              </button>
               <div className="min-w-0">
-                <p className="font-heading font-bold text-white text-sm leading-tight truncate">KinakanGo</p>
-                <p className="text-forest-200 text-xs truncate">Bongao Taste</p>
+                <p className="font-heading font-bold text-white text-sm leading-tight truncate">{user?.name || 'Guest'}</p>
+                <p className="text-forest-200 text-xs truncate">{user?.email || 'Welcome to KinakanGo'}</p>
               </div>
             </div>
           )}
@@ -238,23 +241,16 @@ export default function CustomerLayout() {
         {active === 'dashboard' && (
           <header className="glass-dark clay-forest-bar flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3" style={{ background: 'transparent', boxShadow: 'none' }}>
 
-            {/* Profile (left) · KinakanGo (centre) · menu (right), like the reference */}
-            <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })} aria-label="Profile"
-              className="w-10 h-10 rounded-full overflow-hidden border-2 border-ember-400/60 hover:border-ember-400 transition-all flex items-center justify-center glass flex-shrink-0">
-              {user?.avatar
-                ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
-                : <User className="w-5 h-5 text-forest-100" />
-              }
+            {/* Menu (left) · KinakanGo (centre) · profile (right) */}
+            <button onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu"
+              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0">
+              <Menu className="w-6 h-6" />
             </button>
 
             <h1 className="brand-wordmark flex-1 text-center text-white text-2xl leading-none select-none">
               Kinakan<span className="text-ember-500">Go</span>
             </h1>
 
-            <button onClick={() => setMobileOpen(!mobileOpen)} aria-label="Menu"
-              className="lg:hidden w-10 h-10 rounded-xl flex items-center justify-center text-white flex-shrink-0">
-              <Menu className="w-6 h-6" />
-            </button>
             <button onClick={() => navigate('/cart')} aria-label="Cart"
               className="relative hidden lg:flex w-10 h-10 glass rounded-xl items-center justify-center text-forest-100 hover:glass-green transition-all flex-shrink-0">
               <ShoppingCart className="w-5 h-5" />
@@ -263,6 +259,13 @@ export default function CustomerLayout() {
                   {cartItems.length}
                 </span>
               )}
+            </button>
+            <button onClick={() => navigate('/profile', { state: { tab: 'profile' } })} aria-label="Profile"
+              className="w-10 h-10 rounded-full overflow-hidden border-2 border-ember-400/60 hover:border-ember-400 transition-all flex items-center justify-center glass flex-shrink-0">
+              {user?.avatar
+                ? <img src={user.avatar} alt="" className="w-full h-full object-cover" />
+                : <User className="w-5 h-5 text-forest-100" />
+              }
             </button>
           </header>
         )}
