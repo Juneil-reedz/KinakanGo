@@ -4,7 +4,7 @@ import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed, Utensils, Hamburger, Pizza, Fish, Drumstick, CupSoda, Croissant, Shrimp } from 'lucide-react';
+import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed, Utensils, Hamburger, Pizza, Fish, Drumstick, CupSoda, Croissant, Shrimp, Search, SlidersHorizontal } from 'lucide-react';
 import { foodRating } from '../utils/foodRating';
 
 const CATEGORIES = [
@@ -24,10 +24,21 @@ const PROMO_STYLES = [
   { bg: 'from-forest-600/80 to-ember-800/80', accent: '#3db870' },
 ];
 
-const POSTER = {
-  id: 'poster',
-  poster: `${import.meta.env.BASE_URL}promos/good-food-good-mood.jpg`,
-  alt: 'Good Food, Good Mood! Fresh meals from Bongao\'s favorite restaurants, delivered to your door. Order now.',
+const POSTER_URL = (f) => `${import.meta.env.BASE_URL}promos/${f}.jpg`;
+
+// Always-on posters (made in Canva). They follow any live promo codes.
+const POSTERS = [
+  { id: 'poster-good-food', poster: POSTER_URL('good-food-good-mood'),
+    alt: "Good Food, Good Mood! Fresh meals from Bongao's favorite restaurants, delivered to your door. Order now." },
+  { id: 'poster-pizza', poster: POSTER_URL('craving-pizza'),
+    alt: "Craving Pizza? Hot, cheesy slices from Bongao's pizza spots, delivered fast. Order now." },
+  { id: 'poster-pay', poster: POSTER_URL('pay-your-way'),
+    alt: 'Pay your way: GCash or Cash on Delivery. Track your rider live to your door. Order now.' },
+];
+
+// A live promo code with its own Canva poster shows the poster instead of the plain card
+const CODE_POSTERS = {
+  POWER12: { poster: POSTER_URL('code-power12'), alt: '2% off your order with code POWER12.' },
 };
 
 const promoTitle = (promo) => {
@@ -43,6 +54,7 @@ export default function Home() {
   const [cat, setCat]               = useState('All');
   const [promo, setPromo]           = useState(0);
   const [activePromos, setActivePromos] = useState([]);
+  const [search, setSearch]           = useState('');
   const [restaurants, setRestaurants] = useState([]);
   const [popularItems, setPopularItems] = useState([]);
   const [recentOrders, setRecentOrders] = useState([]);
@@ -72,18 +84,19 @@ export default function Home() {
   }, []);
 
   // The KinakanGo poster always leads the carousel; live promo codes follow it
-  const promoCards = [POSTER, ...(activePromos.length
-    ? activePromos.map((item, index) => {
-        const style = PROMO_STYLES[index % PROMO_STYLES.length];
-        return {
-          id: item.id,
-          tag: item.code || 'Promo',
-          title: promoTitle(item),
-          sub: item.description || `Use code ${item.code}`,
-          ...style,
-        };
-      })
-    : [])];
+  const codeCards = activePromos.map((item, index) => {
+    const poster = CODE_POSTERS[String(item.code || '').toUpperCase()];
+    if (poster) return { id: `code-${item.id}`, ...poster };
+    const style = PROMO_STYLES[index % PROMO_STYLES.length];
+    return {
+      id: item.id,
+      tag: item.code || 'Promo',
+      title: promoTitle(item),
+      sub: item.description || `Use code ${item.code}`,
+      ...style,
+    };
+  });
+  const promoCards = [...codeCards, ...POSTERS];
 
   useEffect(() => {
     if (promoCards.length < 2) return undefined;
@@ -150,6 +163,21 @@ export default function Home() {
         </div>
         )}
       </section>}
+
+      {/* ── Search (under the promo) ─────────────────── */}
+      <form role="search" className="flex items-center gap-2.5"
+        onSubmit={e => { e.preventDefault(); const q = search.trim(); navigate(q ? `/restaurants?search=${encodeURIComponent(q)}` : '/restaurants'); }}>
+        <div className="flex-1 relative">
+          <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300" aria-hidden="true" />
+          <input value={search} onChange={e => setSearch(e.target.value)} type="search"
+            placeholder="Search food or restaurants…" aria-label="Search food or restaurants"
+            className="w-full input-glass pl-11 pr-4 py-3 text-sm rounded-2xl" />
+        </div>
+        <button type="button" onClick={() => navigate('/restaurants')} aria-label="Filters"
+          className="w-12 h-12 glass rounded-2xl flex items-center justify-center text-forest-100 flex-shrink-0">
+          <SlidersHorizontal className="w-5 h-5" />
+        </button>
+      </form>
 
       {/* ── Categories ───────────────────────────────── */}
       <section>

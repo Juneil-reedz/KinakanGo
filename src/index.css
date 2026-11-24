@@ -81,11 +81,8 @@
 [class*="bg-red-500"], [class*="bg-red-600"], .bg-rose-500, .bg-forest-500, .bg-forest-600, .bg-forest-700,
 [class*="from-forest-"], [class*="from-red-"],
 :has(> [class*="from-black"]) {
-  --app-bg:
-            radial-gradient(ellipse at 85% 0%, rgba(247,147,30,.11) 0%, transparent 50%),
-            radial-gradient(ellipse at 0% 60%, rgba(229,123,12,.06) 0%, transparent 55%),
-            radial-gradient(ellipse at 100% 100%, rgba(184,95,6,.08) 0%, transparent 55%),
-            linear-gradient(170deg, #1a1613 0%, #120f0d 55%, #0c0a09 100%);
+  /* one flat colour everywhere, the same as the top bar */
+  --app-bg: #1a1512;
   --app-text: #f6f0ea;
   --fg-rgb: 255,255,255;
 
@@ -236,6 +233,21 @@
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .10), 0 0 0 1px rgb(255 255 255 / .07), 0 14px 30px -16px rgb(0 0 0 / .75);
 }
 :root:not(.light) :is(.glass-green, .glass-teal) { box-shadow: inset 0 1px 0 rgb(255 255 255 / .14), 0 0 0 1px rgb(247 147 30 / .35), 0 14px 30px -16px rgb(0 0 0 / .75); }
+
+/* Light mode only lightens the bottom navigation bar; the rest stays dark */
+:root.light-nav .bottom-nav {
+  background: #faf7f3;
+  -webkit-backdrop-filter: none; backdrop-filter: none;
+  box-shadow: 0 -10px 30px -18px rgb(0 0 0 / .6);
+  border-top-color: transparent !important;
+  --app-text: #2a211b;
+  --fg-rgb: 42,33,27;
+  --color-white: #2a211b;
+  --color-forest-50: #1d1712;  --color-forest-100: #2a211b; --color-forest-200: #4a3d33;
+  --color-forest-300: #6b5a4c; --color-forest-400: #c2620a;
+  color: #2a211b;
+}
+:root.light-nav .bottom-nav .clay-active { background: linear-gradient(160deg, #ffe9cf 0%, #fff4e6 100%) !important; color: #c2620a !important; box-shadow: var(--clay-sunk) !important; }
 
 /* Solid white (toggle knobs, dots) stays white; only translucent white tints flip */
 :root.light .bg-white { background-color: #fff; }
@@ -395,9 +407,10 @@
      gradient lines up exactly), just a soft shadow to separate them */
   header.glass-dark.clay-forest-bar {
     background: var(--app-bg);
-    background-attachment: fixed;
-    box-shadow: 0 10px 24px -22px rgb(0 0 0 / .6);
+    box-shadow: none;
+    -webkit-backdrop-filter: none; backdrop-filter: none;
   }
+  .brand-wordmark { font-family: Poppins, var(--font-sans); font-weight: 800; letter-spacing: -.02em; }
 
   /* Bars and sidebars: a flatter slab, so the floating cards stand out */
   .glass-dark {
@@ -515,7 +528,7 @@
     position: absolute;
     z-index: -1;           /* glow behind the content, never a tint over the white cards */
   }
-  :root:not(.light) .orb { opacity: .3; }
+  :root:not(.light) .orb { display: none; }   /* keep the page one flat colour */
 
   /* Food category pill */
   .category-pill {

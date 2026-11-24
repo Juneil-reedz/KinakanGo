@@ -28,7 +28,7 @@ export default function CustomerBottomNav({ fixed = true }) {
   const activeKey = getActiveKey(pathname);
 
   return (
-    <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-30' : ''} lg:hidden glass-dark`}
+    <nav className={`${fixed ? 'fixed bottom-0 left-0 right-0 z-30' : ''} lg:hidden glass-dark bottom-nav`}
       style={{ borderTop: '1px solid rgba(var(--fg-rgb),.08)' }}>
       <div className="flex items-center justify-around px-2 py-2">
         {ITEMS.map(({ key, icon: Icon, path }) => {
