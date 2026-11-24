@@ -1,10 +1,77 @@
-import { useState } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { Minus, Plus, X, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight, Trash2 } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import useGoBack from '../hooks/useGoBack';
 import useCartTotals from '../hooks/useCartTotals';
+
+const REVEAL = 88; // px the card slides to show the delete button
+
+// One cart line: round photo, name, - qty +, price. Drag it left to reveal delete.
+function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
+  const start = useRef(null);
+  const [dx, setDx] = useState(0);
+  const [dragging, setDragging] = useState(false);
+  const offset = dragging ? dx : (open ? -REVEAL : 0);
+
+  const down = (e) => {
+    if (e.target.closest('button')) return;
+    start.current = { x: e.clientX, base: open ? -REVEAL : 0 };
+    setDx(open ? -REVEAL : 0);
+    setDragging(true);
+    e.currentTarget.setPointerCapture?.(e.pointerId);
+  };
+  const move = (e) => {
+    if (!start.current) return;
+    const next = start.current.base + (e.clientX - start.current.x);
+    setDx(Math.max(-REVEAL - 24, Math.min(0, next)));
+  };
+  const up = () => {
+    if (!start.current) return;
+    start.current = null;
+    setDragging(false);
+    setOpen(dx < -REVEAL / 2 ? item.id : null);
+  };
+
+  return (
+    <div className="relative animate-fade-up" style={{ animationDelay: `${index * 60}ms` }}>
+      {/* Delete, behind the card on the right */}
+      <button onClick={onRemove} aria-label={`Remove ${item.name}`} tabIndex={open ? 0 : -1}
+        className="absolute inset-y-0 right-0 w-20 rounded-2xl bg-red-600 text-white flex items-center justify-center transition-opacity"
+        style={{ opacity: offset < -8 ? 1 : 0 }}>
+        <Trash2 className="w-6 h-6" />
+      </button>
+
+      <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
+        className="cart-line relative flex items-center gap-4 p-3 pr-4 touch-pan-y select-none"
+        style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : 'transform .45s cubic-bezier(.22,1,.36,1)' }}>
+        <div className="w-20 h-20 rounded-full p-[3px] bg-gradient-to-br from-ember-400 to-ember-600 flex-shrink-0">
+          <img src={item.image} alt="" draggable="false" className="w-full h-full rounded-full object-cover pointer-events-none" />
+        </div>
+        <div className="flex-1 min-w-0">
+          <p className="text-white font-heading font-bold text-[.95rem] truncate">{item.name}</p>
+          <div className="flex items-center gap-3 my-1.5">
+            <button onClick={() => onQty(item.quantity - 1)} aria-label={`One less ${item.name}`}
+              className="w-7 h-7 rounded-full border border-white/40 flex items-center justify-center text-white hover:bg-white/10">
+              <Minus className="w-3.5 h-3.5" />
+            </button>
+            <span className="text-white font-bold text-base w-5 text-center tabular-nums">{item.quantity}</span>
+            <button onClick={() => onQty(item.quantity + 1)} aria-label={`One more ${item.name}`}
+              className="w-7 h-7 rounded-full border border-white/40 flex items-center justify-center text-white hover:bg-white/10">
+              <Plus className="w-3.5 h-3.5" />
+            </button>
+          </div>
+          <p className="text-white font-heading font-extrabold"><span className="text-ember-500 text-sm mr-0.5">₱</span>{(item.price * item.quantity).toFixed(2)}</p>
+        </div>
+        <button onClick={() => setOpen(open ? null : item.id)} aria-label={open ? 'Hide delete' : `Show delete for ${item.name}`}
+          className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/40 hover:text-red-300 flex-shrink-0">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
 
 export default function Cart() {
   const navigate = useNavigate();
@@ -16,6 +83,7 @@ export default function Cart() {
   const closed = restaurant?.is_open === false;
   const [promoOpen, setPromoOpen]   = useState(false);
   const [promoInput, setPromoInput] = useState('');
+  const [openId, setOpenId]         = useState(null);
 
   if (cartItems.length === 0) {
     return (
@@ -57,45 +125,12 @@ export default function Cart() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4 pb-72 lg:pb-60">
-        {/* Restaurant label */}
-        <div className="glass-green rounded-2xl px-4 py-3 flex items-center gap-2">
-          <span className="text-lg">🏪</span>
-          <div>
-            <p className="text-forest-200/60 text-xs">Ordering from</p>
-            <p className="text-white font-semibold text-sm">{cartItems[0]?.restaurant}</p>
-          </div>
-        </div>
-
-        {/* Cart items */}
+        {/* Cart items: swipe one left to reveal delete */}
         <div className="space-y-3">
           {cartItems.map((item, idx) => (
-            <div key={item.id} className="glass card-3d rounded-2xl p-4 flex items-center gap-4 animate-fade-up group"
-              style={{ animationDelay:`${idx*60}ms` }}>
-              <img src={item.image} alt={item.name}
-                className="w-16 h-16 rounded-xl object-cover border border-white/10 flex-shrink-0" />
-              <div className="flex-1 min-w-0">
-                <p className="text-white font-semibold text-sm truncate">{item.name}</p>
-                <p className="text-forest-200/50 text-xs truncate mb-2">{item.restaurant}</p>
-                <div className="flex items-center gap-2">
-                  <button onClick={() => updateQuantity(item.id, item.quantity - 1)}
-                    className="w-7 h-7 glass rounded-lg flex items-center justify-center hover:glass-orange transition-all">
-                    <Minus className="w-3 h-3 text-forest-200" />
-                  </button>
-                  <span className="text-white font-bold text-sm w-5 text-center">{item.quantity}</span>
-                  <button onClick={() => updateQuantity(item.id, item.quantity + 1)}
-                    className="w-7 h-7 glass rounded-lg flex items-center justify-center hover:glass-green transition-all">
-                    <Plus className="w-3 h-3 text-forest-200" />
-                  </button>
-                </div>
-              </div>
-              <div className="flex flex-col items-end gap-3">
-                <button onClick={() => removeFromCart(item.id)}
-                  className="w-7 h-7 glass rounded-full flex items-center justify-center text-forest-200/50 hover:glass-orange hover:text-white transition-all opacity-0 group-hover:opacity-100">
-                  <X className="w-3.5 h-3.5" />
-                </button>
-                <p className="text-ember-400 font-bold text-sm">₱{(item.price * item.quantity).toFixed(2)}</p>
-              </div>
-            </div>
+            <SwipeItem key={item.id} item={item} index={idx}
+              open={openId === item.id} setOpen={setOpenId}
+              onQty={q => updateQuantity(item.id, q)} onRemove={() => removeFromCart(item.id)} />
           ))}
         </div>
 
@@ -171,7 +206,7 @@ export default function Cart() {
           </p>
         )}
         <button onClick={() => navigate('/checkout')} disabled={belowMin || closed}
-          className="w-full max-w-2xl mx-auto block py-4 btn-glow-orange text-white font-heading font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50">
+          className="w-full max-w-2xl mx-auto block py-4 btn-glass-orange font-heading font-bold rounded-2xl flex items-center justify-center gap-2 disabled:opacity-50">
           Proceed to Checkout <ChevronRight className="w-5 h-5" />
         </button>
       </div>
