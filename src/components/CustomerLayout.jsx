@@ -71,7 +71,7 @@ export default function CustomerLayout() {
     if (p === '/messages') return 'message';
     if (p === '/orders') return 'order-history';
     if (p === '/settings') return 'setting';
-    return 'dashboard';
+    return 'other'; // profile, tracking, cart…: no home-only header
   };
   const active = getActive(); // drives the header and right panel
 
