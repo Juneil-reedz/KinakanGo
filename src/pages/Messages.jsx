@@ -218,18 +218,6 @@ export default function Messages() {
         </div>
       </div>
 
-      {/* Order / subject strip */}
-      {selectedConversation.latest?.subject && (
-        <div className="px-3 sm:px-4 pt-3 flex-shrink-0">
-          <div className="glass rounded-2xl px-3 py-2.5 flex items-center gap-3">
-            <div className="w-9 h-9 rounded-xl bg-ember-500/15 text-ember-400 flex items-center justify-center flex-shrink-0">
-              <MessageSquare className="w-4 h-4" />
-            </div>
-            <p className="text-white text-sm font-semibold truncate">{selectedConversation.latest.subject.replace(/^(Re:\s*)+/i, '')}</p>
-          </div>
-        </div>
-      )}
-
       {/* Bubbles */}
       <div className="flex-1 min-h-0 overflow-y-auto overscroll-contain px-3 sm:px-4 py-4 space-y-3 scrollbar-hide"
         onClick={() => setActionId(null)}>

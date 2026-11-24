@@ -1,7 +1,6 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/api';
-import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed, Utensils, Hamburger, Pizza, Fish, Drumstick, CupSoda, Croissant, Shrimp, Search, SlidersHorizontal } from 'lucide-react';
@@ -57,29 +56,17 @@ export default function Home() {
   const [search, setSearch]           = useState('');
   const [restaurants, setRestaurants] = useState([]);
   const [popularItems, setPopularItems] = useState([]);
-  const [recentOrders, setRecentOrders] = useState([]);
   const [loading, setLoading]       = useState(true);
 
   useEffect(() => {
     Promise.all([
       getFeaturedRestaurants(4).catch(() => []),
       getAllMenuItems({ limit: 10 }).catch(() => []),
-      ordersApi.list({ limit: 5 }).catch(() => null),
       promosApi.publicList().catch(() => null),
-    ]).then(([rests, items, orders, promos]) => {
+    ]).then(([rests, items, promos]) => {
       setRestaurants(Array.isArray(rests?.data) ? rests.data : Array.isArray(rests) ? rests : []);
       setPopularItems(Array.isArray(items) ? items : []);
       setActivePromos(promos?.data || promos || []);
-      const orderList = orders?.data ?? [];
-      const unique = [];
-      const seen = new Set();
-      for (const o of orderList) {
-        if (!seen.has(o.restaurant_name)) {
-          seen.add(o.restaurant_name);
-          unique.push(o);
-        }
-      }
-      setRecentOrders(unique.slice(0, 4));
     }).finally(() => setLoading(false));
   }, []);
 
@@ -197,39 +184,6 @@ export default function Home() {
           ))}
         </div>
       </section>
-
-      {/* ── Recent orders ────────────────────────────── */}
-      {recentOrders.length > 0 && (
-        <section>
-          <div className="flex items-center justify-between mb-3">
-            <h3 className="text-white font-heading font-bold text-lg">Recent Orders</h3>
-            <button onClick={() => navigate('/orders')} className="text-ember-400 text-xs font-medium hover:text-ember-300 flex items-center gap-1">
-              View all <ChevronRight className="w-3.5 h-3.5" />
-            </button>
-          </div>
-          <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-            {recentOrders.map(order => (
-              <button key={order.id} onClick={() => navigate('/restaurants')}
-                className="flex-shrink-0 flex flex-col items-center gap-2 group">
-                <div className="relative w-16 h-16 rounded-2xl overflow-hidden border-2 border-white/10 group-hover:border-ember-400/50 transition-all card-3d glass flex items-center justify-center">
-                  {order.restaurant_image
-                    ? <img src={order.restaurant_image} alt={order.restaurant_name} className="w-full h-full object-cover" />
-                    : <UtensilsCrossed className="w-6 h-6 text-forest-300" />
-                  }
-                </div>
-                <span className="text-forest-200/70 text-xs group-hover:text-forest-100 max-w-[64px] truncate">{order.restaurant_name}</span>
-              </button>
-            ))}
-            <button onClick={() => navigate('/restaurants')}
-              className="flex-shrink-0 flex flex-col items-center gap-2">
-              <div className="w-16 h-16 glass rounded-2xl flex items-center justify-center hover:glass-green transition-all">
-                <ChevronRight className="w-5 h-5 text-forest-300" />
-              </div>
-              <span className="text-forest-200/50 text-xs">More</span>
-            </button>
-          </div>
-        </section>
-      )}
 
       {/* ── Popular food ─────────────────────────────── */}
       <section>
