@@ -239,13 +239,19 @@ export default function FoodDetail() {
         )}
       </div>
 
-      {/* Bottom bar: Add to Cart and the total */}
+      {/* Bottom bar: the total on the left, a round add-to-cart button on the right */}
       <div className="relative z-20 w-full max-w-5xl mx-auto flex items-center justify-between gap-4 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] fd-rise" style={{ animationDelay: '450ms' }}>
-        <button onClick={handleAdd}
-          className="btn-glow-orange text-white font-heading font-bold rounded-full px-7 py-4 flex items-center gap-2">
-          <ShoppingCart className="w-5 h-5" /> Add to Cart
+        <div>
+          <p className="text-forest-200/55 text-xs font-semibold uppercase tracking-wide">Total</p>
+          <p className="text-white font-heading font-extrabold text-3xl leading-tight"><span className="text-ember-500 text-lg mr-0.5">₱</span>{total.toFixed(2)}</p>
+        </div>
+        <button onClick={handleAdd} aria-label="Add to cart"
+          className="relative w-16 h-16 btn-glow-orange text-white rounded-full flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform">
+          <ShoppingCart className="w-7 h-7" />
+          <span className="absolute top-2.5 right-2.5 w-5 h-5 rounded-full bg-white text-ember-600 flex items-center justify-center shadow">
+            <Plus className="w-3.5 h-3.5" strokeWidth={3} />
+          </span>
         </button>
-        <p className="text-white font-heading font-extrabold text-2xl"><span className="text-ember-500 text-base mr-0.5">₱</span>{total.toFixed(2)}</p>
       </div>
     </div>
   );
