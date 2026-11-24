@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const pool = require('../config/db');
 const { sendEmail } = require('../utils/email');
 const { notify } = require('../utils/notify');
+const storeCredit = require('../utils/storeCredit');
 
 // Who may set which order status (admins may set any)
 const RESTAURANT_STATUSES = ['accepted', 'preparing', 'ready', 'cancelled'];
@@ -259,7 +260,9 @@ async function placeOrder(req, res) {
   if (!['cash', 'gcash'].includes(paymentMethod || 'cash')) {
     return res.status(400).json({ error: 'Unsupported payment method' });
   }
-  if (paymentMethod === 'gcash' && !proofImage) {
+  const useCredit = req.body.useCredit === true;
+  // With store credit the GCash proof may not be needed (checked once the amount due is known)
+  if (paymentMethod === 'gcash' && !proofImage && !useCredit) {
     return res.status(400).json({ error: 'Please upload your GCash payment proof' });
   }
 
@@ -338,15 +341,33 @@ async function placeOrder(req, res) {
         return res.status(409).json({ error: 'This promo code has just run out. Please place the order again without it.' });
       }
     }
+    // Store credit at this restaurant pays part (or all) of the order. One order at a
+    // time per customer, so the same credit can't be spent twice.
+    let creditUsed = 0;
+    if (useCredit) {
+      await client.query('SELECT pg_advisory_xact_lock(424242, $1)', [customerId]);
+      const available = await storeCredit.balance(customerId, restaurantId, client);
+      creditUsed = storeCredit.round2(Math.min(available, total));
+    }
+    const amountDue = storeCredit.round2(total - creditUsed);
+    if (paymentMethod === 'gcash' && amountDue > 0 && !proofImage) {
+      await client.query('ROLLBACK');
+      return res.status(400).json({ error: 'Please upload your GCash payment proof' });
+    }
     const { rows: orderRows } = await client.query(
       `INSERT INTO orders
          (customer_id, restaurant_id, status, delivery_address, special_instructions,
-          subtotal, delivery_fee, tax, total, payment_method, proof_image)
-       VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
+          subtotal, delivery_fee, tax, total, payment_method, proof_image, credit_used, payment_status)
+       VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10,$11,$12) RETURNING id`,
       [customerId, restaurantId, deliveryAddress, specialInstructions || null,
-       subtotal, deliveryFee, tax, total, paymentMethod || 'cash', paymentMethod === 'gcash' ? proofImage : null]
+       subtotal, deliveryFee, tax, total, paymentMethod || 'cash',
+       paymentMethod === 'gcash' && amountDue > 0 ? proofImage : null,
+       creditUsed, amountDue > 0 ? 'pending' : 'paid']
     );
     const orderId = orderRows[0].id;
+    if (creditUsed > 0) {
+      await storeCredit.give(client, { customerId, restaurantId, amount: -creditUsed, orderId, note: `Used on order #${orderId}` });
+    }
 
     for (const item of items) {
       const mi = itemMap[item.menuItemId];
@@ -356,7 +377,7 @@ async function placeOrder(req, res) {
       );
     }
     await client.query('COMMIT');
-    res.status(201).json({ id: orderId, orderId, total });
+    res.status(201).json({ id: orderId, orderId, total, creditUsed, amountDue });
 
     // Email the customer a receipt as proof of the order (never blocks the order)
     sendOrderReceipt(orderId).catch(err => console.error('receipt email failed:', err.message));
@@ -370,7 +391,9 @@ async function placeOrder(req, res) {
     });
     await notify(rest[0]?.owner_id, {
       audience: 'restaurant', type: 'warning', link: '/owner/orders',
-      title: `New order · #${orderId}`, message: `${count} item${count === 1 ? '' : 's'} · ₱${Number(total).toFixed(2)} · ${paymentMethod || 'cash'}`,
+      title: `New order · #${orderId}`,
+      message: `${count} item${count === 1 ? '' : 's'} · ₱${Number(total).toFixed(2)} · ${paymentMethod || 'cash'}`
+        + (creditUsed > 0 ? ` · ₱${creditUsed.toFixed(2)} paid with store credit` : ''),
     });
   } catch (err) {
     await client.query('ROLLBACK');
@@ -548,6 +571,7 @@ async function updateStatus(req, res) {
     [status, status, cancelledReason || null, status, deliveryProof || null, req.params.id]
   );
   if (!updatedRows.length) return res.status(404).json({ error: 'Order not found' });
+  if (status === 'cancelled') await storeCredit.returnForCancelledOrder(req.params.id);
 
   await notifyOrderStatus(req.params.id, status, cancelledReason);
   if (status === 'cancelled' && isCustomer && !isOwner && !isAdmin) {
@@ -689,6 +713,7 @@ async function sendOrderReceipt(orderId) {
           ${row('Delivery fee', peso(o.delivery_fee))}
           ${row('Tax (8%)', peso(o.tax))}
           ${row('Total', peso(o.total), true)}
+          ${Number(o.credit_used) > 0 ? row('Paid with store credit', `&minus;${peso(o.credit_used)}`) + row('To pay', peso(Number(o.total) - Number(o.credit_used)), true) : ''}
         </table>
         <p style="color:#888;font-size:12px;margin-top:20px">Keep this email as proof of your order. You can also see it anytime in KinakanGo under Profile &rarr; Order History.</p>
       </div>`,

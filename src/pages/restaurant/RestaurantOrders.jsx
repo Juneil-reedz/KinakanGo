@@ -398,6 +398,17 @@ export default function RestaurantOrders() {
                       <span className="text-white font-bold">Total</span>
                       <span className="text-ember-400 font-heading font-bold text-lg">₱{Number(detail.total).toFixed(2)}</span>
                     </div>
+                    {Number(detail.credit_used) > 0 && (
+                      <>
+                        <div className="flex justify-between text-sm text-forest-300">
+                          <span>Paid with store credit</span><span>−₱{Number(detail.credit_used).toFixed(2)}</span>
+                        </div>
+                        <div className="flex justify-between text-sm text-white font-semibold">
+                          <span>{detail.payment_method === 'gcash' ? 'Paid by GCash' : 'Collect in cash'}</span>
+                          <span>₱{(Number(detail.total) - Number(detail.credit_used)).toFixed(2)}</span>
+                        </div>
+                      </>
+                    )}
                   </div>
                 </div>
 

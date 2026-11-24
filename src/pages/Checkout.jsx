@@ -28,7 +28,11 @@ export default function Checkout() {
   const { cartItems, restaurantId, clearCart } = useCart();
   const { user } = useAuth();
   const { addNotification } = useNotification();
-  const { restaurant: restaurantInfo, food: subtotal, discount, deliveryFee, tax, total, promoCode, promoError } = useCartTotals();
+  const { restaurant: restaurantInfo, food: subtotal, discount, deliveryFee, tax, total, credit, promoCode, promoError } = useCartTotals();
+  // Store credit at this restaurant pays part (or all) of the order
+  const [useCredit, setUseCredit] = useState(true);
+  const creditUsed = useCredit ? Math.min(credit, total) : 0;
+  const amountDue  = Math.max(0, Math.round((total - creditUsed) * 100) / 100);
 
   const gcashNumber = restaurantInfo?.gcash_number || '—';
   const gcashName   = restaurantInfo?.gcash_name   || '—';
@@ -88,7 +92,7 @@ export default function Checkout() {
     if (!form.phone.trim())     e.phone = 'Required';
     if (!form.address.trim())   e.address = 'Required';
     if (!form.city.trim())      e.city = 'Required';
-    if (form.paymentMethod === 'gcash' && !form.proofImage) e.proofImage = 'Please upload your GCash payment proof';
+    if (form.paymentMethod === 'gcash' && amountDue > 0 && !form.proofImage) e.proofImage = 'Please upload your GCash payment proof';
     setErrors(e);
     return Object.keys(e).length === 0;
   };
@@ -141,7 +145,8 @@ export default function Checkout() {
         specialInstructions: form.deliveryInstructions || null,
         paymentMethod: form.paymentMethod,
         promoCode: promoCode && !promoError ? promoCode : null,
-        proofImage: form.proofImage || null,
+        proofImage: amountDue > 0 ? form.proofImage || null : null,
+        useCredit: creditUsed > 0,
         contactInfo: { name: form.fullName, email: form.email, phone: form.phone },
         verificationCode,
       };
@@ -333,13 +338,16 @@ export default function Checkout() {
               </div>
 
               {/* GCash proof upload */}
-              {form.paymentMethod === 'gcash' && (
+              {form.paymentMethod === 'gcash' && amountDue === 0 && (
+                <p className="mt-4 glass-green rounded-xl p-4 text-forest-200 text-sm">Your store credit covers this order. Nothing to send.</p>
+              )}
+              {form.paymentMethod === 'gcash' && amountDue > 0 && (
                 <div className="mt-4 space-y-3">
                   <div className="glass-green rounded-xl p-4">
                     <p className="text-white font-semibold text-sm mb-1">Send payment to:</p>
                     <p className="text-forest-200/70 text-xs">GCash number: <span className="text-white font-bold">{gcashNumber}</span></p>
                     <p className="text-forest-200/70 text-xs">Account name: <span className="text-white font-bold">{gcashName}</span></p>
-                    <p className="text-ember-300 text-xs mt-2 font-medium">Amount: ₱{total.toFixed(2)}</p>
+                    <p className="text-ember-300 text-xs mt-2 font-medium">Amount: ₱{amountDue.toFixed(2)}</p>
                   </div>
                   <div>
                     <label className="block text-forest-200/60 text-xs font-medium mb-1">
@@ -396,8 +404,29 @@ export default function Checkout() {
                 ))}
                 <div className="flex justify-between items-center pt-2 border-t border-white/8">
                   <span className="text-white font-bold">Total</span>
-                  <span className="text-ember-400 font-heading font-bold text-xl">₱{total.toFixed(2)}</span>
+                  <span className={`font-heading font-bold ${creditUsed > 0 ? 'text-forest-100 text-base' : 'text-ember-400 text-xl'}`}>₱{total.toFixed(2)}</span>
                 </div>
+                {credit > 0 && (
+                  <label className="flex items-start gap-2 glass-green rounded-xl p-3 text-sm cursor-pointer">
+                    <input type="checkbox" checked={useCredit} onChange={e => setUseCredit(e.target.checked)} className="mt-0.5" />
+                    <span className="text-forest-100">
+                      Use my store credit
+                      <span className="block text-forest-200/60 text-xs">₱{credit.toFixed(2)} available at {restaurantInfo?.name || 'this restaurant'}</span>
+                    </span>
+                  </label>
+                )}
+                {creditUsed > 0 && (
+                  <>
+                    <div className="flex justify-between text-sm">
+                      <span className="text-forest-300">Store credit</span>
+                      <span className="text-forest-300">−₱{creditUsed.toFixed(2)}</span>
+                    </div>
+                    <div className="flex justify-between items-center pt-2 border-t border-white/8">
+                      <span className="text-white font-bold">To pay</span>
+                      <span className="text-ember-400 font-heading font-bold text-xl">₱{amountDue.toFixed(2)}</span>
+                    </div>
+                  </>
+                )}
               </div>
             </div>
 
@@ -437,7 +466,7 @@ export default function Checkout() {
                 ${submitting ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
               {submitting
                 ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Placing order…</>
-                : <>Confirm &amp; Place Order — ₱{total.toFixed(2)}</>}
+                : <>Confirm &amp; Place Order — ₱{amountDue.toFixed(2)}</>}
             </button>
 
             <div className="flex items-center justify-between mt-4 text-xs">

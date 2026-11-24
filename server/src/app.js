@@ -142,6 +142,28 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS escalation_reason  TEXT        DEFAULT NULL
 `).catch(err => console.warn('issues refund columns warning:', err.message));
 
+// Store credit (refunds kept at the restaurant, used on a later order there)
+pool.query(`
+  CREATE TABLE IF NOT EXISTS store_credits (
+    id            SERIAL PRIMARY KEY,
+    customer_id   INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+    amount        DECIMAL(10,2) NOT NULL,
+    order_id      INT DEFAULT NULL REFERENCES orders(id) ON DELETE SET NULL,
+    issue_id      INT DEFAULT NULL REFERENCES issues(id) ON DELETE SET NULL,
+    note          TEXT DEFAULT NULL,
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`).then(() => pool.query(`
+  CREATE INDEX IF NOT EXISTS idx_store_credits_owner ON store_credits(customer_id, restaurant_id)
+`)).then(() => pool.query(`
+  ALTER TABLE orders ADD COLUMN IF NOT EXISTS credit_used DECIMAL(10,2) NOT NULL DEFAULT 0
+`)).then(() => pool.query(`
+  ALTER TABLE issues
+    ADD COLUMN IF NOT EXISTS refund_method VARCHAR(10) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS refund_gcash  VARCHAR(30) DEFAULT NULL
+`)).catch(err => console.warn('store credit init warning:', err.message));
+
 pool.query(`
   ALTER TABLE promo_codes
     ADD COLUMN IF NOT EXISTS owner_id     INT          DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
@@ -205,6 +227,7 @@ const restaurantRoutes = require('./routes/restaurants');
 const orderRoutes  = require('./routes/orders');
 const appRoutes    = require('./routes/applications');
 const issueRoutes  = require('./routes/issues');
+const storeCreditRoutes = require('./routes/storeCredit');
 const promoRoutes  = require('./routes/promos');
 const menuRoutes    = require('./routes/menu');
 const upgradeRoutes = require('./routes/upgrades');
@@ -237,6 +260,7 @@ app.use('/api/restaurants',  restaurantRoutes);
 app.use('/api/orders',       orderRoutes);
 app.use('/api/applications', appRoutes);
 app.use('/api/issues',       issueRoutes);
+app.use('/api/store-credit', storeCreditRoutes);
 app.use('/api/promos',       promoRoutes);
 app.use('/api/menu',         menuRoutes);
 app.use('/api/upgrades',     upgradeRoutes);

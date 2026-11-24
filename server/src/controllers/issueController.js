@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { notify } = require('../utils/notify');
+const storeCredit = require('../utils/storeCredit');
 
 const TYPES = ['refund', 'quality', 'payment', 'rider', 'missing'];
 const peso = (n) => `₱${Number(n).toFixed(2)}`;
@@ -14,16 +15,27 @@ const RESTAURANT_WAIT_HOURS = 24;
 //   refund, the customer can ask the admin to review. When the admin approves a
 //   refund, the restaurant is told to send it.
 // - An order counts as refunded only when the customer confirms they got the money.
+// - If the customer chose store credit, an approved refund is added to their credit
+//   at that restaurant right away (nothing to send, nothing to confirm).
 
 const ISSUE_COLS = `i.id, i.order_id, i.type, i.status, i.priority, i.description, i.handler,
   i.refund_requested, i.refund_approved, i.refund_status, i.refund_sent_note, i.refund_sent_at,
-  i.refund_received_at, i.resolution_notes, i.escalated_at, i.escalation_reason,
+  i.refund_received_at, i.resolution_notes, i.escalated_at, i.escalation_reason, i.refund_method, i.refund_gcash,
   i.created_at, i.resolved_at`;
 
 const parseAmount = (v, max) => {
   const n = Number(v);
   return Number.isFinite(n) && n > 0 ? Math.min(Math.round(n * 100) / 100, Number(max)) : null;
 };
+
+// Approved refund given as store credit: add it and mark the order refunded
+async function creditRefund(client, issue, amount) {
+  await storeCredit.give(client, {
+    customerId: issue.customer_id, restaurantId: issue.restaurant_id, amount,
+    issueId: issue.id, orderId: issue.order_id, note: `Refund for order #${issue.order_id}`,
+  });
+  await client.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [issue.order_id]);
+}
 
 // Issue + its order's restaurant owner and customer
 async function loadIssue(id) {
@@ -65,19 +77,35 @@ async function submit(req, res) {
     refund = parseAmount(req.body.refundRequested, order.total);
     if (refund == null) return res.status(400).json({ error: 'Enter a refund amount above ₱0' });
   }
+  // How the customer wants the money back
+  let refundMethod = null, refundGcash = null;
+  if (refund != null) {
+    refundMethod = String(req.body.refundMethod || '');
+    if (!['gcash', 'cash', 'credit'].includes(refundMethod)) {
+      return res.status(400).json({ error: 'Choose how you want your refund' });
+    }
+    if (refundMethod === 'gcash') {
+      refundGcash = String(req.body.refundGcash || '').replace(/[^\d+]/g, '');
+      if (!/^(\+?63|0)9\d{9}$/.test(refundGcash)) {
+        return res.status(400).json({ error: 'Enter your GCash number, e.g. 09171234567' });
+      }
+    }
+  }
   const priority = refund != null || type === 'missing' ? 'high' : 'medium';
   const handler = type === 'rider' ? 'admin' : 'restaurant';
 
   const { rows } = await pool.query(
-    `INSERT INTO issues (order_id, customer_id, type, priority, description, refund_requested, handler)
-     VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
-    [orderId, req.user.id, type, priority, description, refund, handler]
+    `INSERT INTO issues (order_id, customer_id, type, priority, description, refund_requested, handler, refund_method, refund_gcash)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9) RETURNING id`,
+    [orderId, req.user.id, type, priority, description, refund, handler, refundMethod, refundGcash]
   );
   if (handler === 'restaurant') {
     await notify(order.owner_id, {
       audience: 'restaurant', type: 'warning', link: '/owner/issues',
       title: `A customer reported a problem with order #${orderId}`,
-      message: refund != null ? `They are asking for a ${peso(refund)} refund.` : description.slice(0, 200),
+      message: refund != null
+        ? `They are asking for a ${peso(refund)} refund${refundMethod === 'credit' ? ' as store credit' : refundMethod === 'gcash' ? ' to GCash' : ' in cash'}.`
+        : description.slice(0, 200),
     });
   }
   const { rows: saved } = await pool.query(`SELECT ${ISSUE_COLS} FROM issues i WHERE i.id = $1`, [rows[0].id]);
@@ -181,21 +209,40 @@ async function restaurantResolve(req, res) {
     return res.status(400).json({ error: 'Enter a refund amount above ₱0' });
   }
   const notes = String(req.body.notes || '').trim().slice(0, 1000) || null;
-  const { rowCount } = await pool.query(
-    `UPDATE issues SET status = 'resolved', refund_approved = $2, refund_status = $3,
-       resolution_notes = $4, resolved_by = $5, resolved_at = NOW()
-     WHERE id = $1 AND handler = 'restaurant' AND status = 'pending'`,
-    [issue.id, amount, amount ? 'to_send' : null, notes, req.user.id]
-  );
-  if (!rowCount) return res.status(409).json({ error: 'This report was already answered or is with KinakanGo' });
+  const asCredit = !!amount && issue.refund_method === 'credit';
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rowCount } = await client.query(
+      `UPDATE issues SET status = 'resolved', refund_approved = $2, refund_status = $3,
+         resolution_notes = $4, resolved_by = $5, resolved_at = NOW(),
+         refund_received_at = CASE WHEN $3::varchar = 'credited' THEN NOW() ELSE refund_received_at END
+       WHERE id = $1 AND handler = 'restaurant' AND status = 'pending'`,
+      [issue.id, amount, asCredit ? 'credited' : amount ? 'to_send' : null, notes, req.user.id]
+    );
+    if (!rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'This report was already answered or is with KinakanGo' });
+    }
+    if (asCredit) await creditRefund(client, issue, amount);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
   await notify(issue.customer_id, {
     audience: 'customer', type: 'success', link: `/order-receipt/${issue.order_id}`,
-    title: amount
-      ? `${issue.restaurant_name} approved a ${peso(amount)} refund for order #${issue.order_id}`
-      : `${issue.restaurant_name} answered your report about order #${issue.order_id}`,
-    message: amount ? `They will send it to you. ${notes || ''}`.trim() : notes,
+    title: asCredit
+      ? `${peso(amount)} store credit added at ${issue.restaurant_name}`
+      : amount
+        ? `${issue.restaurant_name} approved a ${peso(amount)} refund for order #${issue.order_id}`
+        : `${issue.restaurant_name} answered your report about order #${issue.order_id}`,
+    message: asCredit ? `It's used automatically on your next order there. ${notes || ''}`.trim()
+      : amount ? `They will send it to you. ${notes || ''}`.trim() : notes,
   });
-  res.json({ message: 'Saved' });
+  res.json({ message: 'Saved', credited: asCredit });
 }
 
 async function restaurantDeny(req, res) {
@@ -279,24 +326,44 @@ async function resolve(req, res) {
   // Refund amount in pesos (older admin pages sent `true`: then refund what was asked for)
   const raw = req.body.refundApproved === true ? (issue.refund_requested || issue.order_total) : req.body.refundApproved;
   const amount = parseAmount(raw, issue.order_total);
-  // A refund already sent and confirmed stays as it is
+  // A refund already confirmed or credited stays as it is
+  const settled = ['received', 'credited'].includes(issue.refund_status);
+  const asCredit = !!amount && !settled && issue.refund_method === 'credit';
   const refundStatus = amount
-    ? (issue.refund_status === 'received' ? 'received' : issue.refund_status === 'sent' && Number(issue.refund_approved) === amount ? 'sent' : 'to_send')
+    ? (settled ? issue.refund_status
+      : asCredit ? 'credited'
+      : issue.refund_status === 'sent' && Number(issue.refund_approved) === amount ? 'sent' : 'to_send')
     : issue.refund_status;
 
-  await pool.query(
-    `UPDATE issues SET status = 'resolved', handler = 'admin', refund_approved = COALESCE($2, refund_approved),
-       refund_status = $3, resolution_notes = $4, resolved_by = $5, resolved_at = NOW()
-     WHERE id = $1`,
-    [issue.id, amount, refundStatus, notes, req.user.id]
-  );
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    await client.query(
+      `UPDATE issues SET status = 'resolved', handler = 'admin',
+         refund_approved = CASE WHEN $6::boolean THEN refund_approved ELSE COALESCE($2, refund_approved) END,
+         refund_status = $3, resolution_notes = $4, resolved_by = $5, resolved_at = NOW(),
+         refund_received_at = CASE WHEN $3::varchar = 'credited' AND refund_received_at IS NULL THEN NOW() ELSE refund_received_at END
+       WHERE id = $1`,
+      [issue.id, amount, refundStatus, notes, req.user.id, settled]
+    );
+    if (asCredit) await creditRefund(client, issue, amount);
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 
   await notify(issue.customer_id, {
     audience: 'customer', type: 'success', link: `/order-receipt/${issue.order_id}`,
-    title: amount
-      ? `KinakanGo approved a ${peso(amount)} refund for order #${issue.order_id}`
-      : `Your report about order #${issue.order_id} was resolved`,
-    message: amount ? `${issue.restaurant_name} will send it to you. ${notes || ''}`.trim() : notes,
+    title: asCredit
+      ? `${peso(amount)} store credit added at ${issue.restaurant_name}`
+      : amount
+        ? `KinakanGo approved a ${peso(amount)} refund for order #${issue.order_id}`
+        : `Your report about order #${issue.order_id} was resolved`,
+    message: asCredit ? `KinakanGo approved your refund. It's used automatically on your next order there. ${notes || ''}`.trim()
+      : amount ? `${issue.restaurant_name} will send it to you. ${notes || ''}`.trim() : notes,
   });
   if (amount && refundStatus === 'to_send') {
     await notify(issue.owner_id, {
