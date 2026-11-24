@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { ArrowLeft, Heart, Star, Clock, Store, UtensilsCrossed, Plus, Minus, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ArrowLeft, Heart, Star, Clock, Store, UtensilsCrossed, Plus, Minus, ShoppingCart } from 'lucide-react';
 import { menuApi, getAllMenuItems } from '../services/api';
 import useGoBack from '../hooks/useGoBack';
 
@@ -45,6 +45,8 @@ export default function FoodDetail() {
   const dragStart = useRef(null);
   const stageRef  = useRef(null);
   const moved     = useRef(false);
+  const lastMove  = useRef({ x: 0, t: 0, v: 0 });
+  const frame     = useRef(0);
 
   if (status !== 'ready') {
     return (
@@ -85,29 +87,41 @@ export default function FoodDetail() {
   };
   const slotWidth = () => (stageRef.current?.offsetWidth || 360) * 0.62;
 
+  // The row moves slower than the finger (a heavy, smooth drag) and eases into place
+  const DRAG = 0.6;
   const onPointerDown = (e) => {
     if (!many) return;
     dragStart.current = e.clientX;
+    lastMove.current = { x: e.clientX, t: performance.now(), v: 0 };
     setDragging(true);
     e.currentTarget.setPointerCapture?.(e.pointerId);
   };
   const onPointerMove = (e) => {
     if (dragStart.current == null) return;
-    let dx = e.clientX - dragStart.current;
+    const now = performance.now();
+    const last = lastMove.current;
+    const dt = Math.max(1, now - last.t);
+    lastMove.current = { x: e.clientX, t: now, v: (e.clientX - last.x) / dt };
+    let dx = (e.clientX - dragStart.current) * DRAG;
     // Resist past the first and last food
-    if ((index === 0 && dx > 0) || (index === options.length - 1 && dx < 0)) dx *= 0.3;
-    setDragX(dx);
+    if ((index === 0 && dx > 0) || (index === options.length - 1 && dx < 0)) dx *= 0.35;
+    cancelAnimationFrame(frame.current);
+    frame.current = requestAnimationFrame(() => setDragX(dx));
   };
   const onPointerUp = (e) => {
     if (dragStart.current == null) return;
-    const dx = e.clientX - dragStart.current;
+    cancelAnimationFrame(frame.current);
+    const dx = (e.clientX - dragStart.current) * DRAG;
+    const v = performance.now() - lastMove.current.t < 120 ? lastMove.current.v : 0;
     dragStart.current = null;
-    moved.current = Math.abs(dx) > 6;
+    moved.current = Math.abs(dx) > 4;
     setDragging(false);
     setDragX(0);
-    const steps = Math.round(-dx / slotWidth());
+    const slot = slotWidth();
+    let steps = Math.round(-dx / slot);
+    if (!steps && Math.abs(dx) > slot * 0.22) steps = dx < 0 ? 1 : -1;   // a short drag still moves one
+    if (!steps && Math.abs(v) > 0.45) steps = v < 0 ? 1 : -1;            // a quick flick moves one
     if (steps) goTo(index + steps);
-    else if (Math.abs(dx) > 40) goTo(index + (dx < 0 ? 1 : -1));
   };
 
   const total = foodItem.price * quantity;
@@ -180,14 +194,12 @@ export default function FoodDetail() {
         </div>
 
         {many && (
-          <div className="flex items-center justify-center gap-3 mt-3 fd-fade" style={{ animationDelay: '500ms' }}>
-            <button onClick={() => goTo(index - 1)} disabled={index === 0} aria-label="Previous option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10 disabled:opacity-30"><ChevronLeft className="w-5 h-5" /></button>
+          <div className="flex items-center justify-center gap-3 mt-4 fd-fade" style={{ animationDelay: '500ms' }}>
             <div className="flex items-center gap-1.5">
               {options.slice(0, 8).map((o, i) => (
                 <span key={o.id} className={`h-1.5 rounded-full transition-all ${i === index ? 'w-5 bg-ember-500' : 'w-1.5 bg-white/25'}`} />
               ))}
             </div>
-            <button onClick={() => goTo(index + 1)} disabled={index === options.length - 1} aria-label="Next option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10 disabled:opacity-30"><ChevronRight className="w-5 h-5" /></button>
           </div>
         )}
 
