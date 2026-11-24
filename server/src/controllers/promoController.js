@@ -130,23 +130,28 @@ async function remove(req, res) {
 }
 
 async function validate(req, res) {
-  const { code, orderTotal } = req.body;
+  const { code, orderTotal, restaurantId } = req.body;
+  const gross = Number(orderTotal) || 0;
   const { rows } = await pool.query(
-    `SELECT * FROM promo_codes WHERE code = $1 AND is_active = true
-       AND (starts_at IS NULL OR starts_at <= NOW())
-       AND (expires_at IS NULL OR expires_at > NOW())
-       AND (max_uses IS NULL OR used_count < max_uses)`,
-    [code]
+    `SELECT * FROM promo_codes WHERE UPPER(code) = UPPER($1) AND ${activeWhere}`,
+    [String(code || '').trim()]
   );
   if (!rows.length) return res.status(404).json({ error: 'Invalid or expired promo code' });
   const promo = rows[0];
-  if (orderTotal < promo.min_order) {
-    return res.status(400).json({ error: `Minimum order ₱${promo.min_order} required` });
+  // A restaurant's own promo only works at that restaurant (same rule as checkout)
+  if (promo.owner_id) {
+    const { rows: r } = await pool.query('SELECT owner_id FROM restaurants WHERE id = $1', [parseInt(restaurantId)]);
+    if (!r.length || r[0].owner_id !== promo.owner_id) {
+      return res.status(400).json({ error: 'This promo code is not valid for this restaurant' });
+    }
   }
-  const discount = promo.discount_type === 'percent'
-    ? (orderTotal * promo.discount_value) / 100
-    : promo.discount_value;
-  res.json({ valid: true, discount, promo });
+  if (gross < Number(promo.min_order)) {
+    return res.status(400).json({ error: `Minimum order ₱${Number(promo.min_order).toFixed(2)} required` });
+  }
+  const value = Number(promo.discount_value);
+  let discount = promo.discount_type === 'percent' ? (gross * value) / 100 : value;
+  discount = Math.min(Math.max(discount, 0), gross);
+  res.json({ valid: true, code: promo.code, discount, promo: mapPromo(promo) });
 }
 
 module.exports = { list, publicList, ownerList, ownerCreate, create, update, remove, validate };

@@ -1,18 +1,18 @@
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Minus, Plus, X, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import useGoBack from '../hooks/useGoBack';
+import useCartTotals from '../hooks/useCartTotals';
 
 export default function Cart() {
   const navigate = useNavigate();
   const goBack = useGoBack();
-  const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
-
-  const subtotal    = getCartTotal();
-  const deliveryFee = cartItems.length > 0 ? 2.99 : 0;
-  const tax         = subtotal * 0.08;
-  const total       = subtotal + deliveryFee + tax;
+  const { cartItems, updateQuantity, removeFromCart } = useCart();
+  const { food: subtotal, discount, deliveryFee, tax, total, promoCode, setPromoCode, promoError, promoChecking } = useCartTotals();
+  const [promoOpen, setPromoOpen]   = useState(false);
+  const [promoInput, setPromoInput] = useState('');
 
   if (cartItems.length === 0) {
     return (
@@ -97,11 +97,36 @@ export default function Cart() {
         </div>
 
         {/* Promo */}
-        <button className="w-full glass rounded-2xl px-4 py-3.5 flex items-center gap-3 hover:glass-green transition-all text-left">
-          <Tag className="w-4 h-4 text-ember-400 flex-shrink-0" />
-          <span className="text-forest-200/60 text-sm flex-1">Have a promo code?</span>
-          <ChevronRight className="w-4 h-4 text-forest-200/30" />
-        </button>
+        {promoCode ? (
+          <div className="w-full glass rounded-2xl px-4 py-3.5 flex items-center gap-3">
+            <Tag className="w-4 h-4 text-ember-400 flex-shrink-0" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white text-sm font-semibold">{promoCode}</p>
+              <p className={`text-xs ${promoError ? 'text-red-400' : 'text-forest-200/60'}`}>
+                {promoChecking ? 'Checking…' : promoError || `You save ₱${discount.toFixed(2)}`}
+              </p>
+            </div>
+            <button onClick={() => { setPromoCode(''); setPromoInput(''); }}
+              className="text-forest-200/60 text-xs font-semibold hover:text-white">Remove</button>
+          </div>
+        ) : promoOpen ? (
+          <form onSubmit={e => { e.preventDefault(); if (promoInput.trim()) setPromoCode(promoInput); }}
+            className="w-full glass rounded-2xl px-4 py-3 flex items-center gap-3">
+            <Tag className="w-4 h-4 text-ember-400 flex-shrink-0" />
+            <input autoFocus value={promoInput} onChange={e => setPromoInput(e.target.value)}
+              placeholder="Enter promo code" aria-label="Promo code"
+              className="flex-1 min-w-0 bg-transparent text-white text-sm uppercase placeholder:normal-case placeholder:text-forest-200/40 outline-none" />
+            <button type="submit" disabled={!promoInput.trim()}
+              className="px-3 py-1.5 rounded-xl btn-glow-green text-white text-xs font-bold disabled:opacity-40">Apply</button>
+          </form>
+        ) : (
+          <button onClick={() => setPromoOpen(true)}
+            className="w-full glass rounded-2xl px-4 py-3.5 flex items-center gap-3 hover:glass-green transition-all text-left">
+            <Tag className="w-4 h-4 text-ember-400 flex-shrink-0" />
+            <span className="text-forest-200/60 text-sm flex-1">Have a promo code?</span>
+            <ChevronRight className="w-4 h-4 text-forest-200/30" />
+          </button>
+        )}
       </div>
 
       {/* Fixed bottom summary */}
@@ -111,6 +136,7 @@ export default function Cart() {
         <div className="max-w-2xl mx-auto space-y-2 mb-4">
           {[
             { label:'Subtotal',    val:`₱${subtotal.toFixed(2)}` },
+            ...(discount > 0 ? [{ label:`Promo (${promoCode})`, val:`−₱${discount.toFixed(2)}`, icon: Tag }] : []),
             { label:'Delivery',    val:`₱${deliveryFee.toFixed(2)}`, icon: Truck },
             { label:'Tax (8%)',    val:`₱${tax.toFixed(2)}` },
           ].map(({ label, val, icon: Icon }) => (

@@ -3,9 +3,10 @@ import { useNavigate, Link } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { createOrder, restaurantsApi, ordersApi } from '../services/api';
+import { createOrder, ordersApi } from '../services/api';
 import { User, Mail, Phone, MapPin, Banknote, ArrowLeft, ShoppingCart, ChevronRight, Truck, ImagePlus, Smartphone, ShieldCheck } from 'lucide-react';
 import useGoBack from '../hooks/useGoBack';
+import useCartTotals from '../hooks/useCartTotals';
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -24,17 +25,10 @@ function pickImage(onPick) {
 export default function Checkout() {
   const navigate = useNavigate();
   const goBack = useGoBack();
-  const { cartItems, restaurantId, getCartTotal, clearCart } = useCart();
+  const { cartItems, restaurantId, clearCart } = useCart();
   const { user } = useAuth();
   const { addNotification } = useNotification();
-  const [restaurantInfo, setRestaurantInfo] = useState(null);
-
-  useEffect(() => {
-    if (!restaurantId) return;
-    restaurantsApi.getOne(restaurantId)
-      .then(r => setRestaurantInfo(r))
-      .catch(() => {});
-  }, [restaurantId]);
+  const { restaurant: restaurantInfo, food: subtotal, discount, deliveryFee, tax, total, promoCode, promoError } = useCartTotals();
 
   const gcashNumber = restaurantInfo?.gcash_number || '—';
   const gcashName   = restaurantInfo?.gcash_name   || '—';
@@ -54,10 +48,6 @@ export default function Checkout() {
   const [errors, setErrors]     = useState({});
   const [submitting, setSubmitting] = useState(false);
 
-  const subtotal    = getCartTotal();
-  const deliveryFee = 49;
-  const tax         = subtotal * 0.12;
-  const total       = subtotal + deliveryFee + tax;
 
   const set = (field) => (e) => {
     setForm(f => ({ ...f, [field]: e.target.value }));
@@ -150,6 +140,7 @@ export default function Checkout() {
         deliveryAddress: `${form.address}${form.apartmentUnit ? ', ' + form.apartmentUnit : ''}, ${form.city} ${form.zipCode}`,
         specialInstructions: form.deliveryInstructions || null,
         paymentMethod: form.paymentMethod,
+        promoCode: promoCode && !promoError ? promoCode : null,
         proofImage: form.proofImage || null,
         contactInfo: { name: form.fullName, email: form.email, phone: form.phone },
         verificationCode,
@@ -394,8 +385,9 @@ export default function Checkout() {
               <div className="border-t border-white/8 pt-3 space-y-2">
                 {[
                   { label: 'Subtotal',  val: `₱${subtotal.toFixed(2)}` },
+                  ...(discount > 0 ? [{ label: `Promo (${promoCode})`, val: `−₱${discount.toFixed(2)}` }] : []),
                   { label: 'Delivery',  val: `₱${deliveryFee.toFixed(2)}`, icon: Truck },
-                  { label: 'Tax (12%)', val: `₱${tax.toFixed(2)}` },
+                  { label: 'Tax (8%)',  val: `₱${tax.toFixed(2)}` },
                 ].map(({ label, val, icon: Icon }) => (
                   <div key={label} className="flex justify-between text-sm">
                     <span className="text-forest-200/60 flex items-center gap-1.5">{Icon && <Icon className="w-3.5 h-3.5" />}{label}</span>
