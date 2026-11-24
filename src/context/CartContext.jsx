@@ -1,5 +1,6 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { safeLocalSet } from '../services/api';
+import { useDialog } from './DialogContext';
 
 const CartContext = createContext();
 
@@ -12,8 +13,13 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
+  const ask = useDialog();
   const [cartItems, setCartItems] = useState([]);
-  const [restaurantId, setRestaurantId] = useState(null);
+  const [restaurantId, setRestaurantIdState] = useState(null);
+  // Kept in a ref too, so clearCart() followed by addToCart() in the same tap
+  // (reorder) sees the cleared cart instead of asking to start a new one
+  const restaurantRef = useRef(null);
+  const setRestaurantId = (v) => { restaurantRef.current = v; setRestaurantIdState(v); };
   // Promo code the customer entered in the cart; checked again at checkout
   const [promoCode, setPromoCodeState] = useState(() => {
     try { return localStorage.getItem('cartPromo') || ''; } catch { return ''; }
@@ -46,14 +52,20 @@ export const CartProvider = ({ children }) => {
 
   const addToCart = (item, restaurant) => {
     // If cart has items from a different restaurant, ask user to clear cart
-    if (restaurantId && restaurantId !== restaurant.id) {
-      const shouldClear = window.confirm(
-        `Your cart contains items from ${cartItems[0]?.restaurant}. Would you like to clear your cart and add items from ${restaurant.name}?`
-      );
-      if (!shouldClear) {
-        return false;
-      }
-      clearCart();
+    // Cart holds one restaurant at a time: ask (in-app) before starting over.
+    // Returns false now; the item is added once the customer agrees.
+    if (restaurantRef.current && restaurantRef.current !== restaurant.id) {
+      ask({
+        title: 'Start a new cart?',
+        message: `Your cart has food from ${cartItems[0]?.restaurant}. Clear it and add this from ${restaurant.name}?`,
+        confirmLabel: 'Clear and add',
+      }).then(ok => {
+        if (!ok) return;
+        clearCart();
+        setRestaurantId(restaurant.id);
+        setCartItems([{ ...item, restaurant: restaurant.name, restaurantId: restaurant.id }]);
+      });
+      return false;
     }
 
     setRestaurantId(restaurant.id);

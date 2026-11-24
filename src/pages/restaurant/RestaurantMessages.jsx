@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { restaurantRequest } from '../../context/RestaurantContext';
 import { useNotification } from '../../context/NotificationContext';
 import { Check, Inbox, MessageSquare, Pencil, Reply, Send, Trash2, User } from 'lucide-react';
+import { useDialog } from '../../context/DialogContext';
 
 export default function RestaurantMessages() {
   const { addNotification } = useNotification();
@@ -126,8 +127,9 @@ export default function RestaurantMessages() {
     }
   };
 
+  const ask = useDialog();
   const deleteMessage = async (id) => {
-    if (!window.confirm('Delete this message?')) return;
+    if (!(await ask({ title: 'Delete this message?', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await restaurantRequest(`/messages/${id}`, { method: 'DELETE' });
       setMessages(prev => prev.filter(message => message.id !== id));

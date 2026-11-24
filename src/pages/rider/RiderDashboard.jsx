@@ -206,6 +206,13 @@ export default function RiderDashboard() {
         )}
       </section>
 
+      {/* One delivery at a time: say why new orders aren't coming */}
+      {activeOrders.length > 0 && (
+        <div className="glass-orange rounded-2xl px-4 py-3 text-ember-100 text-sm">
+          You're delivering order #{activeOrders[0].id}. New delivery requests come after you mark it delivered.
+        </div>
+      )}
+
       {/* Orders */}
       <section className={`${mobileSection === 'orders' ? 'block' : 'hidden'} lg:block glass rounded-3xl overflow-hidden`}>
         <div className="flex" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>

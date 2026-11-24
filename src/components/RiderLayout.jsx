@@ -1,7 +1,7 @@
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { useState, useEffect } from 'react';
 import { useRider } from '../context/RiderContext';
-import { LayoutDashboard, DollarSign, Bike, Star, LogOut, Menu, X, History } from 'lucide-react';
+import { LayoutDashboard, DollarSign, Bike, Star, Home, Menu, X, History } from 'lucide-react';
 import ThemeToggle from './ThemeToggle';
 import NotificationBell from './NotificationBell';
 
@@ -14,15 +14,13 @@ const NAV = [
 export default function RiderLayout({ children }) {
   const location = useLocation();
   const navigate  = useNavigate();
-  const { rider, isLoading, logout } = useRider();
+  const { rider, isLoading } = useRider();
   const [mobileOpen, setMobileOpen] = useState(false);
 
   // Same guard as the restaurant and admin panels: no rider session -> rider login
   useEffect(() => {
     if (!isLoading && !rider) navigate('/rider/login', { replace: true });
   }, [rider, isLoading, navigate]);
-
-  const handleLogout = () => { logout(); navigate('/rider/login', { replace: true }); };
 
   const isActive = (p) => location.pathname === p;
 
@@ -78,9 +76,10 @@ export default function RiderLayout({ children }) {
             <p className="text-forest-200/50 text-xs truncate">{rider.email}</p>
           </div>
         )}
-        <button onClick={handleLogout}
-          className="flex items-center gap-2 text-forest-200/50 hover:text-white hover:glass-orange text-sm px-3 py-2.5 rounded-xl transition-all w-full">
-          <LogOut className="w-4 h-4" /> Logout
+        {/* Back to the customer app (the rider panel uses the same account, so no logout here) */}
+        <button onClick={() => goTo('/')}
+          className="flex items-center gap-2 text-forest-200/70 hover:text-white hover:glass-green text-sm px-3 py-2.5 rounded-xl transition-all w-full">
+          <Home className="w-4 h-4" /> Home
         </button>
       </div>
     </div>
@@ -119,6 +118,10 @@ export default function RiderLayout({ children }) {
             <p className="text-white font-semibold">{NAV.find(n => isActive(n.path))?.label || 'Rider'}</p>
           </div>
           <div className="flex items-center gap-2">
+            <button onClick={() => goTo('/')} aria-label="Home" title="Home"
+              className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green">
+              <Home className="w-4 h-4" />
+            </button>
             <ThemeToggle />
             <NotificationBell to="/rider/notifications" />
           </div>

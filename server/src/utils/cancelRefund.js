@@ -83,7 +83,7 @@ async function refundCancelledOrder(orderId, { method = 'gcash', gcash = null, p
   const link = `/order-receipt/${o.id}`;
   if (state === 'check') {
     await notify(o.owner_id, {
-      audience: 'restaurant', type: 'warning', link: '/owner/issues',
+      audience: 'restaurant', type: 'warning', link: `/owner/issues?order=${o.id}`,
       title: `Check your GCash for cancelled order #${o.id}`,
       message: `The customer says they paid ${peso(paid)}. If it arrived, approve the refund on your Problems page. If not, decline it.`,
     });
@@ -106,7 +106,7 @@ async function refundCancelledOrder(orderId, { method = 'gcash', gcash = null, p
     });
   } else {
     await notify(o.owner_id, {
-      audience: 'restaurant', type: 'warning', link: '/owner/issues',
+      audience: 'restaurant', type: 'warning', link: `/owner/issues?order=${o.id}`,
       title: `Send a ${peso(paid)} GCash refund for cancelled order #${o.id}`,
       message: `Send it back${refundGcash ? ` to ${refundGcash}` : ''} and tap "Refund sent".`,
     });
