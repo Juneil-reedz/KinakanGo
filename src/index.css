@@ -80,7 +80,7 @@
 [class*="bg-red-500"], [class*="bg-red-600"], .bg-rose-500, .bg-forest-500, .bg-forest-600, .bg-forest-700,
 [class*="from-forest-"], [class*="from-red-"],
 :has(> [class*="from-black"]) {
-  --app-bg: var(--map-lines),
+  --app-bg:
             radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
             linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
   --app-text: #eef9f9;
@@ -137,7 +137,7 @@
 :root.light {
   color-scheme: light;
   /* the teal "table" the clay sits on */
-  --app-bg: var(--map-lines),
+  --app-bg:
             radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.16) 0%, transparent 50%),
             radial-gradient(ellipse at 100% 100%, rgba(0,40,44,.35) 0%, transparent 60%),
             linear-gradient(170deg, #0a7a80 0%, #016a70 50%, #015c61 100%);
@@ -172,13 +172,13 @@
 /* Dark mode ("dim"): the cards stay white clay; only the page and bars go deeper */
 :root.light.dim {
   color-scheme: dark;
-  --app-bg: var(--map-lines),
+  --app-bg:
             radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
             linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
   --clay-ink: 0 0 0;
 }
 :root.dim .glass-dark.clay-forest-bar {
-  background: var(--map-lines), linear-gradient(165deg, #012f33 0%, #01272a 55%, #002024 100%);
+  background: url("./assets/food-pattern-faint.svg") 0 0 / 260px 260px, linear-gradient(165deg, #012f33 0%, #01272a 55%, #002024 100%);
 }
 
 /* "Paper": light clay surfaces on the teal page. Inside them text is ink. */
@@ -226,7 +226,6 @@
   --clay-sheen: radial-gradient(120% 80% at 20% 0%, rgb(var(--clay-hi) / calc(var(--clay-hi-a) * .45)), transparent 60%);
   --clay-ease: cubic-bezier(.22,1,.36,1);
   /* faint map lines, used on the page background and the header bars */
-  --map-lines: url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M0 60 L70 40 L130 90 L240 70'/%3E%3Cpath d='M0 170 L60 150 L110 200 L180 160 L240 185'/%3E%3Cpath d='M70 40 L60 150'/%3E%3Cpath d='M130 90 L180 160 L170 240'/%3E%3Cpath d='M30 0 L70 40'/%3E%3Cpath d='M200 0 L190 70'/%3E%3C/g%3E%3C/svg%3E");
 }
 
 /* Mustard surfaces always carry ink, in both modes */
@@ -314,10 +313,34 @@
     font-size: var(--font-size-base);
     background: var(--app-bg);
     background-attachment: fixed;
+    isolation: isolate;
     color: var(--app-text);
     overflow-x: hidden;
     min-height: 100%;
   }
+  /* Floating food: two layers of line-drawn food drift slowly behind the cards */
+  body::before, body::after {
+    content: "";
+    position: fixed;
+    inset: -320px;
+    z-index: -1;
+    pointer-events: none;
+    background-image: url("./assets/food-pattern.svg");
+    background-size: 320px 320px;
+    opacity: .09;
+    will-change: transform;
+    animation: food-drift 70s linear infinite;
+  }
+  body::after {
+    background-size: 460px 460px;
+    background-position: 150px 90px;
+    opacity: .05;
+    inset: -460px;
+    animation: food-drift-b 110s linear infinite;
+  }
+  @keyframes food-drift   { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(320px, -320px, 0); } }
+  @keyframes food-drift-b { from { transform: translate3d(0, 0, 0); } to { transform: translate3d(-460px, -460px, 0); } }
+
 
   h1,h2,h3,h4,h5,h6 {
     font-family: var(--font-heading);
@@ -362,7 +385,7 @@
      like the hotel reference; the white clay cards float below them */
   .glass-dark.clay-forest-bar {
     background:
-      var(--map-lines),
+      url("./assets/food-pattern-faint.svg") 0 0 / 260px 260px,
       linear-gradient(165deg, #035c61 0%, #014e53 55%, #01454a 100%);
     box-shadow: 0 16px 34px -20px rgb(0 30 33 / .8);
     color: #fff;
