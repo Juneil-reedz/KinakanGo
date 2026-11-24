@@ -14,7 +14,7 @@ router.get('/', async (req, res) => {
        JOIN menu_items mi ON mi.id = cf.menu_item_id
        JOIN restaurants r ON r.id = mi.restaurant_id
        LEFT JOIN menu_categories c ON c.id = mi.category_id
-       WHERE cf.user_id = $1
+       WHERE cf.user_id = $1 AND mi.is_archived = false
        ORDER BY cf.created_at DESC`,
       [req.user.id]
     );

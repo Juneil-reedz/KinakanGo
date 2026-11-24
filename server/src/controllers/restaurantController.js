@@ -94,8 +94,19 @@ async function update(req, res) {
   res.json(rows[0] || { message: 'Updated' });
 }
 
+// A restaurant with orders can't be deleted (order history, refunds and store
+// credit point to it), so it is suspended instead: hidden, closed and unapproved.
 async function remove(req, res) {
-  await pool.query('DELETE FROM restaurants WHERE id = $1', [req.params.id]);
+  const { rows: used } = await pool.query('SELECT 1 FROM orders WHERE restaurant_id = $1 LIMIT 1', [req.params.id]);
+  if (used.length) {
+    const { rowCount } = await pool.query(
+      'UPDATE restaurants SET is_approved = false, is_open = false WHERE id = $1', [req.params.id]
+    );
+    if (!rowCount) return res.status(404).json({ error: 'Restaurant not found' });
+    return res.json({ message: 'This restaurant has past orders, so it was suspended instead of deleted. It is hidden from customers.', suspended: true });
+  }
+  const { rowCount } = await pool.query('DELETE FROM restaurants WHERE id = $1', [req.params.id]);
+  if (!rowCount) return res.status(404).json({ error: 'Restaurant not found' });
   res.json({ message: 'Deleted' });
 }
 

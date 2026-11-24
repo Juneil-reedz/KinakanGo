@@ -8,6 +8,7 @@ router.post('/',                requireRole('customer'), ctrl.submit);
 router.get('/mine',             ctrl.mine);
 router.post('/:id/escalate',    ctrl.escalate);       // customer: ask the admin to review
 router.post('/:id/received',    ctrl.received);       // customer: refund arrived
+router.post('/:id/to-credit',   ctrl.toCredit);       // customer: take an unsent refund as store credit
 
 // Restaurant owner: reports about their own orders
 router.get('/restaurant',                ctrl.restaurantList);

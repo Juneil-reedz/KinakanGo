@@ -159,6 +159,8 @@ pool.query(`
 `)).then(() => pool.query(`
   ALTER TABLE orders ADD COLUMN IF NOT EXISTS credit_used DECIMAL(10,2) NOT NULL DEFAULT 0
 `)).then(() => pool.query(`
+  ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false
+`)).then(() => pool.query(`
   ALTER TABLE issues
     ADD COLUMN IF NOT EXISTS refund_method VARCHAR(10) DEFAULT NULL,
     ADD COLUMN IF NOT EXISTS refund_gcash  VARCHAR(30) DEFAULT NULL

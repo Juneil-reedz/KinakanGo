@@ -4,6 +4,7 @@ import { ordersApi, storage, request } from '../services/api';
 import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
+import CancelOrderDialog from '../components/CancelOrderDialog';
 import {
   Clock, Package, ChevronRight,
   ClipboardList, ChefHat, PackageCheck, Bike, Navigation, CheckCircle2,
@@ -99,6 +100,7 @@ export default function OrderTracking() {
   const [restLocs,   setRestLocs]   = useState({}); // { [orderId]: {lat,lng} }
   const [lastLiveAt, setLastLiveAt] = useState(null);
   const pollLocRef = useRef(null);
+  const [cancelOrder, setCancelOrder] = useState(null);
   const ordersRef = useRef([]);
   const detailsRef = useRef({}); // { [orderId]: { key, data } } — cached getOne results
 
@@ -292,6 +294,16 @@ export default function OrderTracking() {
                 )}
               </div>
             </div>
+
+            {order.status === 'pending' && (
+              <div className="px-5 pt-4 flex items-center justify-between gap-3">
+                <p className="text-forest-200/60 text-xs">Waiting for the restaurant to accept. You can still cancel.</p>
+                <button onClick={() => setCancelOrder(order)}
+                  className="glass hover:bg-red-500/20 transition-all text-red-300 text-xs font-semibold px-3 py-2 rounded-xl flex-shrink-0">
+                  Cancel order
+                </button>
+              </div>
+            )}
 
             {/* Progress stepper */}
             {!isCancelled && (
@@ -499,6 +511,10 @@ export default function OrderTracking() {
           </div>
         );
       })}
+      {cancelOrder && (
+        <CancelOrderDialog order={cancelOrder} onClose={() => setCancelOrder(null)}
+          onCancelled={() => { setCancelOrder(null); fetchOrders(true); }} />
+      )}
     </div>
   );
 }

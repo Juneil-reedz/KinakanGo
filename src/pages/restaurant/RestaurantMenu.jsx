@@ -137,8 +137,8 @@ export default function RestaurantMenu() {
         addNotification('Item updated!', 'success');
       }
       closeModal();
-    } catch {
-      addNotification('Failed to save menu item', 'error');
+    } catch (err) {
+      addNotification(err?.message || 'Failed to save menu item', 'error');
     }
   };
 
@@ -158,11 +158,11 @@ export default function RestaurantMenu() {
     const item = items.find(i => i.id === id);
     if (!confirm(`Delete ${item.name}?`)) return;
     try {
-      await restaurantRequest(`/restaurants/${restaurantId}/menu/${id}`, { method: 'DELETE' });
+      const res = await restaurantRequest(`/restaurants/${restaurantId}/menu/${id}`, { method: 'DELETE' });
       setItems(prev => prev.filter(i => i.id !== id));
-      addNotification('Item deleted.', 'success');
-    } catch {
-      addNotification('Failed to delete item', 'error');
+      addNotification(res?.archived ? `${item.name} was removed from your menu. Past orders still show it.` : 'Item deleted.', 'success');
+    } catch (err) {
+      addNotification(err?.message || 'Failed to delete item', 'error');
     }
   };
 

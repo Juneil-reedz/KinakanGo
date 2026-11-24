@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { CheckCircle, Package, Clock, ShoppingBag, MapPin } from 'lucide-react';
 import { ordersApi } from '../services/api';
+import CancelOrderDialog from '../components/CancelOrderDialog';
 
 const STATUS_LABEL = {
   pending: 'Waiting for the restaurant', accepted: 'Accepted', preparing: 'Being prepared',
@@ -13,6 +14,7 @@ export default function OrderConfirmation() {
   const navigate    = useNavigate();
   const location    = useLocation();
   const [order, setOrder] = useState(null);
+  const [cancelling, setCancelling] = useState(false);
 
   useEffect(() => {
     ordersApi.getOne(orderId)
@@ -89,6 +91,17 @@ export default function OrderConfirmation() {
             ))}
           </div>
         </div>
+
+        {order.status === 'pending' && (
+          <button onClick={() => setCancelling(true)}
+            className="w-full glass hover:bg-red-500/20 transition-all text-red-300 text-sm font-semibold py-3 rounded-2xl">
+            Cancel order
+          </button>
+        )}
+        {cancelling && (
+          <CancelOrderDialog order={order} onClose={() => setCancelling(false)}
+            onCancelled={() => { setCancelling(false); navigate(`/order-receipt/${order.id}`, { replace: true }); }} />
+        )}
 
         <div className="flex gap-3">
           <button onClick={() => navigate('/orders')}

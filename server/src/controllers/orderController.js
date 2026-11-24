@@ -5,6 +5,7 @@ const pool = require('../config/db');
 const { sendEmail } = require('../utils/email');
 const { notify } = require('../utils/notify');
 const storeCredit = require('../utils/storeCredit');
+const { refundCancelledOrder } = require('../utils/cancelRefund');
 
 // Who may set which order status (admins may set any)
 const RESTAURANT_STATUSES = ['accepted', 'preparing', 'ready', 'cancelled'];
@@ -521,6 +522,15 @@ async function updateStatus(req, res) {
   const { status, cancelledReason, deliveryProof } = req.body;
   const allowed = ['accepted','preparing','ready','picked_up','delivered','cancelled'];
   if (!allowed.includes(status)) return res.status(400).json({ error: 'Invalid status' });
+  // A cancelled GCash order is refunded: the customer picks store credit or GCash
+  const refundMethod = req.body.refundMethod === 'credit' ? 'credit' : 'gcash';
+  let refundGcash = null;
+  if (status === 'cancelled' && req.body.refundGcash) {
+    refundGcash = String(req.body.refundGcash).replace(/[^\d+]/g, '');
+    if (!/^(\+?63|0)9\d{9}$/.test(refundGcash)) {
+      return res.status(400).json({ error: 'Enter your GCash number, e.g. 09171234567' });
+    }
+  }
   if (status === 'delivered' && !deliveryProof) {
     return res.status(400).json({ error: 'Proof of delivery is required' });
   }
@@ -566,12 +576,21 @@ async function updateStatus(req, res) {
          WHEN $4 = 'delivered' THEN 'paid'
          WHEN payment_method = 'gcash' AND $4 IN ('accepted','preparing','ready','picked_up') THEN 'paid'
          ELSE payment_status END
-     WHERE id = $6
+     WHERE id = $6 AND ($7::boolean OR status = $8)
      RETURNING id, status`,
-    [status, status, cancelledReason || null, status, deliveryProof || null, req.params.id]
+    [status, status, cancelledReason || null, status, deliveryProof || null, req.params.id, isAdmin, before.status]
   );
-  if (!updatedRows.length) return res.status(404).json({ error: 'Order not found' });
-  if (status === 'cancelled') await storeCredit.returnForCancelledOrder(req.params.id);
+  // Someone else changed the order a moment ago (e.g. the restaurant accepted it as the customer cancelled)
+  if (!updatedRows.length) return res.status(409).json({ error: 'This order was just updated. Please refresh and try again.' });
+  let refund = null;
+  if (status === 'cancelled') {
+    await storeCredit.returnForCancelledOrder(req.params.id);
+    // Only the customer chooses store credit; otherwise the money goes back by GCash
+    refund = await refundCancelledOrder(req.params.id, {
+      method: isCustomer && !isOwner ? refundMethod : 'gcash',
+      gcash: isCustomer && !isOwner ? refundGcash : null,
+    });
+  }
 
   await notifyOrderStatus(req.params.id, status, cancelledReason);
   if (status === 'cancelled' && isCustomer && !isOwner && !isAdmin) {
@@ -605,7 +624,7 @@ async function updateStatus(req, res) {
     }
   }
 
-  res.json({ message: 'Status updated', order: updatedRows[0] });
+  res.json({ message: 'Status updated', order: updatedRows[0], refund });
 }
 
 // Rider accepts or rejects an assigned order

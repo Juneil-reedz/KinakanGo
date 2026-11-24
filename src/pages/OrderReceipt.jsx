@@ -9,6 +9,7 @@ import { ordersApi, issuesApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
+import CancelOrderDialog from '../components/CancelOrderDialog';
 
 const STATUS_LABEL = {
   pending: 'Waiting for restaurant', accepted: 'Accepted', preparing: 'Preparing',
@@ -131,7 +132,8 @@ function reportState(r, waitHours = 24) {
   if (r.refund_status === 'sent') return { text: `The restaurant sent your ${amt} refund`, tone: 'good', confirm: true };
   if (r.refund_status === 'not_received') return { text: `You told us the ${amt} refund didn't arrive. KinakanGo is checking with the restaurant.`, tone: 'wait' };
   if (r.refund_status === 'to_send') return {
-    text: `Refund of ${amt} approved. The restaurant will send it to you.`, tone: 'good',
+    text: `Refund of ${amt} approved. The restaurant will send it to you${r.refund_method === 'gcash' && r.refund_gcash ? ` by GCash (${r.refund_gcash})` : ''}.`, tone: 'good',
+    toCredit: true,
     escalate: !byAdmin && hoursSince(r.resolved_at) >= waitHours ? "I still haven't received it" : null,
   };
   if (r.status === 'pending') return byAdmin
@@ -228,6 +230,12 @@ function ReportProblem({ order }) {
                         className="flex-1 glass text-forest-100 text-xs py-2 rounded-lg disabled:opacity-50">I didn't get it</button>
                     </div>
                   )}
+                  {st.toCredit && (
+                    <button disabled={busy} onClick={() => act(r, () => issuesApi.toCredit(r.id), 'Added to your store credit')}
+                      className="w-full glass hover:glass-green transition-all text-forest-100 text-xs py-2 rounded-lg mt-2 disabled:opacity-50">
+                      Don't wait: take {peso(r.refund_approved)} as store credit now
+                    </button>
+                  )}
                   {st.escalate && (
                     <button disabled={busy} onClick={() => escalate(r, st.escalate)}
                       className="w-full glass hover:glass-orange transition-all text-forest-100 text-xs py-2 rounded-lg mt-2 disabled:opacity-50">
@@ -309,18 +317,11 @@ export default function OrderReceipt() {
   const [sendingReceipt, setSendingReceipt] = useState(false);
   const [cancelling, setCancelling] = useState(false);
 
-  const cancelOrder = async () => {
-    if (!window.confirm('Cancel this order?')) return;
-    setCancelling(true);
-    try {
-      await ordersApi.updateStatus(order.id, 'cancelled', { cancelledReason: 'Cancelled by customer' });
-      setOrder(o => ({ ...o, status: 'cancelled', cancelled_reason: 'Cancelled by customer' }));
-      addNotification('Your order was cancelled', 'success');
-    } catch (err) {
-      addNotification(err.message || 'Could not cancel the order', 'error');
-    } finally {
-      setCancelling(false);
-    }
+  // After cancelling, reload the order so payment and refund details are current
+  const onCancelled = async () => {
+    setCancelling(false);
+    try { setOrder(await ordersApi.getOne(order.id)); }
+    catch { setOrder(o => ({ ...o, status: 'cancelled' })); }
   };
 
   const emailReceipt = async () => {
@@ -492,7 +493,7 @@ export default function OrderReceipt() {
             <span className="text-forest-200/50">·</span>
             <span className={order.payment_status === 'paid' || order.status === 'delivered' ? 'text-forest-300' : 'text-ember-300'}>
               {order.payment_status === 'refunded' ? 'Refunded'
-                : isCancelled && order.payment_status === 'paid' ? 'Paid · ask for a refund below'
+                : isCancelled && order.payment_status === 'paid' ? 'Paid · see the refund below'
                 : order.payment_status === 'paid' || order.status === 'delivered' ? 'Paid'
                 : isCancelled ? 'Not charged'
                 : order.payment_method === 'gcash' ? 'Payment proof sent' : 'Pay the rider on delivery'}
@@ -504,14 +505,18 @@ export default function OrderReceipt() {
           <RateOrder order={order} onRated={r => setOrder(o => ({ ...o, ...r }))} />
         )}
 
-        {order.status !== 'pending' && <ReportProblem order={order} />}
+        {order.status !== 'pending' && <ReportProblem key={order.status} order={order} />}
+        {cancelling && <CancelOrderDialog order={order} onClose={() => setCancelling(false)} onCancelled={onCancelled} />}
 
         {order.status === 'pending' && (
           <div className="p-5 md:p-6 print:hidden" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.08)' }}>
-            <p className="text-forest-200/60 text-xs mb-2">The restaurant hasn't accepted this order yet, so you can still cancel it.</p>
-            <button onClick={cancelOrder} disabled={cancelling}
+            <p className="text-forest-200/60 text-xs mb-2">
+              The restaurant hasn't accepted this order yet, so you can still cancel it.
+              {order.payment_method === 'gcash' && ' Your GCash payment comes back as store credit or to your GCash.'}
+            </p>
+            <button onClick={() => setCancelling(true)} disabled={cancelling}
               className="w-full glass hover:bg-red-500/20 transition-all text-red-300 text-sm font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-              <XCircle className="w-4 h-4" /> {cancelling ? 'Cancelling…' : 'Cancel order'}
+              <XCircle className="w-4 h-4" /> Cancel order
             </button>
           </div>
         )}
