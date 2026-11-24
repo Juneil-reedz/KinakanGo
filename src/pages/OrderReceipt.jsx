@@ -2,8 +2,9 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Printer, Clock, Store, MapPin, Bike, Banknote, Smartphone,
-  UtensilsCrossed, Navigation, XCircle, CheckCircle, RotateCcw,
+  UtensilsCrossed, Navigation, XCircle, CheckCircle, RotateCcw, Mail, Star,
 } from 'lucide-react';
+import StarRating from '../components/StarRating';
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
@@ -17,6 +18,76 @@ const ACTIVE = ['pending', 'accepted', 'preparing', 'ready', 'picked_up'];
 const peso = (v) => `₱${Number(v || 0).toFixed(2)}`;
 const when = (d) => new Date(d).toLocaleString('en-PH', { dateStyle: 'medium', timeStyle: 'short' });
 
+function Section({ title, children }) {
+  return (
+    <div className="p-5 md:p-6" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.08)' }}>
+      <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3 print:text-gray-500">{title}</p>
+      {children}
+    </div>
+  );
+}
+
+// Rate a delivered order (food + restaurant), or show the rating already given
+function RateOrder({ order, onRated }) {
+  const { addNotification } = useNotification();
+  const [food, setFood] = useState(0);
+  const [rest, setRest] = useState(0);
+  const [comment, setComment] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  if (order.food_rating) {
+    return (
+      <Section title="Your rating">
+        <div className="space-y-2 text-sm">
+          <div className="flex items-center justify-between"><span className="text-forest-100/80">Food</span><StarRating value={order.food_rating} size="w-5 h-5" /></div>
+          {order.restaurant_rating && (
+            <div className="flex items-center justify-between"><span className="text-forest-100/80">Restaurant</span><StarRating value={order.restaurant_rating} size="w-5 h-5" /></div>
+          )}
+          {order.review_comment && <p className="text-forest-200/60 italic">"{order.review_comment}"</p>}
+        </div>
+      </Section>
+    );
+  }
+
+  const submit = async () => {
+    if (!food || !rest) { addNotification('Please rate both the food and the restaurant', 'error'); return; }
+    setSaving(true);
+    try {
+      await ordersApi.review(order.id, { foodRating: food, restaurantRating: rest, comment: comment.trim() || null });
+      addNotification('Thanks for your rating!', 'success');
+      onRated({ food_rating: food, restaurant_rating: rest, review_comment: comment.trim() || null });
+    } catch (err) {
+      addNotification(err.message || 'Could not save your rating', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div id="rate" className="print:hidden">
+      <Section title="Rate this order">
+        <div className="space-y-3">
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-white text-sm font-medium">How was the food?</span>
+            <StarRating value={food} onChange={setFood} label="Food rating" />
+          </div>
+          <div className="flex items-center justify-between gap-3">
+            <span className="text-white text-sm font-medium">How was the restaurant?</span>
+            <StarRating value={rest} onChange={setRest} label="Restaurant rating" />
+          </div>
+          <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={500} rows={2}
+            placeholder="Anything to add? (optional)"
+            className="w-full input-glass px-3 py-2.5 text-sm rounded-xl resize-none" />
+          <button onClick={submit} disabled={saving || !food || !rest}
+            className="w-full btn-glow-orange text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+            <Star className="w-4 h-4" /> {saving ? 'Saving…' : 'Submit rating'}
+          </button>
+        </div>
+      </Section>
+    </div>
+  );
+}
+
 // Full details of one of the customer's orders (opened from Order History)
 export default function OrderReceipt() {
   const { orderId } = useParams();
@@ -25,12 +96,29 @@ export default function OrderReceipt() {
   const { addNotification } = useNotification();
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
+  const [sendingReceipt, setSendingReceipt] = useState(false);
+
+  const emailReceipt = async () => {
+    setSendingReceipt(true);
+    try {
+      const r = await ordersApi.emailReceipt(orderId);
+      addNotification(`Receipt sent to ${r.sentTo || 'your email'}`, 'success');
+    } catch (err) {
+      addNotification(err.message || 'Could not send the receipt', 'error');
+    } finally {
+      setSendingReceipt(false);
+    }
+  };
 
   useEffect(() => {
     let live = true;
     setOrder(null); setError('');
     ordersApi.getOne(orderId)
-      .then(o => { if (live) setOrder(o); })
+      .then(o => {
+        if (!live) return;
+        setOrder(o);
+        if (window.location.hash === '#rate') setTimeout(() => document.getElementById('rate')?.scrollIntoView({ behavior: 'smooth' }), 100);
+      })
       .catch(err => { if (live) setError(err.status === 404 ? 'Order not found' : (err.message || 'Could not load this order')); });
     return () => { live = false; };
   }, [orderId]);
@@ -72,21 +160,20 @@ export default function OrderReceipt() {
     navigate('/cart');
   };
 
-  const Section = ({ title, children }) => (
-    <div className="p-5 md:p-6" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.08)' }}>
-      <p className="text-forest-200/50 text-xs font-semibold uppercase tracking-wide mb-3 print:text-gray-500">{title}</p>
-      {children}
-    </div>
-  );
-
   return (
     <div className="container-custom pt-8 pb-28 lg:pb-8 animate-fade-up">
       <div className="print:hidden mb-6 flex justify-between items-center gap-3 flex-wrap">
         {back}
-        <button onClick={() => window.print()}
-          className="glass hover:glass-green transition-all text-forest-100/80 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl flex items-center gap-2">
-          <Printer className="w-4 h-4" /> Print
-        </button>
+        <div className="flex gap-2">
+          <button onClick={emailReceipt} disabled={sendingReceipt}
+            className="glass hover:glass-green transition-all text-forest-100/80 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl flex items-center gap-2 disabled:opacity-50">
+            <Mail className="w-4 h-4" /> {sendingReceipt ? 'Sending…' : 'Email receipt'}
+          </button>
+          <button onClick={() => window.print()}
+            className="glass hover:glass-green transition-all text-forest-100/80 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl flex items-center gap-2">
+            <Printer className="w-4 h-4" /> Print
+          </button>
+        </div>
       </div>
 
       <div className="max-w-2xl mx-auto glass print:bg-white print:shadow-none rounded-2xl overflow-hidden">
@@ -180,6 +267,10 @@ export default function OrderReceipt() {
             </span>
           </p>
         </Section>
+
+        {order.status === 'delivered' && (
+          <RateOrder order={order} onRated={r => setOrder(o => ({ ...o, ...r }))} />
+        )}
 
         <div className="p-5 md:p-6 flex flex-col sm:flex-row gap-2 print:hidden">
           {isActive && (

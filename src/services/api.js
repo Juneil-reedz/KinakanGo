@@ -184,6 +184,8 @@ export const ordersApi = {
     request(`/orders/${id}/assign-rider`, { method: 'PATCH', body: JSON.stringify({ riderId }) }),
   riderResponse:(id, accept)     =>
     request(`/orders/${id}/rider-response`, { method: 'PATCH', body: JSON.stringify({ accept }) }),
+  review:       (id, data)       => request(`/orders/${id}/review`,  { method: 'POST',  body: JSON.stringify(data) }),
+  emailReceipt: (id)             => request(`/orders/${id}/receipt`, { method: 'POST' }),
 };
 
 export const riderApi = {

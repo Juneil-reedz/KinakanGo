@@ -142,6 +142,24 @@ pool.query(`
   )
 `).catch(err => console.warn('rider_admin_requests init warning:', err.message));
 
+// Order ratings: food + restaurant stars per delivered order
+pool.query(`
+  CREATE TABLE IF NOT EXISTS reviews (
+    id                SERIAL PRIMARY KEY,
+    order_id          INT NOT NULL UNIQUE REFERENCES orders(id),
+    customer_id       INT NOT NULL REFERENCES users(id),
+    restaurant_id     INT NOT NULL REFERENCES restaurants(id),
+    rider_id          INT DEFAULT NULL REFERENCES users(id),
+    food_rating       SMALLINT NOT NULL CHECK (food_rating BETWEEN 1 AND 5),
+    restaurant_rating SMALLINT DEFAULT NULL CHECK (restaurant_rating BETWEEN 1 AND 5),
+    rider_rating      SMALLINT DEFAULT NULL,
+    comment           TEXT DEFAULT NULL,
+    created_at        TIMESTAMPTZ NOT NULL DEFAULT NOW()
+  )
+`).then(() => pool.query(`
+  ALTER TABLE reviews ADD COLUMN IF NOT EXISTS restaurant_rating SMALLINT DEFAULT NULL CHECK (restaurant_rating BETWEEN 1 AND 5)
+`)).catch(err => console.warn('reviews init warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');

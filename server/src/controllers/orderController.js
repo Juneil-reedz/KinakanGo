@@ -344,6 +344,9 @@ async function placeOrder(req, res) {
     await client.query('COMMIT');
     res.status(201).json({ id: orderId, orderId, total });
 
+    // Email the customer a receipt as proof of the order (never blocks the order)
+    sendOrderReceipt(orderId).catch(err => console.error('receipt email failed:', err.message));
+
     // After responding: tell the customer and the restaurant
     const { rows: rest } = await pool.query('SELECT owner_id, name FROM restaurants WHERE id = $1', [restaurantId]);
     const count = items.reduce((n, i) => n + Number(i.quantity), 0);
@@ -406,11 +409,13 @@ async function listOrders(req, res) {
             r.address AS restaurant_address,
             u.name  AS customer_name,
             ru.name  AS rider_name,
-            ru.phone AS rider_phone
+            ru.phone AS rider_phone,
+            rv.food_rating, rv.restaurant_rating
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
      LEFT JOIN users ru ON ru.id = o.rider_id
+     LEFT JOIN reviews rv ON rv.order_id = o.id
      ${cond} ORDER BY o.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
     [...params, parseInt(limit), offset]
   );
@@ -433,11 +438,13 @@ async function getOrder(req, res) {
             r.name  AS restaurant_name, ${imageUrlSql('r', 'restaurants')} AS restaurant_image,
             r.address AS restaurant_address, r.phone AS restaurant_phone, r.owner_id AS restaurant_owner_id,
             u.name  AS customer_name, u.phone AS customer_phone,
-            ru.name  AS rider_name,   ru.phone AS rider_phone
+            ru.name  AS rider_name,   ru.phone AS rider_phone,
+            rv.food_rating, rv.restaurant_rating, rv.comment AS review_comment
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
      LEFT JOIN users ru ON ru.id = o.rider_id
+     LEFT JOIN reviews rv ON rv.order_id = o.id
      WHERE o.id = $1`,
     [req.params.id]
   );
@@ -597,4 +604,137 @@ async function assignRider(req, res) {
   res.json({ message: 'Rider assigned' });
 }
 
-module.exports = { notifyOrderStatus, requestOrderCode, placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };
+// ── Receipts ─────────────────────────────────────────────────────────────────
+
+const PAYMENT_LABEL = { cash: 'Cash on Delivery', gcash: 'GCash', card: 'Card', online: 'Online' };
+
+async function sendOrderReceipt(orderId) {
+  const { rows } = await pool.query(
+    `SELECT o.*, r.name AS restaurant_name, r.address AS restaurant_address,
+            u.name AS customer_name, u.email AS customer_email, u.phone AS customer_phone
+     FROM orders o
+     JOIN restaurants r ON r.id = o.restaurant_id
+     JOIN users u ON u.id = o.customer_id
+     WHERE o.id = $1`, [orderId]
+  );
+  const o = rows[0];
+  if (!o?.customer_email) return;
+  const { rows: items } = await pool.query(
+    'SELECT name, price, quantity, notes FROM order_items WHERE order_id = $1 ORDER BY id', [orderId]
+  );
+  const peso = (n) => `&#8369;${Number(n).toFixed(2)}`;
+  const itemsTotal = items.reduce((s, i) => s + Number(i.price) * i.quantity, 0);
+  const discount = Math.max(0, itemsTotal - Number(o.subtotal));
+  const placed = new Date(o.created_at).toLocaleString('en-PH', { timeZone: 'Asia/Manila', dateStyle: 'medium', timeStyle: 'short' });
+  const row = (l, v, bold) => `<tr><td style="padding:3px 0;${bold ? 'font-weight:bold;border-top:1px solid #ddd;padding-top:8px' : 'color:#555'}">${l}</td>
+    <td style="padding:3px 0;text-align:right;${bold ? 'font-weight:bold;border-top:1px solid #ddd;padding-top:8px' : 'color:#555'}">${v}</td></tr>`;
+  const itemRows = items.map(i => `<tr>
+      <td style="padding:6px 0;border-bottom:1px solid #eee">${escapeHtml(i.name)} &times; ${i.quantity}${i.notes ? `<br><span style="color:#888;font-size:12px">Note: ${escapeHtml(i.notes)}</span>` : ''}</td>
+      <td style="padding:6px 0;border-bottom:1px solid #eee;text-align:right">${peso(Number(i.price) * i.quantity)}</td></tr>`).join('');
+
+  await sendEmail({
+    to: o.customer_email,
+    subject: `KinakanGo receipt · Order #${o.id}`,
+    html: `
+      <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a1a">
+        <h2 style="margin:0;color:#e8540a">KinakanGo</h2>
+        <p style="margin:4px 0 20px;color:#666">Order receipt</p>
+        <table style="width:100%;font-size:14px;margin-bottom:16px">
+          <tr><td style="color:#666">Order</td><td style="text-align:right"><strong>#${o.id}</strong></td></tr>
+          <tr><td style="color:#666">Placed</td><td style="text-align:right">${placed}</td></tr>
+          <tr><td style="color:#666">Customer</td><td style="text-align:right">${escapeHtml(o.customer_name)}</td></tr>
+          <tr><td style="color:#666">Restaurant</td><td style="text-align:right">${escapeHtml(o.restaurant_name)}</td></tr>
+          <tr><td style="color:#666;vertical-align:top">Deliver to</td><td style="text-align:right">${escapeHtml(o.delivery_address)}</td></tr>
+          <tr><td style="color:#666">Payment</td><td style="text-align:right">${PAYMENT_LABEL[o.payment_method] || escapeHtml(o.payment_method)}</td></tr>
+        </table>
+        <table style="width:100%;border-collapse:collapse;font-size:14px">${itemRows}</table>
+        <table style="width:100%;border-collapse:collapse;font-size:14px;margin-top:8px">
+          ${row('Items', peso(itemsTotal))}
+          ${discount > 0.005 ? row('Promo discount', `&minus;${peso(discount)}`) : ''}
+          ${row('Delivery fee', peso(o.delivery_fee))}
+          ${row('Tax (8%)', peso(o.tax))}
+          ${row('Total', peso(o.total), true)}
+        </table>
+        <p style="color:#888;font-size:12px;margin-top:20px">Keep this email as proof of your order. You can also see it anytime in KinakanGo under Profile &rarr; Order History.</p>
+      </div>`,
+  });
+}
+
+// Customer asks for the receipt again (once a minute per order)
+const lastReceiptSent = new Map();
+async function emailReceipt(req, res) {
+  const { rows } = await pool.query('SELECT customer_id FROM orders WHERE id = $1', [req.params.id]);
+  if (!rows.length || rows[0].customer_id !== req.user.id) return res.status(404).json({ error: 'Order not found' });
+  const key = String(req.params.id);
+  const last = lastReceiptSent.get(key) || 0;
+  if (Date.now() - last < 60 * 1000) {
+    return res.status(429).json({ error: 'Receipt already sent. Please wait a minute before sending again.' });
+  }
+  try {
+    await sendOrderReceipt(req.params.id);
+  } catch (err) {
+    console.error('receipt email failed:', err.message);
+    return res.status(503).json({ error: "Couldn't send the receipt email. Please try again later." });
+  }
+  lastReceiptSent.set(key, Date.now());
+  const { rows: u } = await pool.query('SELECT email FROM users WHERE id = $1', [req.user.id]);
+  res.json({ message: 'Receipt sent', sentTo: maskEmail(u[0]?.email || '') });
+}
+
+// ── Reviews ──────────────────────────────────────────────────────────────────
+
+// Customer rates a delivered order: the food and the restaurant, 1–5 stars each
+async function submitReview(req, res) {
+  const foodRating       = Number(req.body.foodRating);
+  const restaurantRating = Number(req.body.restaurantRating);
+  const comment = req.body.comment ? String(req.body.comment).trim().slice(0, 500) : null;
+  const valid = (n) => Number.isInteger(n) && n >= 1 && n <= 5;
+  if (!valid(foodRating) || !valid(restaurantRating)) {
+    return res.status(400).json({ error: 'Please give the food and the restaurant 1 to 5 stars' });
+  }
+  const { rows } = await pool.query(
+    'SELECT customer_id, restaurant_id, rider_id, status FROM orders WHERE id = $1', [req.params.id]
+  );
+  const o = rows[0];
+  if (!o || o.customer_id !== req.user.id) return res.status(404).json({ error: 'Order not found' });
+  if (o.status !== 'delivered') return res.status(400).json({ error: 'You can rate an order once it has been delivered' });
+
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const { rowCount } = await client.query(
+      `INSERT INTO reviews (order_id, customer_id, restaurant_id, rider_id, food_rating, restaurant_rating, comment)
+       VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (order_id) DO NOTHING`,
+      [req.params.id, req.user.id, o.restaurant_id, o.rider_id, foodRating, restaurantRating, comment]
+    );
+    if (!rowCount) {
+      await client.query('ROLLBACK');
+      return res.status(409).json({ error: 'You already rated this order' });
+    }
+    await client.query(
+      `UPDATE restaurants SET
+         rating       = sub.avg,
+         review_count = sub.n
+       FROM (SELECT ROUND(AVG(COALESCE(restaurant_rating, food_rating))::numeric, 2) AS avg, COUNT(*)::int AS n
+             FROM reviews WHERE restaurant_id = $1) sub
+       WHERE id = $1`,
+      [o.restaurant_id]
+    );
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  const { rows: rest } = await pool.query('SELECT owner_id FROM restaurants WHERE id = $1', [o.restaurant_id]);
+  await notify(rest[0]?.owner_id, {
+    audience: 'restaurant', type: 'info', link: '/owner/orders',
+    title: `New rating · Order #${req.params.id}`,
+    message: `Food ${'★'.repeat(foodRating)} · Restaurant ${'★'.repeat(restaurantRating)}${comment ? ` · "${comment.slice(0, 120)}"` : ''}`,
+  });
+  res.status(201).json({ message: 'Thanks for your rating!', foodRating, restaurantRating, comment });
+}
+
+module.exports = { submitReview, emailReceipt, sendOrderReceipt, notifyOrderStatus, requestOrderCode, placeOrder, listOrders, getOrder, canAccessOrder, updateStatus, assignRider, riderResponse, autoAssignRider };
