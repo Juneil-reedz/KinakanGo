@@ -188,6 +188,41 @@
   color: var(--app-text);
 }
 
+/* Light setting (html.light-nav): the page stays dark, but the bottom bar and
+   every card turn light with dark ink inside */
+:root.light-nav {
+  --glass-base-bg:   linear-gradient(160deg, #ffffff 0%, #fdfcfa 45%, #f3eee6 100%);
+  --glass-green-bg:  linear-gradient(160deg, #fff3e4 0%, #fde3c4 100%);
+  --glass-teal-bg:   linear-gradient(160deg, #fff3e4 0%, #fde3c4 100%);
+  --glass-orange-bg: linear-gradient(160deg, #ffe3c0 0%, #fcc98c 100%);
+  --glass-blue-bg:   linear-gradient(160deg, #eef1f6 0%, #dfe5ee 100%);
+}
+:root.light-nav :is(.food-card, .inbox-card, .fd-fact, .fd-qty) {
+  background: linear-gradient(160deg, #ffffff 0%, #fbf8f4 100%);
+  box-shadow: inset 0 1px 0 #fff, 0 0 0 1px rgb(0 0 0 / .04), 0 16px 28px -18px rgb(0 0 0 / .85);
+}
+:root.light-nav .inbox-card.is-active { background: linear-gradient(160deg, #fff3e4 0%, #fde3c4 100%); }
+:root.light-nav .chat-bubble-theirs { background: #f6f1ea; color: #2a211b; }
+:root.light-nav :is(.glass, .glass-green, .glass-orange, .glass-teal, .glass-blue, .clay-card, .card-3d, .clay-modal,
+                    .food-card, .inbox-card, .fd-fact, .fd-qty):not(:is(.keep-dark, .clay-forest, .clay-forest-bar, .chat-header, [class*="from-forest-"], [class*="from-red-"]) *) {
+  --app-text: #2a211b;
+  --fg-rgb: 42,33,27;
+  --clay-ink: 60 36 20;
+  --color-white: #2a211b;
+  --color-forest-50: #1d1712;  --color-forest-100: #2a211b; --color-forest-200: #4a3d33;
+  --color-forest-300: #c2620a; --color-forest-400: #a35208;
+  --color-ember-50: #8a4505;   --color-ember-100: #8a4505;  --color-ember-200: #9a4d06;
+  --color-ember-300: #b25a07;  --color-ember-400: #c2620a;
+  --color-red-200: #991b1b;    --color-red-300: #b91c1c;    --color-red-400: #dc2626;
+  --color-teal-200: #0f766e;   --color-teal-300: #0d7f76;   --color-teal-400: #0b8a80;
+  color: var(--app-text);
+}
+/* Text laid over a photo inside a light card stays white */
+:root.light-nav :is(.restaurant-card, .glass, .card-3d) [class*="bg-gradient-to-t"] ~ * {
+  --color-white: #fff; --fg-rgb: 255,255,255; --app-text: #fff;
+  --color-forest-100: #efe7df; --color-forest-200: #ddd0c3; --color-ember-300: #fdbf78; --color-ember-400: #fba94c;
+}
+
 /* ─── Clay material ─────────────────────────────────────────────────
    Five layers make a surface look like inflated clay:
    a bright upper edge, a soft inner light at the top-left, an inner shade
