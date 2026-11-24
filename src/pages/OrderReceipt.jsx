@@ -10,6 +10,7 @@ import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import { useAuth } from '../context/AuthContext';
 import CancelOrderDialog from '../components/CancelOrderDialog';
+import { useDialog } from '../context/DialogContext';
 
 const STATUS_LABEL = {
   pending: 'Waiting for restaurant', accepted: 'Accepted', preparing: 'Preparing',
@@ -159,6 +160,7 @@ const TONE_CLS = { good: 'text-forest-300', bad: 'text-red-300', wait: 'text-emb
 // Report a problem with this order (optionally asking for a refund), or show the report's status
 function ReportProblem({ order }) {
   const { addNotification } = useNotification();
+  const ask = useDialog();
   const [reports, setReports] = useState(null);
   const [open, setOpen] = useState(false);
   const [type, setType] = useState('missing');
@@ -187,8 +189,12 @@ function ReportProblem({ order }) {
     catch (err) { addNotification(err.message || 'Something went wrong', 'error'); }
     finally { setBusyId(null); }
   };
-  const escalate = (r, label) => {
-    const reason = window.prompt(`${label}\n\nTell KinakanGo what happened (optional):`, '');
+  const escalate = async (r, label) => {
+    const reason = await ask({
+      title: label, input: true, confirmLabel: 'Send to KinakanGo',
+      message: 'KinakanGo will check with the restaurant. Tell us what happened (optional).',
+      placeholder: 'e.g. Nothing arrived in my GCash',
+    });
     if (reason === null) return;
     act(r, () => issuesApi.escalate(r.id, reason), "Sent to KinakanGo. We'll get back to you.");
   };

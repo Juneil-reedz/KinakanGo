@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Trash2, X, CheckCircle2, AlertCircle, AlertTriangle, Info, ChevronRight } from 'lucide-react';
 import { useNotificationFeed } from '../context/NotificationFeed';
+import { useDialog } from '../context/DialogContext';
 
 const TYPE_STYLE = {
   success: { icon: CheckCircle2,  cls: 'glass-green text-forest-300' },
@@ -22,6 +23,17 @@ const dayLabel = (date) => {
 const timeLabel = (date) => new Date(date).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 
 // Shared by the customer app and the restaurant / rider panels (each provides its own feed)
+// Older notifications only point at a list page; send them to the order they
+// mention ("Order #27 delivered") so tapping shows what it is about.
+function targetOf(n) {
+  const id = (/#(\d+)/.exec(`${n.title || ''} ${n.message || ''}`) || [])[1];
+  if (!id) return n.link;
+  if (n.link === '/owner/orders') return `/owner/orders?order=${id}`;
+  if (n.link === '/owner/issues') return `/owner/issues?order=${id}`;
+  if (n.link === '/orders') return `/order-receipt/${id}`;
+  return n.link;
+}
+
 export default function Notifications() {
   const navigate = useNavigate();
   const { items, loading, load, markRead, markAllRead, remove, clearAll } = useNotificationFeed();
@@ -44,11 +56,13 @@ export default function Notifications() {
 
   const open = (n) => {
     if (!n.read) markRead(n.id);
-    if (n.link) navigate(n.link);
+    const link = targetOf(n);
+    if (link) navigate(link);
   };
 
-  const handleClearAll = () => {
-    if (window.confirm('Clear all notifications?')) clearAll();
+  const ask = useDialog();
+  const handleClearAll = async () => {
+    if (await ask({ title: 'Clear all notifications?', confirmLabel: 'Clear all', danger: true })) clearAll();
   };
 
   return (

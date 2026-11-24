@@ -1,5 +1,5 @@
 const { promoDiscount, promoAudienceOk } = require('./promoController');
-const { APPROVED_RIDER_SQL, isApprovedRider } = require('../utils/riders');
+const { APPROVED_RIDER_SQL, isApprovedRider, claimWaitingOrder } = require('../utils/riders');
 const crypto = require('crypto');
 const pool = require('../config/db');
 const { firstImageError } = require('../utils/image');
@@ -46,12 +46,12 @@ async function notifyOrderStatus(orderId, status, reason) {
     const notice = o && STATUS_NOTICE[status];
     if (!notice) return;
     await notify(o.customer_id, {
-      audience: 'customer', type: notice.type, link: '/orders',
+      audience: 'customer', type: notice.type, link: `/order-receipt/${o.id}`,
       title: `${notice.title} · #${o.id}`, message: notice.message(o, reason),
     });
     if (status === 'picked_up' || status === 'delivered') {
       await notify(o.owner_id, {
-        audience: 'restaurant', type: 'info', link: '/owner/orders',
+        audience: 'restaurant', type: 'info', link: `/owner/orders?order=${o.id}`,
         title: status === 'delivered' ? `Order #${o.id} delivered` : `Order #${o.id} picked up`,
         message: o.rider_name ? `Rider: ${o.rider_name}` : null,
       });
@@ -391,11 +391,11 @@ async function placeOrder(req, res) {
     const { rows: rest } = await pool.query('SELECT owner_id, name FROM restaurants WHERE id = $1', [restaurantId]);
     const count = items.reduce((n, i) => n + Number(i.quantity), 0);
     await notify(customerId, {
-      audience: 'customer', type: 'success', link: '/orders',
+      audience: 'customer', type: 'success', link: `/order-receipt/${orderId}`,
       title: `Order placed · #${orderId}`, message: `We sent your order to ${rest[0]?.name || 'the restaurant'}. We'll update you as it progresses.`,
     });
     await notify(rest[0]?.owner_id, {
-      audience: 'restaurant', type: 'warning', link: '/owner/orders',
+      audience: 'restaurant', type: 'warning', link: `/owner/orders?order=${orderId}`,
       title: `New order · #${orderId}`,
       message: `${count} item${count === 1 ? '' : 's'} · ₱${Number(total).toFixed(2)} · ${paymentMethod || 'cash'}`
         + (creditUsed > 0 ? ` · ₱${creditUsed.toFixed(2)} paid with store credit` : ''),
@@ -603,7 +603,7 @@ async function updateStatus(req, res) {
   await notifyOrderStatus(req.params.id, status, cancelledReason);
   if (status === 'cancelled' && isCustomer && !isOwner && !isAdmin) {
     await notify(before.owner_id, {
-      audience: 'restaurant', type: 'error', link: '/owner/orders',
+      audience: 'restaurant', type: 'error', link: `/owner/orders?order=${req.params.id}`,
       title: `Order #${req.params.id} cancelled by the customer`,
       message: cancelledReason || null,
     });
@@ -632,6 +632,11 @@ async function updateStatus(req, res) {
         [before.rider_id, before.status === 'delivered' ? 0 : 1, before.status === 'delivered' ? 0 : Number(before.delivery_fee || 0)]
       ).catch(() => {});
     }
+  }
+  // The rider is free again (delivered, or their order was cancelled): give them
+  // the next order that has been waiting for a rider
+  if ((status === 'delivered' || status === 'cancelled') && before.rider_id) {
+    await claimWaitingOrder(before.rider_id).catch(err => console.warn('claim after free failed:', err.message));
   }
 
   res.json({ message: 'Status updated', order: updatedRows[0], refund });
@@ -870,7 +875,7 @@ async function submitReview(req, res) {
   const itemsText = [...itemRatings].map(([id, st]) => `${nameOf[id] || 'Item'} ${st}★`).join(', ');
   const { rows: rest } = await pool.query('SELECT owner_id FROM restaurants WHERE id = $1', [o.restaurant_id]);
   await notify(rest[0]?.owner_id, {
-    audience: 'restaurant', type: 'info', link: '/owner/orders',
+    audience: 'restaurant', type: 'info', link: `/owner/orders?order=${req.params.id}`,
     title: `New rating · Order #${req.params.id}`,
     message: `Restaurant ${restaurantRating}★ · ${itemsText}${comment ? ` · "${comment.slice(0, 120)}"` : ''}`,
   });

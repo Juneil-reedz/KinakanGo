@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react';
 import { ArrowLeft, Check, Inbox, MessageSquare, Pencil, Plus, Reply, Send, Trash2, User, X } from 'lucide-react';
 import { messagesApi } from '../services/api';
+import { useDialog } from '../context/DialogContext';
 
 export default function Messages() {
   const [messages, setMessages] = useState([]);
@@ -146,8 +147,9 @@ export default function Messages() {
     }
   };
 
+  const ask = useDialog();
   const deleteMessage = async (id) => {
-    if (!window.confirm('Delete this message?')) return;
+    if (!(await ask({ title: 'Delete this message?', confirmLabel: 'Delete', danger: true }))) return;
     await messagesApi.remove(id);
     setMessages(prev => prev.filter(message => message.id !== id));
   };

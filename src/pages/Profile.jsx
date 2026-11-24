@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react';
+import { useDialog } from '../context/DialogContext';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
@@ -103,8 +104,9 @@ export default function Profile() {
     navigate('/login', { replace: true });
   };
 
+  const ask = useDialog();
   const handleReorder = async (order) => {
-    if (!window.confirm(`Reorder from ${order.restaurant_name}?`)) return;
+    if (!(await ask({ title: `Reorder from ${order.restaurant_name}?`, confirmLabel: 'Reorder' }))) return;
     const restaurantId = order.restaurant_id;
     if (!restaurantId) {
       addNotification('Restaurant details are missing for this order', 'error');

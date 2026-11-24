@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { MapPin, Plus, Trash2, Check, Edit2, Home, Briefcase, X } from 'lucide-react';
+import { useDialog } from '../context/DialogContext';
 
 const LABEL_ICONS = { Home, Work: Briefcase, Other: MapPin };
 
@@ -44,8 +45,9 @@ export default function Addresses() {
     }
   };
 
+  const ask = useDialog();
   const handleDelete = async (id) => {
-    if (!window.confirm('Delete this address?')) return;
+    if (!(await ask({ title: 'Delete this address?', confirmLabel: 'Delete', danger: true }))) return;
     try {
       await deleteAddress(id);
       addNotification('Address removed', 'success');

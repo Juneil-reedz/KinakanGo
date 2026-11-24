@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { restaurantRequest } from '../../context/RestaurantContext';
 import { useNotification } from '../../context/NotificationContext';
 import { AlertTriangle, CheckCircle, Clock, Send, X } from 'lucide-react';
@@ -33,7 +34,10 @@ function stage(i) {
 export default function RestaurantIssues() {
   const { addNotification } = useNotification();
   const [issues, setIssues] = useState(null);
-  const [tab, setTab] = useState('todo');
+  // Opened from a notification: show that order's reports, highlighted
+  const [params] = useSearchParams();
+  const focusOrder = parseInt(params.get('order')) || null;
+  const [tab, setTab] = useState(focusOrder ? 'all' : 'todo');
   const [modal, setModal] = useState(null); // { issue, mode: 'approve' | 'decline' | 'sent' }
   const [amount, setAmount] = useState('');
   const [note, setNote] = useState('');
@@ -43,6 +47,11 @@ export default function RestaurantIssues() {
     .then(r => setIssues(r.data || []))
     .catch(() => { setIssues([]); addNotification('Could not load customer problems', 'error'); });
   useEffect(() => { load(); }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  useEffect(() => {
+    if (!focusOrder || !issues) return;
+    setTab('all');
+    setTimeout(() => document.getElementById(`issue-order-${focusOrder}`)?.scrollIntoView({ behavior: 'smooth', block: 'center' }), 100);
+  }, [focusOrder, issues]);
 
   const open = (issue, mode) => {
     setModal({ issue, mode });
@@ -107,7 +116,8 @@ export default function RestaurantIssues() {
           {shown.map(i => {
             const st = stage(i);
             return (
-              <div key={i.id} className="glass rounded-2xl p-4">
+              <div key={i.id} id={i.order_id === focusOrder ? `issue-order-${focusOrder}` : undefined}
+                className={`glass rounded-2xl p-4 ${i.order_id === focusOrder ? 'ring-2 ring-ember-400/70' : ''}`}>
                 <div className="flex items-start gap-3">
                   <div className="w-11 h-11 rounded-xl glass-orange flex items-center justify-center flex-shrink-0">
                     <AlertTriangle className="w-5 h-5 text-ember-300" />

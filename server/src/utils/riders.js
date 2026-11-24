@@ -27,4 +27,33 @@ async function requireApprovedRider(req, res, next) {
   }
 }
 
-module.exports = { APPROVED_RIDER_SQL, isApprovedRider, requireApprovedRider };
+// Give a free, online rider the oldest ready order nobody has taken yet.
+// One UPDATE does the check and the claim, so two riders can't take the same
+// order, and a rider already on a delivery gets nothing. Orders this rider
+// declined are skipped. Returns the order id, or null.
+async function claimWaitingOrder(riderId) {
+  const { rows } = await pool.query(
+    `UPDATE orders SET rider_id = $1
+     WHERE id = (
+       SELECT o.id FROM orders o
+       WHERE o.status = 'ready' AND o.rider_id IS NULL
+         AND NOT EXISTS (SELECT 1 FROM order_rider_declines d WHERE d.order_id = o.id AND d.rider_id = $1)
+       ORDER BY o.created_at ASC LIMIT 1
+       FOR UPDATE SKIP LOCKED
+     )
+     AND rider_id IS NULL
+     AND EXISTS (SELECT 1 FROM rider_profiles rp WHERE rp.user_id = $1 AND rp.is_available = true)
+     AND NOT EXISTS (SELECT 1 FROM orders busy WHERE busy.rider_id = $1 AND busy.status IN ('ready','picked_up'))
+     RETURNING id`,
+    [riderId]
+  );
+  if (!rows.length) return null;
+  const { notify } = require('./notify');
+  await notify(riderId, {
+    audience: 'rider', type: 'warning', link: '/rider/dashboard',
+    title: `New delivery request · #${rows[0].id}`, message: 'An order is ready for pickup. Accept or decline it in your dashboard.',
+  });
+  return rows[0].id;
+}
+
+module.exports = { APPROVED_RIDER_SQL, isApprovedRider, requireApprovedRider, claimWaitingOrder };

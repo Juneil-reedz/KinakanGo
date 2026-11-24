@@ -4,6 +4,7 @@ import { useNotification } from '../../context/NotificationContext';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check, ImagePlus, Tag } from 'lucide-react';
 import { fileToImage } from '../../utils/image';
+import { useDialog } from '../../context/DialogContext';
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -153,9 +154,10 @@ export default function RestaurantMenu() {
     }
   };
 
+  const ask = useDialog();
   const del = async (id) => {
     const item = items.find(i => i.id === id);
-    if (!confirm(`Delete ${item.name}?`)) return;
+    if (!(await ask({ title: `Delete ${item.name}?`, message: 'If it was ordered before, it is hidden from your menu instead, so old orders still show it.', confirmLabel: 'Delete', danger: true }))) return;
     try {
       const res = await restaurantRequest(`/restaurants/${restaurantId}/menu/${id}`, { method: 'DELETE' });
       setItems(prev => prev.filter(i => i.id !== id));

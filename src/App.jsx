@@ -2,6 +2,7 @@ import { useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
+import { DialogProvider } from './context/DialogContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { NotificationProvider } from './context/NotificationContext';
 import { RestaurantProvider } from './context/RestaurantContext';
@@ -132,6 +133,7 @@ function App() {
   return (
     <ThemeProvider>
     <NotificationProvider>
+    <DialogProvider>
       <AuthProvider>
         <CartProvider>
           <FavoritesProvider>
@@ -256,6 +258,7 @@ function App() {
           </FavoritesProvider>
         </CartProvider>
       </AuthProvider>
+    </DialogProvider>
     </NotificationProvider>
     </ThemeProvider>
   );

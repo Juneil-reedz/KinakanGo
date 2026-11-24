@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
+import { useSearchParams } from 'react-router-dom';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 import { useNotification } from '../../context/NotificationContext';
 import {
@@ -66,6 +67,15 @@ export default function RestaurantOrders() {
       setDetailLoading(false);
     }
   };
+
+  // Opened from a notification (/owner/orders?order=27): show that order's details
+  const [params, setParams] = useSearchParams();
+  const focusOrder = parseInt(params.get('order')) || null;
+  useEffect(() => {
+    if (!focusOrder || !restaurant?.id) return;
+    openDetail(orders.find(o => o.id === focusOrder) || { id: focusOrder });
+    setParams({}, { replace: true });
+  }, [focusOrder, restaurant?.id]); // eslint-disable-line react-hooks/exhaustive-deps
 
   const closeDetail = () => { setDetail(null); setRejectReason(''); setRejecting(false); setPaymentArrived(null); };
   const gcashPaid = (o) => o && o.payment_method === 'gcash' && Number(o.total) > Number(o.credit_used || 0);

@@ -101,7 +101,7 @@ async function submit(req, res) {
   );
   if (handler === 'restaurant') {
     await notify(order.owner_id, {
-      audience: 'restaurant', type: 'warning', link: '/owner/issues',
+      audience: 'restaurant', type: 'warning', link: `/owner/issues?order=${orderId}`,
       title: `A customer reported a problem with order #${orderId}`,
       message: refund != null
         ? `They are asking for a ${peso(refund)} refund${refundMethod === 'credit' ? ' as store credit' : refundMethod === 'gcash' ? ' to GCash' : ' in cash'}.`
@@ -155,7 +155,7 @@ async function escalate(req, res) {
     [issue.id, refundStatus, reason]
   );
   await notify(issue.owner_id, {
-    audience: 'restaurant', type: 'warning', link: '/owner/issues',
+    audience: 'restaurant', type: 'warning', link: `/owner/issues?order=${issue.order_id}`,
     title: `The customer asked KinakanGo to review order #${issue.order_id}`,
     message: refundStatus === 'not_received' ? 'They say the refund has not arrived.' : reason,
   });
@@ -174,7 +174,7 @@ async function received(req, res) {
   await pool.query("UPDATE orders SET payment_status = 'refunded' WHERE id = $1", [rows[0].order_id]);
   const issue = await loadIssue(req.params.id);
   await notify(issue.owner_id, {
-    audience: 'restaurant', type: 'success', link: '/owner/issues',
+    audience: 'restaurant', type: 'success', link: `/owner/issues?order=${issue.order_id}`,
     title: `The customer received the ${peso(rows[0].refund_approved)} refund for order #${rows[0].order_id}`,
   });
   res.json({ message: 'Thanks for confirming' });
@@ -206,7 +206,7 @@ async function toCredit(req, res) {
     client.release();
   }
   await notify(issue.owner_id, {
-    audience: 'restaurant', type: 'info', link: '/owner/issues',
+    audience: 'restaurant', type: 'info', link: `/owner/issues?order=${issue.order_id}`,
     title: `No need to send the refund for order #${issue.order_id}`,
     message: `The customer took ${peso(issue.refund_approved)} as store credit at your restaurant instead.`,
   });
@@ -402,7 +402,7 @@ async function resolve(req, res) {
   });
   if (amount && refundStatus === 'to_send') {
     await notify(issue.owner_id, {
-      audience: 'restaurant', type: 'warning', link: '/owner/issues',
+      audience: 'restaurant', type: 'warning', link: `/owner/issues?order=${issue.order_id}`,
       title: `KinakanGo approved a ${peso(amount)} refund for order #${issue.order_id}`,
       message: `Please send it to the customer and tap "Refund sent". ${notes || ''}`.trim(),
     });
