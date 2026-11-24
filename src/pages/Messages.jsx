@@ -34,6 +34,8 @@ export default function Messages() {
   const [messages, setMessages] = useState([]);
   const [selectedKey, setSelectedKey] = useState(null);
   const [showComposer, setShowComposer] = useState(false);
+  const [creating, setCreating] = useState(false);
+  const [composeError, setComposeError] = useState('');
   const [loading, setLoading] = useState(true);
   const [form, setForm] = useState({ to: '', subject: '', body: '' });
   const [reply, setReply] = useState('');
@@ -118,25 +120,25 @@ export default function Messages() {
 
   const createMessage = async (e) => {
     e.preventDefault();
-    if (!form.to.trim() || !form.body.trim()) return;
-    const localMessage = {
-      id: Date.now(), recipient_label: form.to.trim(), to: form.to.trim(), box: 'sent',
-      subject: form.subject.trim() || 'New message', body: form.body.trim(),
-      created_at: new Date().toISOString(), createdAt: new Date().toISOString(),
-    };
+    if (!form.to.trim() || !form.body.trim() || creating) return;
+    setCreating(true);
+    setComposeError('');
     try {
       const saved = await messagesApi.create({ to: form.to, subject: form.subject, body: form.body });
       setMessages(prev => [{ ...saved, box: 'sent' }, ...prev]);
       setSelectedKey(conversationKey({ ...saved, box: 'sent' }));
       setMobileThreadOpen(true);
-    } catch {
-      setMessages(prev => [localMessage, ...prev]);
-      setSelectedKey(conversationKey(localMessage));
-      setMobileThreadOpen(true);
+      setForm({ to: '', subject: '', body: '' });
+      setShowComposer(false);
+    } catch (err) {
+      // Keep the draft and say why; never show a message that wasn't really sent
+      setComposeError(err?.message || 'Message not sent. Please try again.');
+    } finally {
+      setCreating(false);
     }
-    setForm({ to: '', subject: '', body: '' });
-    setShowComposer(false);
   };
+
+  const closeComposer = () => { setShowComposer(false); setComposeError(''); };
 
   const sendReply = async (e) => {
     e.preventDefault();
@@ -367,33 +369,47 @@ export default function Messages() {
         document.body
       )}
 
-      {showComposer && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ background: 'rgba(0,0,0,.68)', backdropFilter: 'blur(8px)' }}>
-          <form onSubmit={createMessage} className="glass w-full max-w-md rounded-3xl p-5 card-3d animate-fade-up space-y-4">
-            <div className="flex items-center justify-between">
-              <p className="text-white font-heading font-bold text-lg">Create Message</p>
-              <button type="button" onClick={() => setShowComposer(false)}
-                className="w-8 h-8 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-orange transition-all">
-                <X className="w-4 h-4" />
+      {/* New message: full screen on phones, a large panel on desktop */}
+      {showComposer && createPortal(
+        <div className="fixed inset-0 z-[60] flex items-stretch sm:items-center justify-center lg:p-6"
+          style={{ background: isDesktop ? 'rgba(0,0,0,.68)' : 'var(--app-bg)', backdropFilter: isDesktop ? 'blur(8px)' : undefined }}>
+          <form onSubmit={createMessage}
+            className={`chat-screen w-full flex flex-col animate-fade-up ${isDesktop ? 'max-w-2xl h-[85vh] rounded-3xl overflow-hidden glass' : 'h-full'}`}>
+            <div className="chat-header flex items-center gap-3 px-3 sm:px-4 py-3 flex-shrink-0">
+              <button type="button" onClick={closeComposer} aria-label="Close"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white flex-shrink-0">
+                {isDesktop ? <X className="w-5 h-5" /> : <ArrowLeft className="w-6 h-6" />}
+              </button>
+              <p className="flex-1 text-white font-heading font-bold text-lg">New Message</p>
+              <button type="submit" disabled={!form.to.trim() || !form.body.trim() || creating}
+                className="btn-glow-orange text-white text-sm font-bold px-4 py-2.5 rounded-full flex items-center gap-1.5 disabled:opacity-50">
+                <Send className="w-4 h-4" /> {creating ? 'Sending...' : 'Send'}
               </button>
             </div>
-            <input value={form.to} onChange={e => setForm(f => ({ ...f, to: e.target.value }))}
-              placeholder="To: restaurant name or email address"
-              className="w-full input-glass py-3 text-sm" />
-            <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
-              placeholder="Subject"
-              className="w-full input-glass py-3 text-sm" />
-            <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
-              placeholder="Write your message..."
-              rows={5}
-              className="w-full input-glass py-3 text-sm resize-none" />
-            <button type="submit" disabled={!form.to.trim() || !form.body.trim()}
-              className="w-full btn-glow-green text-white font-bold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
-              <Send className="w-4 h-4" /> Send Message
-            </button>
+
+            <div className="flex-1 min-h-0 flex flex-col gap-3 px-4 pt-4 pb-[max(1rem,env(safe-area-inset-bottom))] overflow-y-auto">
+              <label className="compose-field flex items-center gap-3 input-glass rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-ember-500/60">
+                <span className="text-forest-200/60 text-sm w-14 flex-shrink-0">To</span>
+                <input value={form.to} onChange={e => { setForm(f => ({ ...f, to: e.target.value })); setComposeError(''); }}
+                  placeholder="Restaurant name or email" autoFocus
+                  className="flex-1 min-w-0 bg-transparent outline-none focus:outline-none focus-visible:outline-none text-white text-[.95rem] placeholder:text-forest-200/40" />
+              </label>
+              <label className="compose-field flex items-center gap-3 input-glass rounded-2xl px-4 py-3 focus-within:ring-2 focus-within:ring-ember-500/60">
+                <span className="text-forest-200/60 text-sm w-14 flex-shrink-0">Subject</span>
+                <input value={form.subject} onChange={e => setForm(f => ({ ...f, subject: e.target.value }))}
+                  placeholder="Optional"
+                  className="flex-1 min-w-0 bg-transparent outline-none focus:outline-none focus-visible:outline-none text-white text-[.95rem] placeholder:text-forest-200/40" />
+              </label>
+              {composeError && (
+                <p role="alert" className="text-sm text-red-300 bg-red-500/10 rounded-2xl px-4 py-3">{composeError}</p>
+              )}
+              <textarea value={form.body} onChange={e => setForm(f => ({ ...f, body: e.target.value }))}
+                placeholder="Write your message..."
+                className="flex-1 min-h-[12rem] w-full input-glass rounded-3xl px-4 py-4 text-[.95rem] leading-relaxed resize-none" />
+            </div>
           </form>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

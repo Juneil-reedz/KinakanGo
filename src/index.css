@@ -725,6 +725,8 @@
 :where(button, a, input, select, textarea, [tabindex]):focus-visible {
   outline: 3px solid #f7931e; outline-offset: 3px;
 }
+/* Fields inside a framed row show the ring on the row instead */
+.compose-field input:focus-visible { outline: none; }
 
 /* Respect reduced motion: no lifts, presses or rising dialogs */
 @media (prefers-reduced-motion: reduce) {
