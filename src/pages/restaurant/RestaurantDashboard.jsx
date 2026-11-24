@@ -172,7 +172,7 @@ export default function RestaurantDashboard() {
                   : 'Order details';
                 const createdAt = order.created_at || order.createdAt;
                 return (
-                  <div key={order.id} className="p-4 flex items-center gap-3 hover:glass transition-all">
+                  <Link key={order.id} to={`/owner/orders?order=${order.id}`} className="p-4 flex items-center gap-3 hover:glass transition-all">
                     <div className="w-10 h-10 btn-glow-orange rounded-xl flex items-center justify-center text-white font-bold text-sm flex-shrink-0">
                       #{order.id}
                     </div>
@@ -198,7 +198,7 @@ export default function RestaurantDashboard() {
                         {(order.status||'pending').charAt(0).toUpperCase() + (order.status||'pending').slice(1)}
                       </span>
                     </div>
-                  </div>
+                  </Link>
                 );
               })}
             </div>

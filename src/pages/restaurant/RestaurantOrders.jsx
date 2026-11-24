@@ -165,7 +165,7 @@ export default function RestaurantOrders() {
 
       {/* Cards grid */}
       {loading ? (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
           {[1,2,3,4,5,6].map(i => <div key={i} className="glass rounded-2xl h-36 animate-pulse" />)}
         </div>
       ) : filtered.length === 0 ? (
@@ -177,7 +177,7 @@ export default function RestaurantOrders() {
           <p className="text-forest-200/50 text-sm">Orders from customers will appear here</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3 gap-3">
           {filtered.map(order => {
             const { cls, label } = statusStyle(order.status);
             return (
