@@ -7,6 +7,15 @@ const { notify } = require('../utils/notify');
 const RESTAURANT_STATUSES = ['accepted', 'preparing', 'ready', 'cancelled'];
 const RIDER_STATUSES      = ['picked_up', 'delivered'];
 const FINAL_STATUSES      = ['delivered', 'cancelled', 'refunded'];
+// Which status may follow which (admins can override). Restaurants accept straight
+// into 'preparing'; 'picked_up' repeats harmlessly when the rider confirms pickup.
+const NEXT_STATUSES = {
+  pending:   ['accepted', 'preparing', 'cancelled'],
+  accepted:  ['preparing', 'ready', 'cancelled'],
+  preparing: ['ready', 'cancelled'],
+  ready:     ['picked_up', 'cancelled'],
+  picked_up: ['picked_up', 'delivered'],
+};
 
 // What the customer is told at each status change
 const STATUS_NOTICE = {
@@ -221,6 +230,38 @@ async function placeOrder(req, res) {
   const { restaurantId, items, deliveryAddress, specialInstructions, paymentMethod, promoCode, proofImage, contactInfo } = req.body;
   const customerId = req.user.id;
 
+  // Basic cart checks before anything else
+  if (!Array.isArray(items) || !items.length) {
+    return res.status(400).json({ error: 'Your cart is empty' });
+  }
+  const seen = new Set();
+  for (const i of items) {
+    const q = Number(i?.quantity);
+    if (!Number.isInteger(q) || q < 1 || q > 99) {
+      return res.status(400).json({ error: 'Each item quantity must be a whole number from 1 to 99' });
+    }
+    if (seen.has(String(i.menuItemId))) {
+      return res.status(400).json({ error: 'The same item appears twice in the cart' });
+    }
+    seen.add(String(i.menuItemId));
+  }
+  if (!['cash', 'gcash'].includes(paymentMethod || 'cash')) {
+    return res.status(400).json({ error: 'Unsupported payment method' });
+  }
+  if (paymentMethod === 'gcash' && !proofImage) {
+    return res.status(400).json({ error: 'Please upload your GCash payment proof' });
+  }
+
+  const { rows: restRows } = await pool.query(
+    'SELECT delivery_fee, is_open, is_approved FROM restaurants WHERE id = $1', [restaurantId]
+  );
+  if (!restRows.length || !restRows[0].is_approved) {
+    return res.status(400).json({ error: 'This restaurant is not available' });
+  }
+  if (!restRows[0].is_open) {
+    return res.status(400).json({ error: 'This restaurant is closed right now' });
+  }
+
   // Every order must be approved with the code emailed to the account holder
   const verifyFail = await consumeOrderCode(customerId, restaurantId, items, req.body.verificationCode);
   if (verifyFail) return res.status(verifyFail.status).json(verifyFail.body);
@@ -236,46 +277,60 @@ async function placeOrder(req, res) {
     `SELECT id, price, name, is_available FROM menu_items WHERE id IN (${placeholders}) AND restaurant_id = $${ids.length + 1}`,
     [...ids, restaurantId]
   );
-  if (menuRows.length !== ids.length) {
+  if (menuRows.length !== ids.length || menuRows.some(r => !r.is_available)) {
     return res.status(400).json({ error: 'One or more items unavailable or not from this restaurant' });
   }
   const itemMap = Object.fromEntries(menuRows.map(r => [r.id, r]));
+  const gross = items.reduce((s, i) => s + Number(itemMap[i.menuItemId].price) * Number(i.quantity), 0);
 
+  // Same rules as /promos/validate, plus: a restaurant's own promo only works there.
+  // The usage count is claimed atomically so max_uses can't be exceeded.
   let discount = 0;
+  let promoId  = null;
   if (promoCode) {
     const { rows: promos } = await pool.query(
-      `SELECT * FROM promo_codes WHERE code = $1 AND is_active = true
-       AND (expires_at IS NULL OR expires_at > NOW())`,
-      [promoCode]
+      `SELECT p.* FROM promo_codes p
+       WHERE p.code = $1 AND p.is_active = true
+         AND (p.starts_at  IS NULL OR p.starts_at  <= NOW())
+         AND (p.expires_at IS NULL OR p.expires_at >  NOW())
+         AND (p.max_uses   IS NULL OR p.used_count < p.max_uses)
+         AND (p.owner_id   IS NULL OR p.owner_id = (SELECT owner_id FROM restaurants WHERE id = $2))`,
+      [promoCode, restaurantId]
     );
-    if (promos.length) {
+    if (promos.length && gross >= Number(promos[0].min_order)) {
       const p = promos[0];
-      const gross = items.reduce((s, i) => s + itemMap[i.menuItemId].price * i.quantity, 0);
-      if (gross >= p.min_order) {
-        discount = p.discount_type === 'percent'
-          ? (gross * p.discount_value) / 100
-          : p.discount_value;
-        await pool.query('UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1', [p.id]);
-      }
+      const value = Number(p.discount_value);
+      discount = p.discount_type === 'percent' ? (gross * value) / 100 : value;
+      discount = Math.min(Math.max(discount, 0), gross);   // never below zero, never more than the food
+      promoId = p.id;
     }
   }
 
-  const { rows: restRows } = await pool.query('SELECT delivery_fee FROM restaurants WHERE id = $1', [restaurantId]);
-  const deliveryFee = restRows[0]?.delivery_fee || 0;
-  const subtotal    = items.reduce((s, i) => s + itemMap[i.menuItemId].price * i.quantity, 0) - discount;
+  const deliveryFee = Number(restRows[0].delivery_fee || 0);
+  const subtotal    = gross - discount;
   const tax         = subtotal * 0.08;
   const total       = subtotal + parseFloat(deliveryFee) + tax;
 
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
+    if (promoId) {
+      const { rowCount } = await client.query(
+        'UPDATE promo_codes SET used_count = used_count + 1 WHERE id = $1 AND (max_uses IS NULL OR used_count < max_uses)',
+        [promoId]
+      );
+      if (!rowCount) {
+        await client.query('ROLLBACK');
+        return res.status(409).json({ error: 'This promo code has just run out. Please place the order again without it.' });
+      }
+    }
     const { rows: orderRows } = await client.query(
       `INSERT INTO orders
          (customer_id, restaurant_id, status, delivery_address, special_instructions,
           subtotal, delivery_fee, tax, total, payment_method, proof_image)
        VALUES ($1,$2,'pending',$3,$4,$5,$6,$7,$8,$9,$10) RETURNING id`,
       [customerId, restaurantId, deliveryAddress, specialInstructions || null,
-       subtotal, deliveryFee, tax, total, paymentMethod || 'cash', proofImage || null]
+       subtotal, deliveryFee, tax, total, paymentMethod || 'cash', paymentMethod === 'gcash' ? proofImage : null]
     );
     const orderId = orderRows[0].id;
 
@@ -446,6 +501,9 @@ async function updateStatus(req, res) {
   if (!isAdmin && FINAL_STATUSES.includes(before.status)) {
     return res.status(409).json({ error: `This order is already ${before.status}` });
   }
+  if (!isAdmin && !(NEXT_STATUSES[before.status] || []).includes(status)) {
+    return res.status(409).json({ error: `An order that is ${before.status.replace('_', ' ')} can't be changed to ${status.replace('_', ' ')}` });
+  }
 
   const { rows: updatedRows } = await pool.query(
     `UPDATE orders SET
@@ -520,7 +578,17 @@ async function riderResponse(req, res) {
 }
 
 async function assignRider(req, res) {
-  const { riderId } = req.body;
+  const riderId = parseInt(req.body.riderId);
+  const { rows: riderRows } = await pool.query(
+    `SELECT 1 FROM rider_profiles rp JOIN users u ON u.id = rp.user_id
+     WHERE rp.user_id = $1 AND u.is_active = true`, [riderId]
+  );
+  if (!riderRows.length) return res.status(400).json({ error: 'That user is not an active rider' });
+  const { rows: orderRows } = await pool.query('SELECT status FROM orders WHERE id = $1', [req.params.id]);
+  if (!orderRows.length) return res.status(404).json({ error: 'Order not found' });
+  if (FINAL_STATUSES.includes(orderRows[0].status)) {
+    return res.status(409).json({ error: `This order is already ${orderRows[0].status}` });
+  }
   await pool.query('UPDATE orders SET rider_id = $1 WHERE id = $2', [riderId, req.params.id]);
   await notify(riderId, {
     audience: 'rider', type: 'warning', link: '/rider/dashboard',

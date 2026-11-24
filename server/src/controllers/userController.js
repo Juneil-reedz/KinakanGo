@@ -75,6 +75,8 @@ async function ban(req, res) {
     'UPDATE users SET is_active = false, ban_reason = $1 WHERE id = $2',
     [reason || null, req.params.id]
   );
+  // End their sessions: without a refresh token they're signed out within 15 minutes
+  await pool.query('DELETE FROM refresh_tokens WHERE user_id = $1', [req.params.id]);
   res.json({ message: 'User banned' });
 }
 

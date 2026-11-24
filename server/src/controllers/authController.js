@@ -108,10 +108,11 @@ async function refresh(req, res) {
   if (!tokenRows.length) return res.status(401).json({ error: 'Refresh token revoked or expired' });
 
   const { rows: users } = await pool.query(
-    'SELECT id, name, email, role FROM users WHERE id = $1', [payload.id]
+    'SELECT id, name, email, role, is_active FROM users WHERE id = $1', [payload.id]
   );
   const user = users[0];
   if (!user) return res.status(401).json({ error: 'User not found' });
+  if (!user.is_active) return res.status(403).json({ error: 'Account suspended' });
 
   const newAccess = signAccess(user);
   res.json({ accessToken: newAccess });

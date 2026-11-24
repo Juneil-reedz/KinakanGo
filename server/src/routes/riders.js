@@ -8,12 +8,23 @@ router.use(authenticate);
 router.get('/me', async (req, res) => {
   try {
     const { rows } = await pool.query(
+      // "Today" is worked out from delivered orders (Philippine time), because the
+      // stored today_* counters were never reset at midnight.
       `SELECT u.id, u.name, u.email, u.phone,
-              rp.is_available, rp.total_deliveries, rp.today_deliveries,
-              rp.total_earnings, rp.today_earnings, rp.rating,
-              rp.vehicle_type, rp.plate_number, rp.zone
+              rp.is_available, rp.total_deliveries,
+              COALESCE(t.deliveries, 0) AS today_deliveries,
+              rp.total_earnings,
+              COALESCE(t.earnings, 0)   AS today_earnings,
+              rp.rating, rp.vehicle_type, rp.plate_number, rp.zone
        FROM users u
        LEFT JOIN rider_profiles rp ON rp.user_id = u.id
+       LEFT JOIN (
+         SELECT rider_id, COUNT(*)::int AS deliveries, COALESCE(SUM(delivery_fee), 0) AS earnings
+         FROM orders
+         WHERE status = 'delivered' AND rider_id = $1
+           AND (delivered_at AT TIME ZONE 'Asia/Manila')::date = (NOW() AT TIME ZONE 'Asia/Manila')::date
+         GROUP BY rider_id
+       ) t ON t.rider_id = u.id
        WHERE u.id = $1`,
       [req.user.id]
     );
@@ -129,7 +140,7 @@ router.get('/', requireRole('admin'), async (req, res) => {
         LEFT JOIN (
           SELECT rider_id,
                  COUNT(*)::int AS total_deliveries,
-                 COUNT(*) FILTER (WHERE delivered_at::date = CURRENT_DATE)::int AS completed_today,
+                 COUNT(*) FILTER (WHERE (delivered_at AT TIME ZONE 'Asia/Manila')::date = (NOW() AT TIME ZONE 'Asia/Manila')::date)::int AS completed_today,
                  COALESCE(SUM(delivery_fee), 0) AS earnings
           FROM orders
           WHERE status = 'delivered' AND rider_id IS NOT NULL
