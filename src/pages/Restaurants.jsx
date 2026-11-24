@@ -8,15 +8,16 @@ import { Utensils, Store, Plus, Check, Heart, Star, Search, SlidersHorizontal, C
 import { useNotification } from '../context/NotificationContext';
 import { foodRating } from '../utils/foodRating';
 
+const CAT_IMG = (f) => `${import.meta.env.BASE_URL}categories/${f}.webp`;
 const CATEGORIES = [
-  { id:'all',      label:'All',      emoji:'🍽️' },
-  { id:'pizza',    label:'Pizza',    emoji:'🍕' },
-  { id:'burgers',  label:'Burgers',  emoji:'🍔' },
-  { id:'sushi',    label:'Sushi',    emoji:'🍣' },
-  { id:'pasta',    label:'Pasta',    emoji:'🍝' },
-  { id:'salads',   label:'Salads',   emoji:'🥗' },
-  { id:'desserts', label:'Desserts', emoji:'🍰' },
-  { id:'drinks',   label:'Drinks',   emoji:'🥤' },
+  { id:'all',      label:'All',      img: CAT_IMG('all') },
+  { id:'pizza',    label:'Pizza',    img: CAT_IMG('pizza') },
+  { id:'burgers',  label:'Burgers',  img: CAT_IMG('burger') },
+  { id:'sushi',    label:'Sushi',    img: CAT_IMG('sushi') },
+  { id:'pasta',    label:'Pasta',    img: CAT_IMG('pasta') },
+  { id:'salads',   label:'Salads',   img: CAT_IMG('salad') },
+  { id:'desserts', label:'Desserts', img: CAT_IMG('dessert') },
+  { id:'drinks',   label:'Drinks',   img: CAT_IMG('drinks') },
 ];
 
 export default function Restaurants() {
@@ -135,12 +136,12 @@ export default function Restaurants() {
 
       {/* Categories */}
       <div className="flex gap-2.5 overflow-x-auto scrollbar-hide pb-1">
-        {CATEGORIES.map(({id, label, emoji}) => (
+        {CATEGORIES.map(({id, label, img}) => (
           <button key={id} onClick={() => handleCat(id)}
-            className={`category-pill flex-shrink-0 px-3 py-2 text-xs
+            aria-label={label} title={label} aria-pressed={selectedCat===id}
+            className={`category-pill category-photo flex-shrink-0
               ${selectedCat===id ? 'active text-white' : 'glass text-forest-100/60 hover:text-white hover:glass-green'}`}>
-            <span className="text-lg">{emoji}</span>
-            <span>{label}</span>
+            <img src={img} alt="" width="160" height="160" loading="lazy" decoding="async" draggable="false" />
           </button>
         ))}
       </div>

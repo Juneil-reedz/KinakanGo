@@ -7,15 +7,16 @@ import { useFavorites } from '../context/FavoritesContext';
 import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed } from 'lucide-react';
 import { foodRating } from '../utils/foodRating';
 
+const CAT_IMG = (f) => `${import.meta.env.BASE_URL}categories/${f}.webp`;
 const CATEGORIES = [
-  { name: 'All' },
-  { name: 'Burger' },
-  { name: 'Pizza' },
-  { name: 'Sushi' },
-  { name: 'Chicken' },
-  { name: 'Beverage' },
-  { name: 'Bakery' },
-  { name: 'Seafood' },
+  { name: 'All',      img: CAT_IMG('all') },
+  { name: 'Burger',   img: CAT_IMG('burger') },
+  { name: 'Pizza',    img: CAT_IMG('pizza') },
+  { name: 'Sushi',    img: CAT_IMG('sushi') },
+  { name: 'Chicken',  img: CAT_IMG('chicken') },
+  { name: 'Beverage', img: CAT_IMG('drinks') },
+  { name: 'Bakery',   img: CAT_IMG('bakery') },
+  { name: 'Seafood',  img: CAT_IMG('seafood') },
 ];
 
 const PROMO_STYLES = [
@@ -136,14 +137,15 @@ export default function Home() {
           </button>
         </div>
         <div className="flex gap-3 overflow-x-auto scrollbar-hide pb-1">
-          {CATEGORIES.map(({ name }) => (
+          {CATEGORIES.map(({ name, img }) => (
             <button key={name} onClick={() => setCat(name)}
-              className={`category-pill flex-shrink-0 ${
+              aria-label={name} title={name} aria-pressed={cat === name}
+              className={`category-pill category-photo flex-shrink-0 ${
                 cat === name
                   ? 'active text-white'
                   : 'glass text-forest-100/70 hover:text-white hover:glass-green'
               }`}>
-              <span className="text-xs font-medium whitespace-nowrap">{name}</span>
+              <img src={img} alt="" width="160" height="160" loading="lazy" decoding="async" draggable="false" />
             </button>
           ))}
         </div>
