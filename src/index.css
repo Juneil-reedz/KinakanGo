@@ -1,18 +1,18 @@
 @import "tailwindcss";
 
 @theme {
-  /* "forest" = deep forest #103F32 → sage #A6BDA5 (class names kept so every page follows) */
-  --color-forest-950: #071c16;
-  --color-forest-900: #0b2a21;
-  --color-forest-800: #0e352a;
-  --color-forest-700: #103f32;
-  --color-forest-600: #1d5443;
-  --color-forest-500: #2f6b57;
-  --color-forest-400: #4f8a72;
-  --color-forest-300: #7aa684;
-  --color-forest-200: #a6bda5;
-  --color-forest-100: #d3e0d2;
-  --color-forest-50:  #eef3ed;
+  /* "forest" = KinakanGo teal #016A70 scale (class names kept so every page follows) */
+  --color-forest-950: #00191b;
+  --color-forest-900: #002a2d;
+  --color-forest-800: #013d41;
+  --color-forest-700: #015257;
+  --color-forest-600: #016a70;
+  --color-forest-500: #0f8389;
+  --color-forest-400: #2f9da2;
+  --color-forest-300: #66bcc0;
+  --color-forest-200: #a3d9db;
+  --color-forest-100: #d2eeef;
+  --color-forest-50:  #eef9f9;
 
   /* "ember" = mustard #E8B52A */
   --color-ember-950: #3a2a04;
@@ -63,15 +63,14 @@
 }
 
 /* ─── Theme tokens ──────────────────────────────────────────────────
-   KinakanGo clay: the interface is made of soft sculpted clay in a forest
-   palette. Warm ivory/cream clay on a sage table, deep forest for featured
-   panels and primary buttons, mustard for highlights.
-     Deep Forest #103F32 · Muted Sage #93AF94 · Sage Background #A6BDA5
-     Warm Ivory #FAF9F6 · Clay Cream #E9DFD0 · Mustard #E8B52A · Ink #25352E
-   Light clay is the default; dark mode is the same clay in deep forest.
+   KinakanGo clay: soft sculpted clay. White/ivory clay cards float on a
+   teal #016A70 table; deeper teal for headers, sidebars and primary
+   buttons; mustard #E8B52A for highlights; ink #25352E inside cards.
+   Light clay is the default; dark mode is the same clay in deep teal.
 
-   Light mode (html.light) remaps the palette so existing utility classes
-   flip: `text-white` and pale forest/ember shades become ink.
+   On the teal page, text is white. "Paper" surfaces (cards, dialogs,
+   inputs, the bottom bar) remap the palette so `text-white` and the pale
+   teal/ember shades become ink inside them.
    "Dark scopes" (forest buttons and panels, red badges, photo overlays,
    `.keep-dark`) keep the light-on-dark palette for their subtree.
    "Mustard scopes" always use ink. */
@@ -81,28 +80,28 @@
 [class*="bg-red-500"], [class*="bg-red-600"], .bg-rose-500, .bg-forest-500, .bg-forest-600, .bg-forest-700,
 [class*="from-forest-"], [class*="from-red-"],
 :has(> [class*="from-black"]) {
-  --app-bg: radial-gradient(ellipse at 15% 0%, rgba(147,175,148,.22) 0%, transparent 55%),
-            linear-gradient(165deg, #12392e 0%, #0d2d24 55%, #0a241d 100%);
-  --app-text: #eef3ed;
+  --app-bg: radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
+            linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
+  --app-text: #eef9f9;
   --fg-rgb: 255,255,255;
 
   --clay-ink: 0 0 0;            /* shadow colour, as r g b */
   --clay-hi: 255 255 255;       /* highlight colour */
   --clay-hi-a: .10;
 
-  --glass-base-bg:   linear-gradient(160deg, #1c4c3e 0%, #163f33 100%);
-  --glass-green-bg:  linear-gradient(160deg, #2a5d4b 0%, #224f40 100%);
+  --glass-base-bg:   linear-gradient(160deg, #0d5257 0%, #0a464a 100%);
+  --glass-green-bg:  linear-gradient(160deg, #13666b 0%, #0f585c 100%);
   --glass-orange-bg: linear-gradient(160deg, #57501f 0%, #4a431a 100%);
-  --glass-dark-bg:   #123a2f;
-  --glass-teal-bg:   linear-gradient(160deg, #2a5d4b 0%, #224f40 100%);
+  --glass-dark-bg:   #033f43;
+  --glass-teal-bg:   linear-gradient(160deg, #13666b 0%, #0f585c 100%);
   --glass-blue-bg:   linear-gradient(160deg, #26405a 0%, #1f364d 100%);
   --glass-base-border: none; --glass-green-border: none; --glass-orange-border: none;
   --glass-dark-border: none; --glass-teal-border: none;  --glass-blue-border: none;
 
-  --input-bg: #0c3026;
+  --input-bg: #02353a;
   --input-border: transparent;
-  --input-placeholder: rgba(211,224,210,.45);
-  --panel-bg: #164135;
+  --input-placeholder: rgba(210,238,239,.45);
+  --panel-bg: #0b4a4e;
 }
 
 /* Inside a dark scope, put back the palette that light mode remaps */
@@ -115,8 +114,8 @@
 ) {
   color-scheme: dark;
   --color-white: #fff;
-  --color-forest-50: #f3f7f2;  --color-forest-100: #e2ebe1; --color-forest-200: #c4d5c3;
-  --color-forest-300: #a6bda5; --color-forest-400: #93af94;
+  --color-forest-50: #f2fbfb;  --color-forest-100: #e0f4f4; --color-forest-200: #bfe6e7;
+  --color-forest-300: #9fd6d8; --color-forest-400: #7cc5c8;
   --color-ember-50: #fdf8ec;   --color-ember-100: #fbf0d4;  --color-ember-200: #f8e4ad;
   --color-ember-300: #f4d57f;  --color-ember-400: #efc552;
   --color-red-200: oklch(88.5% 0.062 18.334);  --color-red-300: oklch(80.8% 0.114 19.571);
@@ -125,9 +124,9 @@
   --color-teal-400: oklch(77.7% 0.152 181.912);
   --color-rose-400: oklch(71.2% 0.194 13.428);
   --color-purple-300: oklch(82.7% 0.119 306.383);
-  --clay-ink: 0 18 12; --clay-hi: 255 255 255; --clay-hi-a: .18;
+  --clay-ink: 0 22 24; --clay-hi: 255 255 255; --clay-hi-a: .18;
   --glass-base-bg: linear-gradient(160deg, rgba(255,255,255,.14) 0%, rgba(255,255,255,.06) 100%);
-  --glass-green-bg: linear-gradient(160deg, rgba(147,175,148,.35) 0%, rgba(147,175,148,.2) 100%);
+  --glass-green-bg: linear-gradient(160deg, rgba(160,220,222,.3) 0%, rgba(160,220,222,.16) 100%);
   --glass-dark-bg: rgba(0,0,0,.18);
   --input-bg: rgba(0,0,0,.18);
   --input-placeholder: rgba(226,235,225,.55);
@@ -136,40 +135,54 @@
 
 :root.light {
   color-scheme: light;
-  /* the sage "table" the clay sits on */
-  --app-bg: radial-gradient(ellipse at 12% 0%, rgba(250,249,246,.55) 0%, transparent 50%),
-            radial-gradient(ellipse at 100% 100%, rgba(147,175,148,.55) 0%, transparent 60%),
-            linear-gradient(170deg, #b3c8b2 0%, #a6bda5 50%, #9db69c 100%);
-  --app-text: #25352e;
-  --fg-rgb: 37,53,46;
+  /* the teal "table" the clay sits on */
+  --app-bg: radial-gradient(ellipse at 12% 0%, rgba(255,255,255,.16) 0%, transparent 50%),
+            radial-gradient(ellipse at 100% 100%, rgba(0,40,44,.35) 0%, transparent 60%),
+            linear-gradient(170deg, #0a7a80 0%, #016a70 50%, #015c61 100%);
+  --app-text: #fff;
+  --fg-rgb: 255,255,255;
 
-  --clay-ink: 52 74 58;
+  --clay-ink: 0 38 42;          /* cards cast deep-teal shadows on the table */
   --clay-hi: 255 255 255;
   --clay-hi-a: .9;
 
-  /* raised clay: ivory into warm cream */
-  --glass-base-bg:   linear-gradient(160deg, #ffffff 0%, #fdfcfa 45%, #f1ebe1 100%);
-  --glass-green-bg:  linear-gradient(160deg, #e6eee4 0%, #d6e3d4 100%);
+  /* raised clay: white into warm ivory */
+  --glass-base-bg:   linear-gradient(160deg, #ffffff 0%, #fdfcfa 45%, #f1ece3 100%);
+  --glass-green-bg:  linear-gradient(160deg, #e6f4f4 0%, #d2eaea 100%);
   --glass-orange-bg: linear-gradient(160deg, #fbedc4 0%, #f5dd97 100%);
-  --glass-dark-bg:   #f6f3ec;
-  --glass-teal-bg:   linear-gradient(160deg, #e6eee4 0%, #d6e3d4 100%);
+  --glass-dark-bg:   #faf9f6;
+  --glass-teal-bg:   linear-gradient(160deg, #e6f4f4 0%, #d2eaea 100%);
   --glass-blue-bg:   linear-gradient(160deg, #eef1f6 0%, #dfe5ee 100%);
 
-  --input-bg: #ece5d8;
+  --input-bg: #ede8de;
   --input-border: transparent;
   --input-placeholder: rgba(37,53,46,.45);
   --panel-bg: #faf9f6;
 
-  /* Light shades used as text on dark → forest ink on light */
+  /* Text straight on the teal page: white and pale teal */
+  --color-white: #fff;
+  --color-forest-50: #f2fbfb;  --color-forest-100: #e0f4f4; --color-forest-200: #bfe6e7;
+  --color-forest-300: #9fd6d8; --color-forest-400: #7cc5c8;
+  --color-ember-50: #fdf8ec;   --color-ember-100: #fbf0d4;  --color-ember-200: #f8e4ad;
+  --color-ember-300: #f4d57f;  --color-ember-400: #efc552;
+}
+
+/* "Paper": light clay surfaces on the teal page. Inside them text is ink. */
+:root.light :is(.glass, .glass-green, .glass-orange, .glass-teal, .glass-blue, .clay-card, .card-3d,
+                .clay-modal, .input-glass, .clay-input, .glass-dark:not(.clay-forest-bar)):not(:is(.keep-dark, .clay-forest, .clay-forest-bar, [class*="from-forest-"], [class*="from-red-"]) *) {
+  --app-text: #25352e;
+  --fg-rgb: 37,53,46;
+  --clay-ink: 40 62 60;
   --color-white: #25352e;
-  --color-forest-50: #17241f;  --color-forest-100: #25352e; --color-forest-200: #34493f;
-  --color-forest-300: #103f32; --color-forest-400: #1d5443;
+  --color-forest-50: #15292a;  --color-forest-100: #25352e; --color-forest-200: #34494a;
+  --color-forest-300: #016a70; --color-forest-400: #01595e;
   --color-ember-50: #6e4f05;   --color-ember-100: #6e4f05;  --color-ember-200: #7a5806;
   --color-ember-300: #8a6407;  --color-ember-400: #9a6f08;
   --color-red-200: #991b1b;    --color-red-300: #b91c1c;    --color-red-400: #dc2626;
   --color-teal-200: #0f766e;   --color-teal-300: #0d7f76;   --color-teal-400: #0b8a80;
   --color-rose-400: #e11d48;
   --color-purple-300: #7e22ce;
+  color: var(--app-text);
 }
 
 /* ─── Clay material ─────────────────────────────────────────────────
@@ -203,7 +216,7 @@
 /* Mustard surfaces always carry ink, in both modes */
 :root :is(.btn-glow-orange, .category-pill.active, .clay-mustard, .bg-ember-300, .bg-ember-400, .bg-ember-500) {
   --color-white: #25352e;
-  --color-forest-100: #25352e; --color-forest-200: #34493f; --color-forest-300: #103f32; --color-forest-400: #1d5443;
+  --color-forest-100: #25352e; --color-forest-200: #34493f; --color-forest-300: #016a70; --color-forest-400: #01595e;
   --color-ember-50: #4a3604; --color-ember-100: #4a3604; --color-ember-200: #4a3604; --color-ember-300: #4a3604; --color-ember-400: #4a3604;
   --clay-ink: 120 82 6;
   color: #25352e;
@@ -265,7 +278,7 @@
 :root.light .text-forest-400\/55 { color: color-mix(in oklab, var(--color-forest-400) 73%, transparent); }
 /* Native <option> popups have inline dark backgrounds */
 :root.light option { background: #faf9f6 !important; color: #25352e !important; }
-:root:not(.light) option { background: #164135 !important; color: #eef3ed !important; }
+:root:not(.light) option { background: #0b4a4e !important; color: #eef9f9 !important; }
 
 /* ─── Global Reset ─────────────────────────────────────────────── */
 @layer base {
@@ -319,9 +332,9 @@
 
   /* Featured forest panel */
   .clay-forest {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .16), transparent 60%), linear-gradient(160deg, #1d5443 0%, #103f32 60%, #0c3328 100%);
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .16), transparent 60%), linear-gradient(160deg, #0a7a80 0%, #016a70 60%, #015459 100%);
     box-shadow: inset 0 2px 1px rgb(255 255 255 / .18), inset 6px 8px 14px -8px rgb(255 255 255 / .14),
-                inset -8px -10px 18px -10px rgb(0 0 0 / .45), 0 2px 3px rgb(16 63 50 / .2), 10px 18px 34px -14px rgb(16 63 50 / .6);
+                inset -8px -10px 18px -10px rgb(0 0 0 / .45), 0 2px 3px rgb(0 38 42 / .2), 10px 18px 34px -14px rgb(0 38 42 / .6);
     color: #fff;
   }
   .clay-mustard {
@@ -334,8 +347,8 @@
   .glass-dark.clay-forest-bar {
     background:
       url("data:image/svg+xml;utf8,%3Csvg xmlns='http://www.w3.org/2000/svg' width='240' height='240'%3E%3Cg fill='none' stroke='%23ffffff' stroke-opacity='.06' stroke-width='1.2'%3E%3Cpath d='M0 60 L70 40 L130 90 L240 70'/%3E%3Cpath d='M0 170 L60 150 L110 200 L180 160 L240 185'/%3E%3Cpath d='M70 40 L60 150'/%3E%3Cpath d='M130 90 L180 160 L170 240'/%3E%3Cpath d='M30 0 L70 40'/%3E%3Cpath d='M200 0 L190 70'/%3E%3C/g%3E%3C/svg%3E"),
-      linear-gradient(165deg, #154a3b 0%, #103f32 55%, #0d3529 100%);
-    box-shadow: 0 16px 34px -20px rgb(16 63 50 / .7);
+      linear-gradient(165deg, #035c61 0%, #014e53 55%, #01454a 100%);
+    box-shadow: 0 16px 34px -20px rgb(0 30 33 / .8);
     color: #fff;
   }
   :root:not(.light) .glass-dark.clay-forest-bar { box-shadow: 0 16px 34px -18px rgb(0 0 0 / .7); }
@@ -355,13 +368,13 @@
 
   /* Buttons: forest (green/teal names), mustard (orange name) */
   .btn-glow-green, .btn-glow-teal, .clay-btn-primary {
-    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .22), transparent 60%), linear-gradient(160deg, #6f9a78 0%, #4e7b5a 100%);
-    box-shadow: inset 0 2px 1px rgb(255 255 255 / .3), inset -5px -6px 12px -6px rgb(20 50 30 / .45),
-                0 2px 3px rgb(40 70 50 / .18), 6px 12px 22px -10px rgb(40 70 50 / .55);
+    background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .22), transparent 60%), linear-gradient(160deg, #0d8389 0%, #016a70 55%, #015a5f 100%);
+    box-shadow: inset 0 2px 1px rgb(255 255 255 / .3), inset -5px -6px 12px -6px rgb(0 30 33 / .5),
+                0 2px 3px rgb(0 38 42 / .2), 6px 12px 22px -10px rgb(0 38 42 / .6);
     color: #fff;
     letter-spacing: .02em;
   }
-  .btn-glow-teal { background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .18), transparent 60%), linear-gradient(160deg, #4f8a72 0%, #2f6b57 100%); }
+  .btn-glow-teal { background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .18), transparent 60%), linear-gradient(160deg, #2f9da2 0%, #0f8389 100%); }
   .btn-glow-orange, .clay-btn-accent {
     background: radial-gradient(120% 80% at 20% 0%, rgb(255 255 255 / .55), transparent 60%), linear-gradient(160deg, #f0c64a 0%, #e8b52a 100%);
     box-shadow: inset 0 2px 1px rgb(255 255 255 / .75), inset -5px -6px 12px -6px rgb(120 82 6 / .45),
@@ -397,12 +410,12 @@
 
   /* Selected navigation / tabs: pressed into the surface */
   .clay-active {
-    background: linear-gradient(160deg, #d3e0d2 0%, #e2ebe1 100%) !important;
+    background: linear-gradient(160deg, #cfe8e8 0%, #e3f3f3 100%) !important;
     box-shadow: var(--clay-sunk) !important;
-    color: #103f32 !important;
+    color: #016a70 !important;
     font-weight: 700;
   }
-  :root:not(.light) .clay-active { background: #0b2a21 !important; color: #efc552 !important; }
+  :root:not(.light) .clay-active { background: #012a2d !important; color: #efc552 !important; }
 
   .clay-input, .clay-sunk {
     background: var(--input-bg);
@@ -423,11 +436,11 @@
     background: var(--input-bg); box-shadow: var(--clay-sunk);
     transition: background .3s var(--clay-ease);
   }
-  .clay-toggle[aria-checked="true"] { background: linear-gradient(160deg, #2f6b57, #103f32); box-shadow: inset 3px 4px 8px rgb(0 0 0 / .35); }
+  .clay-toggle[aria-checked="true"] { background: linear-gradient(160deg, #0f8389, #016a70); box-shadow: inset 3px 4px 8px rgb(0 0 0 / .35); }
   .clay-toggle::after {
     content: ''; position: absolute; top: .22rem; left: .22rem; width: 1.4rem; height: 1.4rem; border-radius: 999px;
     background: radial-gradient(120% 80% at 30% 15%, #fff, #f2ede4 70%);
-    box-shadow: inset -2px -3px 5px rgb(52 74 58 / .2), 0 3px 6px rgb(0 0 0 / .25);
+    box-shadow: inset -2px -3px 5px rgb(0 38 42 / .2), 0 3px 6px rgb(0 0 0 / .25);
     transition: transform .32s var(--clay-ease);
   }
   .clay-toggle[aria-checked="true"]::after { transform: translateX(1.4rem); }
@@ -498,7 +511,7 @@
   .input-glass::placeholder { color: var(--input-placeholder); }
   .input-glass:focus {
     outline: none;
-    border-color: rgba(16,63,50,.35);
+    border-color: rgba(1,106,112,.4);
     box-shadow: var(--clay-sunk), 0 0 0 3px rgba(232,181,42,.35);
   }
 

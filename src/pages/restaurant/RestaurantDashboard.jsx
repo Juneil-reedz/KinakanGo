@@ -224,7 +224,7 @@ export default function RestaurantDashboard() {
                   strokeDasharray="251" strokeDashoffset={251 - (todayOrders > 0 ? (pendingCount / todayOrders) * 251 : 0)} strokeLinecap="round" />
                 <defs>
                   <linearGradient id="grad" x1="0%" y1="0%" x2="100%" y2="0%">
-                    <stop offset="0%" stopColor="#6f9a78" />
+                    <stop offset="0%" stopColor="#016a70" />
                     <stop offset="100%" stopColor="#e8b52a" />
                   </linearGradient>
                 </defs>

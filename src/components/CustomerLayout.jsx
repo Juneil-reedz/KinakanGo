@@ -287,19 +287,8 @@ export default function CustomerLayout() {
           </header>
         )}
 
-        {/* Mobile top bar for pages without the dashboard header, so the menu is always reachable */}
-        {active !== 'dashboard' && (
-          <div className="lg:hidden flex-shrink-0 flex items-center justify-between px-4 pt-3">
-            <button onClick={() => setMobileOpen(true)} aria-label="Open menu"
-              className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
-              <Menu className="w-5 h-5" />
-            </button>
-            <div className="flex items-center gap-2">
-              <ThemeToggle />
-              {bellButton}
-            </div>
-          </div>
-        )}
+        {/* Other customer pages have no top bar: the menu, theme and
+            notification buttons only show on the home dashboard */}
 
         {/* Page content */}
         <div className="flex-1 overflow-y-auto scrollbar-hide p-4 md:p-6">
