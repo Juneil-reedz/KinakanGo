@@ -128,7 +128,7 @@ export default function CustomerLayout() {
           LEFT SIDEBAR
       ══════════════════════════════ */}
       <aside className={`
-        flex flex-col glass-dark z-50 h-full transition-all duration-300
+        flex flex-col glass-dark clay-forest-bar z-50 h-full transition-all duration-300
         ${collapsed ? 'w-20' : 'w-64'}
         fixed lg:relative
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'} lg:translate-x-0
@@ -240,7 +240,7 @@ export default function CustomerLayout() {
 
         {/* Header — dashboard only */}
         {active === 'dashboard' && (
-          <header className="glass-dark flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
+          <header className="glass-dark clay-forest-bar flex-shrink-0 px-4 md:px-6 py-3 flex items-center gap-3"
             style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.07)', boxShadow: '0 4px 24px rgba(0,0,0,.3)' }}>
 
             {/* Mobile menu btn */}

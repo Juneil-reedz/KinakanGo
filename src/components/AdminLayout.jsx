@@ -39,7 +39,7 @@ export default function AdminLayout({ children }) {
   return (
     <div className="min-h-screen flex">
       {/* Sidebar */}
-      <aside className={`glass-dark flex-shrink-0 fixed top-0 left-0 h-screen z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
+      <aside className={`glass-dark clay-forest-bar flex-shrink-0 fixed top-0 left-0 h-screen z-50 transition-all duration-300 ${collapsed ? 'w-20' : 'w-64'}`}
         style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <div className="flex flex-col h-full">
           {/* Logo */}
@@ -96,7 +96,7 @@ export default function AdminLayout({ children }) {
       {/* Main content */}
       <div className={`flex-1 flex flex-col min-w-0 transition-all duration-300 ${collapsed ? 'lg:ml-20' : 'lg:ml-64'}`}>
         {/* Top bar */}
-        <header className="glass-dark sticky top-0 z-30 px-5 py-3 flex items-center justify-between"
+        <header className="glass-dark clay-forest-bar sticky top-0 z-30 px-5 py-3 flex items-center justify-between"
           style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <h2 className="text-white font-heading font-bold">
             {NAV.find(n => isActive(n.path))?.label || 'Dashboard'}

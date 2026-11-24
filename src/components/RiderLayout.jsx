@@ -97,20 +97,20 @@ export default function RiderLayout({ children }) {
     <div className="min-h-screen flex flex-col lg:flex-row">
       {mobileOpen && <button aria-label="Close menu" onClick={() => setMobileOpen(false)} className="fixed inset-0 bg-black/60 z-40 lg:hidden" />}
 
-      <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark transform transition-transform duration-300 lg:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
+      <aside className={`fixed inset-y-0 left-0 z-50 w-72 glass-dark clay-forest-bar transform transition-transform duration-300 lg:hidden ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}`}
         style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <SidebarContent mobile />
       </aside>
 
       {/* Desktop sidebar */}
-      <aside className="hidden lg:block lg:w-64 glass-dark flex-shrink-0" style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
+      <aside className="hidden lg:block lg:w-64 glass-dark clay-forest-bar flex-shrink-0" style={{ borderRight:'1px solid rgba(var(--fg-rgb),.07)' }}>
         <SidebarContent />
       </aside>
 
       {/* Main */}
       <div className="flex-1 flex flex-col">
         {/* Header */}
-        <header className="glass-dark px-5 py-3 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
+        <header className="glass-dark clay-forest-bar px-5 py-3 flex items-center justify-between" style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
           <div className="flex items-center gap-3">
             <button onClick={() => setMobileOpen(true)} className="lg:hidden w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100">
               <Menu className="w-4 h-4" />
