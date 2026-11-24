@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { firstImageError, unlessOwn } = require('../utils/image');
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 async function list(req, res) {
@@ -64,7 +65,10 @@ async function update(req, res) {
   if (req.user.role !== 'admin' && req.user.id !== parseInt(req.params.id)) {
     return res.status(403).json({ error: 'Forbidden' });
   }
-  const { name, phone, avatarUrl } = req.body;
+  const { name, phone } = req.body;
+  const avatarUrl = unlessOwn(req.body.avatarUrl);
+  const badImage = firstImageError({ 'Profile photo': avatarUrl });
+  if (badImage) return res.status(400).json({ error: badImage });
   await pool.query(
     `UPDATE users SET
        name       = COALESCE($1, name),

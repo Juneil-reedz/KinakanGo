@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { useNotification } from '../../context/NotificationContext';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
 import { Package, Search, Plus, Edit2, Trash2, Clock, Leaf, X, Check, ImagePlus, Tag } from 'lucide-react';
+import { fileToImage } from '../../utils/image';
 
 function pickImage(onPick) {
   const input = document.createElement('input');
@@ -11,9 +12,7 @@ function pickImage(onPick) {
   input.onchange = (e) => {
     const file = e.target.files[0];
     if (!file) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => onPick(ev.target.result);
-    reader.readAsDataURL(file);
+    fileToImage(file).then(onPick).catch(err => console.warn(err.message));
   };
   input.click();
 }

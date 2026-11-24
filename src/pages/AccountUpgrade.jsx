@@ -10,6 +10,7 @@ import { useAuth } from '../context/AuthContext';
 import { useRestaurant } from '../context/RestaurantContext';
 import { useRider } from '../context/RiderContext';
 import { request, authApi } from '../services/api';
+import { fileToImage } from '../utils/image';
 
 // Basic is the free customer account (shown for comparison); Premium unlocks a role
 const PLANS = [
@@ -48,10 +49,7 @@ function ImageUpload({ label, value, onChange, required = false }) {
   const handleFile = (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) return;
-    const reader = new FileReader();
-    reader.onload = (ev) => onChange(ev.target.result);
-    reader.readAsDataURL(file);
+    fileToImage(file).then(onChange).catch(err => console.warn(err.message));
   };
   return (
     <div>

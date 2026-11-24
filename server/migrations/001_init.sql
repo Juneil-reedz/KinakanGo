@@ -292,6 +292,7 @@ CREATE TABLE issues (
   escalation_reason  TEXT        DEFAULT NULL,
   refund_method      VARCHAR(10) DEFAULT NULL,  -- how the customer wants it: gcash, cash, credit
   refund_gcash       VARCHAR(30) DEFAULT NULL,
+  payment_check      BOOLEAN     NOT NULL DEFAULT false,  -- a cancelled GCash order the restaurant must check
   created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );

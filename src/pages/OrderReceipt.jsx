@@ -136,6 +136,15 @@ function reportState(r, waitHours = 24) {
     toCredit: true,
     escalate: !byAdmin && hoursSince(r.resolved_at) >= waitHours ? "I still haven't received it" : null,
   };
+  const back = r.refund_method === 'credit' ? 'as store credit' : 'by GCash';
+  if (r.payment_check && !byAdmin && r.status === 'pending') return {
+    text: `The restaurant is checking that your ${peso(r.refund_requested)} GCash payment arrived. Once they confirm it, you get it back ${back}.`, tone: 'wait',
+    escalate: hoursSince(r.created_at) >= waitHours ? 'No answer yet? Ask KinakanGo to review' : null,
+  };
+  if (r.payment_check && !byAdmin && r.status === 'denied') return {
+    text: "The restaurant says your GCash payment never arrived. If you did pay, ask KinakanGo to review it and keep your GCash receipt.", tone: 'bad',
+    escalate: 'Ask KinakanGo to review',
+  };
   if (r.status === 'pending') return byAdmin
     ? { text: r.escalated_at ? 'KinakanGo is reviewing your report' : 'KinakanGo is reviewing this delivery problem', tone: 'wait' }
     : { text: 'The restaurant is reviewing your report', tone: 'wait',
@@ -494,6 +503,7 @@ export default function OrderReceipt() {
             <span className={order.payment_status === 'paid' || order.status === 'delivered' ? 'text-forest-300' : 'text-ember-300'}>
               {order.payment_status === 'refunded' ? 'Refunded'
                 : isCancelled && order.payment_status === 'paid' ? 'Paid · see the refund below'
+                : isCancelled && order.payment_method === 'gcash' && Number(order.total) > Number(order.credit_used || 0) ? 'GCash · see below'
                 : order.payment_status === 'paid' || order.status === 'delivered' ? 'Paid'
                 : isCancelled ? 'Not charged'
                 : order.payment_method === 'gcash' ? 'Payment proof sent' : 'Pay the rider on delivery'}
