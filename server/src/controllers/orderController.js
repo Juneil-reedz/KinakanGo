@@ -321,7 +321,16 @@ async function listOrders(req, res) {
     // Rider fetching their own assigned orders
     where.push(`o.rider_id = $${idx++}`); params.push(id);
   } else if (restaurant_id) {
-    where.push(`o.restaurant_id = $${idx++}`); params.push(parseInt(restaurant_id));
+    // Only that restaurant's owner (or an admin) may list its orders
+    const rid = parseInt(restaurant_id);
+    if (!Number.isInteger(rid)) return res.status(400).json({ error: 'Invalid restaurant_id' });
+    if (role !== 'admin') {
+      const { rows: owned } = await pool.query(
+        'SELECT 1 FROM restaurants WHERE id = $1 AND owner_id = $2', [rid, id]
+      );
+      if (!owned.length) return res.status(403).json({ error: 'Forbidden' });
+    }
+    where.push(`o.restaurant_id = $${idx++}`); params.push(rid);
   } else if (role === 'customer') {
     where.push(`o.customer_id = $${idx++}`); params.push(id);
   } else if (role === 'rider') {
@@ -383,7 +392,12 @@ async function getOrder(req, res) {
 
   // Proof images are large base64 blobs; customers never display them, and the
   // tracking page refetches this endpoint, so don't ship them to customers.
-  if (req.user.role === 'customer') {
+  // Check the user's relation to this order, not their role: restaurant owners and
+  // riders who upgraded from a customer account still carry role 'customer'.
+  const isStaffForOrder = req.user.role === 'admin'
+    || order.restaurant_owner_id === req.user.id
+    || order.rider_id === req.user.id;
+  if (!isStaffForOrder) {
     delete order.proof_image;
     delete order.delivery_proof_image;
   }
