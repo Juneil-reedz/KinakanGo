@@ -114,6 +114,8 @@ CREATE TABLE restaurants (
   review_count INT          NOT NULL DEFAULT 0,
   delivery_fee DECIMAL(8,2) NOT NULL DEFAULT 0.00,
   min_order    DECIMAL(8,2) NOT NULL DEFAULT 0.00,
+  gcash_number VARCHAR(30)  DEFAULT NULL,
+  gcash_name   VARCHAR(120) DEFAULT NULL,
   created_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at   TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
@@ -173,10 +175,12 @@ CREATE TABLE orders (
   tax                  DECIMAL(8,2) NOT NULL DEFAULT 0.00,
   total                DECIMAL(8,2) NOT NULL,
   payment_method       VARCHAR(10) NOT NULL DEFAULT 'cash'
-                       CHECK (payment_method IN ('online','cash','card')),
+                       CHECK (payment_method IN ('online','cash','card','gcash')),
   payment_status       VARCHAR(10) NOT NULL DEFAULT 'pending'
                        CHECK (payment_status IN ('pending','paid','refunded')),
   transaction_id       VARCHAR(100) DEFAULT NULL,
+  proof_image          TEXT         DEFAULT NULL,  -- customer's GCash payment screenshot
+  delivery_proof_image TEXT         DEFAULT NULL,  -- rider's proof-of-delivery photo
   estimated_delivery   TIMESTAMPTZ  DEFAULT NULL,
   delivered_at         TIMESTAMPTZ  DEFAULT NULL,
   cancelled_reason     TEXT         DEFAULT NULL,
@@ -210,6 +214,9 @@ CREATE TABLE rider_profiles (
   today_deliveries INT           NOT NULL DEFAULT 0,
   total_earnings   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
   today_earnings   DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  current_lat         DECIMAL(10,7) DEFAULT NULL,
+  current_lng         DECIMAL(10,7) DEFAULT NULL,
+  location_updated_at TIMESTAMPTZ   DEFAULT NULL,
   bank_name        VARCHAR(80)   DEFAULT NULL,
   account_number   VARCHAR(40)   DEFAULT NULL,
   account_name     VARCHAR(120)  DEFAULT NULL
@@ -248,6 +255,7 @@ CREATE TABLE promo_codes (
   is_active      BOOLEAN      NOT NULL DEFAULT TRUE,
   starts_at      TIMESTAMPTZ  DEFAULT NULL,
   expires_at     TIMESTAMPTZ  DEFAULT NULL,
+  owner_id       INT          DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
   created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
@@ -307,27 +315,48 @@ CREATE TABLE reviews (
   created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
--- ─── FAVORITES ───────────────────────────────────────────────────────────────
+-- ─── FAVORITES (menu items) ──────────────────────────────────────────────────
 
-CREATE TABLE favorites (
-  user_id       INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  restaurant_id INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
-  created_at    TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
-  PRIMARY KEY (user_id, restaurant_id)
+CREATE TABLE customer_favorites (
+  user_id      INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  menu_item_id INT NOT NULL REFERENCES menu_items(id) ON DELETE CASCADE,
+  created_at   TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  PRIMARY KEY (user_id, menu_item_id)
 );
 
--- ─── NOTIFICATIONS ───────────────────────────────────────────────────────────
+-- ─── MESSAGES ────────────────────────────────────────────────────────────────
 
-CREATE TABLE notifications (
-  id         SERIAL PRIMARY KEY,
-  user_id    INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-  title      VARCHAR(160) NOT NULL,
-  body       TEXT         NOT NULL,
-  type       VARCHAR(40)  NOT NULL DEFAULT 'info',
-  is_read    BOOLEAN      NOT NULL DEFAULT FALSE,
-  meta       JSONB        DEFAULT NULL,
-  created_at TIMESTAMPTZ  NOT NULL DEFAULT NOW()
+CREATE TABLE messages (
+  id                SERIAL PRIMARY KEY,
+  sender_id         INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  recipient_user_id INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+  recipient_label   VARCHAR(160) NOT NULL,
+  subject           VARCHAR(160) NOT NULL DEFAULT 'New message',
+  body              TEXT         NOT NULL,
+  is_read           BOOLEAN      NOT NULL DEFAULT FALSE,
+  created_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
+  updated_at        TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
+
+-- ─── ACCOUNT UPGRADE REQUESTS (customer → restaurant owner / rider) ─────────
+
+CREATE TABLE upgrade_requests (
+  id               SERIAL PRIMARY KEY,
+  user_id          INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  plan             VARCHAR(80)   NOT NULL,
+  amount           DECIMAL(10,2) NOT NULL DEFAULT 0.00,
+  payment_method   VARCHAR(20)   NOT NULL DEFAULT 'none',
+  reference_number VARCHAR(100)  DEFAULT NULL,
+  proof_image      TEXT          DEFAULT NULL,
+  notes            TEXT          DEFAULT NULL,  -- JSON text: role, restaurantName, vehicleType, ...
+  status           VARCHAR(10)   NOT NULL DEFAULT 'pending'
+                   CHECK (status IN ('pending','approved','rejected')),
+  admin_note       TEXT          DEFAULT NULL,
+  reviewed_by      INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+  reviewed_at      TIMESTAMPTZ   DEFAULT NULL,
+  created_at       TIMESTAMPTZ   NOT NULL DEFAULT NOW()
+);
+CREATE INDEX idx_upgrade_requests_user ON upgrade_requests(user_id, status);
 
 -- ─── INDEXES ─────────────────────────────────────────────────────────────────
 
