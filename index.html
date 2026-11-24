@@ -3,11 +3,13 @@
   <head>
     <meta charset="UTF-8" />
     <link rel="icon" type="image/svg+xml" href="/vite.svg" />
+    <meta name="theme-color" content="#016A70" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kinakan Go - Food Delivery</title>
     <script>
-      // Apply the saved theme before first paint so light mode doesn't flash dark
-      try { if (localStorage.getItem('kkg_theme') === 'light') document.documentElement.classList.add('light'); } catch (e) {}
+      // Light clay is the default; apply a saved dark choice before first paint
+      (function () { var dark = false; try { dark = localStorage.getItem('kkg_mode') === 'dark'; } catch (e) {}
+        if (!dark) document.documentElement.classList.add('light'); })();
     </script>
     <script>
       // Restore path after SPA redirect from 404.html

@@ -1,9 +1,9 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 
 const ThemeContext = createContext(null);
-const STORAGE_KEY = 'kkg_theme';
+const STORAGE_KEY = 'kkg_mode'; // new key: everyone starts on the light clay theme
 
-// index.html applies the saved theme before React loads (no dark→light flash);
+// index.html applies the saved theme before React loads (no flash);
 // this reads that initial state and keeps <html class="light"> in sync.
 const readTheme = () => (document.documentElement.classList.contains('light') ? 'light' : 'dark');
 
