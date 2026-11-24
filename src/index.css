@@ -492,6 +492,24 @@
     color: #25352e;
   }
 
+  /* Image-only category tiles: the food photo is the label (name lives in aria-label) */
+  .category-photo {
+    padding: .5rem;
+    width: 4.25rem;
+    height: 4.25rem;
+    justify-content: center;
+  }
+  .category-photo img {
+    width: 3.25rem;
+    height: 3.25rem;
+    object-fit: contain;
+    filter: drop-shadow(0 6px 6px rgb(0 0 0 / .22));
+    transition: transform .25s cubic-bezier(.34,1.56,.64,1);
+    pointer-events: none;
+    user-select: none;
+  }
+  .category-photo.active img { transform: scale(1.08) rotate(-4deg); }
+
   /* Restaurant card */
   .restaurant-card {
     border-radius: 1.5rem;

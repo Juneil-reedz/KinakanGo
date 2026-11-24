@@ -1,0 +1,4 @@
+Category images are adapted from Microsoft Fluent Emoji (3D set)
+https://github.com/microsoft/fluentui-emoji
+Copyright (c) Microsoft Corporation. Licensed under the MIT License.
+Resized to 160px and converted to WebP; backgrounds are transparent.
