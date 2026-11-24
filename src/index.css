@@ -242,27 +242,29 @@
   box-shadow: 0 -12px 30px -18px rgb(0 0 0 / .8), inset 0 1px 0 rgb(255 255 255 / .07);
 }
 .nav-dock-item {
+  position: relative; z-index: 1;
   display: flex; flex-direction: column; align-items: center; gap: .2rem;
   padding: .35rem 0 .15rem; color: rgba(var(--fg-rgb),.5);
-  font-size: .68rem; font-weight: 600;
-  transition: transform .28s cubic-bezier(.34,1.56,.64,1), color .2s;
+  font-size: .68rem; font-weight: 600; transition: color .2s;
 }
 .nav-dock-item:hover { color: rgba(var(--fg-rgb),.8); }
-.nav-dock-item.is-active { color: var(--color-ember-500); transform: translateY(-5px); }
-.nav-dock-item span { transition: font-weight .2s; }
-.nav-dock-item.is-active span { font-weight: 800; }
-.nav-dock-cart {
-  position: relative; width: 3.6rem; height: 3.6rem; margin-top: -1.9rem;
-  border-radius: 9999px; display: flex; align-items: center; justify-content: center;
-  color: #fff; background: linear-gradient(160deg, #ffa53d 0%, #f7931e 45%, #e0730a 100%);
+.nav-dock-icon { position: relative; display: flex; transition: transform .35s cubic-bezier(.34,1.56,.64,1), color .2s; }
+.nav-dock-item.is-active { color: var(--color-ember-500); }
+.nav-dock-item.is-active .nav-dock-icon { color: #fff; transform: translateY(-1.1rem); }
+.nav-dock-item.is-active .nav-dock-label { font-weight: 800; transform: translateY(-.15rem); }
+.nav-dock-label { transition: transform .35s cubic-bezier(.34,1.56,.64,1); }
+/* The orange circle that slides to the active tab */
+.nav-dock-bubble {
+  position: absolute; top: -1.2rem; width: 3.3rem; height: 3.3rem; border-radius: 9999px;
+  transform: translateX(-50%);
+  background: linear-gradient(160deg, #ffa53d 0%, #f7931e 45%, #e0730a 100%);
   box-shadow: 0 0 0 5px var(--app-bg), 0 10px 22px -8px rgb(247 147 30 / .7);
-  transition: transform .28s cubic-bezier(.34,1.56,.64,1);
+  transition: left .4s cubic-bezier(.34,1.3,.64,1), opacity .2s;
 }
-.nav-dock-cart.is-active { transform: translateY(-5px); }
-.nav-dock-cart:active { transform: scale(.94); }
-:root.light-nav .nav-dock-cart { box-shadow: 0 0 0 5px #faf7f3, 0 10px 22px -8px rgb(247 147 30 / .7); }
+:root.light-nav .nav-dock-bubble { box-shadow: 0 0 0 5px #faf7f3, 0 10px 22px -8px rgb(247 147 30 / .7); }
 :root.light-nav .nav-dock-item { color: #8a7a6c; }
 :root.light-nav .nav-dock-item.is-active { color: #e0730a; }
+:root.light-nav .nav-dock-item.is-active .nav-dock-icon { color: #fff; }
 
 /* Messages: floating inbox cards and a full-screen chat on phones */
 .inbox-card {
