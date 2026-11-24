@@ -98,7 +98,7 @@ export default function AdminIssues() {
   const approveRefund = async () => {
     const amt = parseFloat(refundAmount);
     try {
-      await adminApi.issues.resolve(selected.backendId, { refundApproved: true, notes: refundNotes });
+      await adminApi.issues.resolve(selected.backendId, { refundApproved: amt, notes: refundNotes });
       setIssues(prev => prev.map(i => i.id === selected.id ? { ...i, status:"resolved", refundAmount:amt, refundNotes } : i));
       addNotification(`Refund of ₱${amt.toFixed(2)} approved for ${selected.customerName}`, "success");
       close();

@@ -67,6 +67,11 @@ async function update(req, res) {
     }
   }
   const { name, description, address, cuisine, imageUrl, coverUrl, deliveryFee, minOrder, isOpen, gcashNumber, gcashName } = req.body;
+  for (const [label, v] of [['Delivery fee', deliveryFee], ['Minimum order', minOrder]]) {
+    if (v != null && v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0 || Number(v) > 100000)) {
+      return res.status(400).json({ error: `${label} must be ₱0 or more` });
+    }
+  }
   const { rows } = await pool.query(
     `UPDATE restaurants SET
        name         = COALESCE($1,  name),

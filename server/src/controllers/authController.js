@@ -4,6 +4,7 @@ const crypto = require('crypto');
 const pool   = require('../config/db');
 const { sendEmail } = require('../utils/email');
 const { notify } = require('../utils/notify');
+const { isApprovedRider } = require('../utils/riders');
 const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 
@@ -19,7 +20,7 @@ function signAccess(user) {
   );
 }
 function signRefresh(user) {
-  return jwt.sign({ id: user.id }, process.env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_TTL });
+  return jwt.sign({ id: user.id, jti: require('crypto').randomUUID() }, process.env.JWT_REFRESH_SECRET, { expiresIn: REFRESH_TTL });
 }
 
 async function register(req, res) {
@@ -61,24 +62,18 @@ async function login(req, res) {
   if (!ok) return res.status(401).json({ error: 'Invalid credentials' });
 
   // Check extra capabilities (restaurant / rider) — use allSettled so a missing table won't crash login
-  const [rResult, rpResult, urResult] = await Promise.allSettled([
+  const [rResult, rpResult] = await Promise.allSettled([
     pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [row.id]),
-    pool.query('SELECT user_id FROM rider_profiles WHERE user_id = $1 LIMIT 1', [row.id]),
-    pool.query(
-      `SELECT id FROM upgrade_requests WHERE user_id = $1 AND status = 'approved'
-       AND (plan ILIKE '%rider%' OR notes ILIKE '%"role":"rider"%') LIMIT 1`,
-      [row.id]
-    ),
+    isApprovedRider(row.id),
   ]);
   const rRows  = rResult.status  === 'fulfilled' ? rResult.value.rows  : [];
-  const rpRows = rpResult.status === 'fulfilled' ? rpResult.value.rows : [];
-  const urRows = urResult.status === 'fulfilled' ? urResult.value.rows : [];
+  const approvedRider = rpResult.status === 'fulfilled' && rpResult.value === true;
 
   const user = {
     id: row.id, name: row.name, email: row.email, role: row.role, avatarUrl: row.avatar_url,
     has_restaurant: rRows.length > 0,
-    // true if rider_profiles row exists OR upgrade_request was approved as rider
-    has_rider_profile: rpRows.length > 0 || urRows.length > 0,
+    // true only for riders an admin approved (see utils/riders.js)
+    has_rider_profile: approvedRider,
   };
   const accessToken  = signAccess(user);
   const refreshToken = signRefresh(user);
@@ -135,12 +130,11 @@ async function me(req, res) {
   resolveImageUrls(req, rows[0], ['avatar_url']);
   const [rResult, rpResult] = await Promise.allSettled([
     pool.query('SELECT id FROM restaurants WHERE owner_id = $1 LIMIT 1', [req.user.id]),
-    pool.query('SELECT user_id FROM rider_profiles WHERE user_id = $1 LIMIT 1', [req.user.id]),
+    isApprovedRider(req.user.id),
   ]);
   const rRows2  = rResult.status  === 'fulfilled' ? rResult.value.rows  : [];
-  const rpRows2 = rpResult.status === 'fulfilled' ? rpResult.value.rows : [];
   const u = rows[0];
-  res.json({ ...u, has_restaurant: rRows2.length > 0, has_rider_profile: rpRows2.length > 0 });
+  res.json({ ...u, has_restaurant: rRows2.length > 0, has_rider_profile: rpResult.status === 'fulfilled' && rpResult.value === true });
 }
 
 const OTP_TTL_MS   = 10 * 60 * 1000; // 10 minutes to enter the code
@@ -148,10 +142,10 @@ const RESET_TTL_MS = 15 * 60 * 1000; // 15 minutes to submit the new password af
 const MAX_ATTEMPTS = 5;
 
 async function forgotPassword(req, res) {
-  const { email } = req.body;
+  const email = String(req.body.email || '').trim().toLowerCase();
   if (!email) return res.status(400).json({ error: 'Email is required' });
 
-  const { rows } = await pool.query('SELECT id, name FROM users WHERE email = $1', [email]);
+  const { rows } = await pool.query('SELECT id, name FROM users WHERE LOWER(email) = $1', [email]);
   // Always return success to prevent email enumeration
   if (!rows.length) return res.json({ message: 'If that email exists, a code was sent.' });
 
@@ -191,7 +185,7 @@ async function verifyResetOtp(req, res) {
   const { email, otp } = req.body;
   if (!email || !otp) return res.status(400).json({ error: 'Email and code are required' });
 
-  const { rows: users } = await pool.query('SELECT id FROM users WHERE email = $1', [email]);
+  const { rows: users } = await pool.query('SELECT id FROM users WHERE LOWER(email) = LOWER($1)', [String(email).trim()]);
   if (!users.length) return res.status(400).json({ error: 'Invalid or expired code' });
   const userId = users[0].id;
 

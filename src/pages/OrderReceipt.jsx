@@ -2,10 +2,10 @@
 import { useParams, useNavigate } from 'react-router-dom';
 import {
   ArrowLeft, Printer, Clock, Store, MapPin, Bike, Banknote, Smartphone,
-  UtensilsCrossed, Navigation, XCircle, CheckCircle, RotateCcw, Mail, Star,
+  UtensilsCrossed, Navigation, XCircle, CheckCircle, RotateCcw, Mail, Star, AlertTriangle,
 } from 'lucide-react';
 import StarRating from '../components/StarRating';
-import { ordersApi } from '../services/api';
+import { ordersApi, issuesApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 
@@ -110,6 +110,106 @@ function RateOrder({ order, onRated }) {
   );
 }
 
+const ISSUE_TYPES = [
+  { id: 'missing', label: 'Missing or wrong item' },
+  { id: 'quality', label: 'Food quality problem' },
+  { id: 'rider',   label: 'Problem with the delivery' },
+  { id: 'payment', label: 'Payment problem' },
+  { id: 'refund',  label: 'Other / I want a refund' },
+];
+const ISSUE_STATUS = { pending: 'Being reviewed', resolved: 'Resolved', denied: 'Declined' };
+
+// Report a problem with this order (optionally asking for a refund), or show the report's status
+function ReportProblem({ order }) {
+  const { addNotification } = useNotification();
+  const [reports, setReports] = useState(null);
+  const [open, setOpen] = useState(false);
+  const [type, setType] = useState('missing');
+  const [text, setText] = useState('');
+  const [wantRefund, setWantRefund] = useState(false);
+  const [amount, setAmount] = useState('');
+  const [saving, setSaving] = useState(false);
+
+  useEffect(() => {
+    issuesApi.mine(order.id).then(r => setReports(r.data || [])).catch(() => setReports([]));
+  }, [order.id]);
+
+  if (reports === null) return null;
+  const pending = reports.find(r => r.status === 'pending');
+
+  const submit = async () => {
+    if (text.trim().length < 5) { addNotification('Please describe the problem', 'error'); return; }
+    setSaving(true);
+    try {
+      const saved = await issuesApi.submit({
+        orderId: order.id, type, description: text.trim(),
+        refundRequested: wantRefund ? Number(amount || order.total) : null,
+      });
+      setReports(r => [saved, ...r]);
+      setOpen(false); setText(''); setWantRefund(false); setAmount('');
+      addNotification("Thanks, we've received your report. You'll get a notification when it's reviewed.", 'success');
+    } catch (err) {
+      addNotification(err.message || 'Could not send your report', 'error');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="print:hidden">
+      <Section title="Problem with this order?">
+        {reports.length > 0 && (
+          <div className="space-y-2 mb-3">
+            {reports.map(r => (
+              <div key={r.id} className="glass rounded-xl px-3 py-2.5 text-sm">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-white font-medium">{ISSUE_TYPES.find(t => t.id === r.type)?.label || 'Report'}</span>
+                  <span className={r.status === 'resolved' ? 'text-forest-300' : r.status === 'denied' ? 'text-red-300' : 'text-ember-300'}>
+                    {ISSUE_STATUS[r.status] || r.status}
+                  </span>
+                </div>
+                <p className="text-forest-200/60 text-xs mt-1">{r.description}</p>
+                {r.refund_approved && <p className="text-forest-300 text-xs mt-1">Refund approved: {peso(r.refund_approved)}</p>}
+                {r.resolution_notes && <p className="text-forest-200/60 text-xs mt-1 italic">"{r.resolution_notes}"</p>}
+              </div>
+            ))}
+          </div>
+        )}
+        {pending ? null : !open ? (
+          <button onClick={() => setOpen(true)}
+            className="w-full glass hover:glass-orange transition-all text-forest-100 text-sm py-3 rounded-xl flex items-center justify-center gap-2">
+            <AlertTriangle className="w-4 h-4 text-ember-400" /> Report a problem
+          </button>
+        ) : (
+          <div className="space-y-3">
+            <select value={type} onChange={e => setType(e.target.value)} className="w-full input-glass px-3 py-2.5 text-sm rounded-xl">
+              {ISSUE_TYPES.map(t => <option key={t.id} value={t.id} style={{ background: '#0d2b1a' }}>{t.label}</option>)}
+            </select>
+            <textarea value={text} onChange={e => setText(e.target.value)} maxLength={1000} rows={3}
+              placeholder="What happened?" className="w-full input-glass px-3 py-2.5 text-sm rounded-xl resize-none" />
+            <label className="flex items-center gap-2 text-sm text-forest-100">
+              <input type="checkbox" checked={wantRefund} onChange={e => setWantRefund(e.target.checked)} />
+              Ask for a refund
+            </label>
+            {wantRefund && (
+              <input type="number" min="1" step="0.01" max={Number(order.total)} value={amount}
+                onChange={e => setAmount(e.target.value)} placeholder={`Amount (up to ${peso(order.total)})`}
+                className="w-full input-glass px-3 py-2.5 text-sm rounded-xl" />
+            )}
+            <div className="flex gap-2">
+              <button onClick={() => setOpen(false)} className="flex-1 glass text-forest-200 text-sm py-3 rounded-xl">Cancel</button>
+              <button onClick={submit} disabled={saving}
+                className="flex-1 btn-glow-orange text-white font-bold py-3 rounded-xl disabled:opacity-50">
+                {saving ? 'Sending…' : 'Send report'}
+              </button>
+            </div>
+          </div>
+        )}
+      </Section>
+    </div>
+  );
+}
+
 // Full details of one of the customer's orders (opened from Order History)
 export default function OrderReceipt() {
   const { orderId } = useParams();
@@ -119,6 +219,21 @@ export default function OrderReceipt() {
   const [order, setOrder] = useState(null);
   const [error, setError] = useState('');
   const [sendingReceipt, setSendingReceipt] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
+
+  const cancelOrder = async () => {
+    if (!window.confirm('Cancel this order?')) return;
+    setCancelling(true);
+    try {
+      await ordersApi.updateStatus(order.id, 'cancelled', { cancelledReason: 'Cancelled by customer' });
+      setOrder(o => ({ ...o, status: 'cancelled', cancelled_reason: 'Cancelled by customer' }));
+      addNotification('Your order was cancelled', 'success');
+    } catch (err) {
+      addNotification(err.message || 'Could not cancel the order', 'error');
+    } finally {
+      setCancelling(false);
+    }
+  };
 
   const emailReceipt = async () => {
     setSendingReceipt(true);
@@ -283,6 +398,7 @@ export default function OrderReceipt() {
             <span className="text-forest-200/50">·</span>
             <span className={order.payment_status === 'paid' || order.status === 'delivered' ? 'text-forest-300' : 'text-ember-300'}>
               {order.payment_status === 'refunded' ? 'Refunded'
+                : isCancelled && order.payment_status === 'paid' ? 'Paid · ask for a refund below'
                 : order.payment_status === 'paid' || order.status === 'delivered' ? 'Paid'
                 : isCancelled ? 'Not charged'
                 : order.payment_method === 'gcash' ? 'Payment proof sent' : 'Pay the rider on delivery'}
@@ -292,6 +408,18 @@ export default function OrderReceipt() {
 
         {order.status === 'delivered' && (
           <RateOrder order={order} onRated={r => setOrder(o => ({ ...o, ...r }))} />
+        )}
+
+        {order.status !== 'pending' && <ReportProblem order={order} />}
+
+        {order.status === 'pending' && (
+          <div className="p-5 md:p-6 print:hidden" style={{ borderBottom: '1px solid rgba(var(--fg-rgb),.08)' }}>
+            <p className="text-forest-200/60 text-xs mb-2">The restaurant hasn't accepted this order yet, so you can still cancel it.</p>
+            <button onClick={cancelOrder} disabled={cancelling}
+              className="w-full glass hover:bg-red-500/20 transition-all text-red-300 text-sm font-semibold py-3 rounded-xl flex items-center justify-center gap-2 disabled:opacity-50">
+              <XCircle className="w-4 h-4" /> {cancelling ? 'Cancelling…' : 'Cancel order'}
+            </button>
+          </div>
         )}
 
         <div className="p-5 md:p-6 flex flex-col sm:flex-row gap-2 print:hidden">

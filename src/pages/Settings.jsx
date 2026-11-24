@@ -1,5 +1,4 @@
-import { useState } from 'react';
-import { Bell, Lock, Moon, Shield, HelpCircle, ChevronRight } from 'lucide-react';
+import { Lock, Moon, HelpCircle, ChevronRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
@@ -47,46 +46,13 @@ export default function Settings() {
   const navigate   = useNavigate();
   const { isLight, toggleTheme } = useTheme();
 
-  const [s, setS] = useState({
-    notifications: { orderUpdates:true, promotions:true, newRestaurants:false, newsletter:false },
-    privacy:       { shareData:false, saveHistory:true },
-    appearance:    { language:'en' },
-  });
-
-  const toggle = (cat, key) => setS(prev => ({ ...prev, [cat]: { ...prev[cat], [key]: !prev[cat][key] } }));
-
   return (
     <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
       <h1 className="text-2xl font-heading font-bold text-white">Settings</h1>
 
-      {/* Notifications */}
-      <Section title="Notifications" desc="Manage your notification preferences" icon={Bell} iconColor="btn-glow-orange">
-        <ToggleRow label="Order Updates"    desc="Get notified about your order status"        value={s.notifications.orderUpdates}   onChange={() => toggle('notifications','orderUpdates')} />
-        <ToggleRow label="Promotions"       desc="Receive special offers and discounts"         value={s.notifications.promotions}     onChange={() => toggle('notifications','promotions')} />
-        <ToggleRow label="New Restaurants"  desc="Be notified when new restaurants join"        value={s.notifications.newRestaurants} onChange={() => toggle('notifications','newRestaurants')} />
-        <ToggleRow label="Newsletter"       desc="Weekly newsletter with food tips"             value={s.notifications.newsletter}     onChange={() => toggle('notifications','newsletter')} />
-      </Section>
-
-      {/* Privacy */}
-      <Section title="Privacy & Security" desc="Control your data and security" icon={Shield} iconColor="btn-glow-green">
-        <ToggleRow label="Share Usage Data"   desc="Help us improve by sharing anonymous data" value={s.privacy.shareData}   onChange={() => toggle('privacy','shareData')} />
-        <ToggleRow label="Save Order History" desc="Keep records of your past orders"          value={s.privacy.saveHistory} onChange={() => toggle('privacy','saveHistory')} />
-      </Section>
-
       {/* Appearance */}
       <Section title="Appearance" desc="Customize how the app looks" icon={Moon} iconColor="glass">
         <ToggleRow label="Dark Mode" desc="Use the dark theme" value={!isLight} onChange={toggleTheme} />
-        <div className="flex items-center justify-between">
-          <div>
-            <p className="text-forest-100 text-sm font-medium">Language</p>
-            <p className="text-forest-200/50 text-xs mt-0.5">Select your preferred language</p>
-          </div>
-          <select value={s.appearance.language} onChange={e => setS(prev => ({ ...prev, appearance:{ ...prev.appearance, language:e.target.value } }))}
-            className="input-glass py-1.5 px-3 text-sm">
-            <option value="en" style={{background:'#0d2b1a'}}>English</option>
-            <option value="fil" style={{background:'#0d2b1a'}}>Filipino</option>
-          </select>
-        </div>
       </Section>
 
       {/* Account actions */}

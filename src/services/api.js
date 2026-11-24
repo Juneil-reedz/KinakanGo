@@ -221,6 +221,7 @@ export const applicationsApi = {
 
 export const issuesApi = {
   submit:  (data)         => request('/issues',              { method: 'POST', body: JSON.stringify(data) }),
+  mine:    (orderId)      => request(`/issues/mine${orderId ? `?orderId=${orderId}` : ''}`),
   list:    (params = {})  => request(`/issues?${new URLSearchParams(params)}`),
   resolve: (id, data)     => request(`/issues/${id}/resolve`, { method: 'POST', body: JSON.stringify(data) }),
   deny:    (id, notes)    => request(`/issues/${id}/deny`,    { method: 'POST', body: JSON.stringify({ notes }) }),
