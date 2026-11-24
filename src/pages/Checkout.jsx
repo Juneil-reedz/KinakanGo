@@ -162,7 +162,8 @@ export default function Checkout() {
         if (kind !== 'INVALID_CODE') setResendIn(0); // let them request a new code right away
       } else {
         setVerify(null);
-        addNotification('Failed to place order. Please try again.', 'error');
+        // Say why (restaurant closed, food sold out, minimum not met, promo ran out…)
+        addNotification(err?.data?.error || err?.message || 'Failed to place order. Please try again.', 'error');
       }
       setSubmitting(false);
     }

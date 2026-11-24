@@ -1,13 +1,31 @@
 import { useEffect, useState } from 'react';
 import { useCart } from '../context/CartContext';
-import { restaurantsApi, promosApi, storeCreditApi } from '../services/api';
+import { restaurantsApi, promosApi, storeCreditApi, request } from '../services/api';
+import { useNotification } from '../context/NotificationContext';
 
 // Same math as the server's placeOrder, so the cart, checkout and the saved
 // order all show one total: (food − promo) + 8% tax + the restaurant's delivery fee.
 export const TAX_RATE = 0.08;
 
 export default function useCartTotals() {
-  const { cartItems, restaurantId, getCartTotal, promoCode, setPromoCode } = useCart();
+  const { cartItems, restaurantId, getCartTotal, promoCode, setPromoCode, syncWithMenu } = useCart();
+  const { addNotification } = useNotification();
+  const [menu, setMenu] = useState(null);
+
+  // Check the cart against the live menu (prices change, foods sell out)
+  useEffect(() => {
+    if (!restaurantId) { setMenu(null); return; }
+    let live = true;
+    request(`/restaurants/${restaurantId}/menu?includeClosed=true`)
+      .then(rows => { if (live && Array.isArray(rows)) setMenu(rows); })
+      .catch(() => {});
+    return () => { live = false; };
+  }, [restaurantId]);
+  useEffect(() => {
+    if (!menu || !cartItems.length) return;
+    const changes = syncWithMenu(menu);
+    if (changes.length) addNotification(`Your cart was updated: ${changes.join('; ')}.`, 'info');
+  }, [menu]); // eslint-disable-line react-hooks/exhaustive-deps
   const [restaurant, setRestaurant] = useState(null);
   const [promo, setPromo] = useState({ discount: 0, error: '', checking: false });
 

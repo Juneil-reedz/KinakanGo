@@ -276,7 +276,14 @@ export default function OrderTracking() {
                 <p className="text-forest-200/30 text-xs">{new Date(order.created_at).toLocaleString('en-PH')}</p>
               </div>
               <div className="text-right">
-                <p className="text-ember-400 font-heading font-bold text-2xl">₱{Number(order.total).toFixed(2)}</p>
+                {Number(order.credit_used) > 0 ? (
+                  <>
+                    <p className="text-ember-400 font-heading font-bold text-2xl">₱{Math.max(0, Number(order.total) - Number(order.credit_used)).toFixed(2)}</p>
+                    <p className="text-forest-200/50 text-xs">to pay · ₱{Number(order.credit_used).toFixed(2)} store credit used</p>
+                  </>
+                ) : (
+                  <p className="text-ember-400 font-heading font-bold text-2xl">₱{Number(order.total).toFixed(2)}</p>
+                )}
                 {!isDone && order.estimated_delivery && (
                   <p className="text-forest-200/60 text-xs flex items-center gap-1 justify-end mt-1">
                     <Clock className="w-3 h-3" />

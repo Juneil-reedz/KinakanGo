@@ -4,7 +4,7 @@ import { getFeaturedRestaurants, getAllMenuItems, promosApi } from '../services/
 import { ordersApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Heart, Star, Plus, Clock, Truck, Tag, ChevronRight, Flame, Zap, UtensilsCrossed } from 'lucide-react';
+import { Heart, Star, Plus, ChevronRight, Flame, Zap, UtensilsCrossed } from 'lucide-react';
 import { foodRating } from '../utils/foodRating';
 
 const CATEGORIES = [
@@ -16,33 +16,6 @@ const CATEGORIES = [
   { name: 'Beverage' },
   { name: 'Bakery' },
   { name: 'Seafood' },
-];
-
-const PROMOS = [
-  {
-    id: 1,
-    tag: 'Hot Deal',
-    title: 'Get 20% Off',
-    sub: 'Your first order today',
-    bg: 'from-ember-700/80 to-ember-900/80',
-    accent: '#f97316',
-  },
-  {
-    id: 2,
-    tag: 'Free Delivery',
-    title: 'Orders Above ₱500',
-    sub: 'Limited time offer',
-    bg: 'from-forest-700/80 to-forest-900/80',
-    accent: '#2d8a57',
-  },
-  {
-    id: 3,
-    tag: 'Flash Sale',
-    title: 'Buy 1 Get 1 Free',
-    sub: 'On all burgers this weekend',
-    bg: 'from-forest-600/80 to-ember-800/80',
-    accent: '#3db870',
-  },
 ];
 
 const PROMO_STYLES = [
@@ -103,14 +76,15 @@ export default function Home() {
           ...style,
         };
       })
-    : PROMOS;
+    : [];
 
   useEffect(() => {
+    if (promoCards.length < 2) return undefined;
     const t = setInterval(() => setPromo(p => (p + 1) % promoCards.length), 4000);
     return () => clearInterval(t);
   }, [promoCards.length]);
 
-  const currentPromoIndex = promo % promoCards.length;
+  const currentPromoIndex = promoCards.length ? promo % promoCards.length : 0;
   const currentPromo = promoCards[currentPromoIndex];
 
   const filteredFood = cat === 'All'
@@ -127,8 +101,8 @@ export default function Home() {
   return (
     <div className="space-y-6 pb-20 lg:pb-0 animate-fade-up">
 
-      {/* ── Promo carousel ─────────────────────────── */}
-      <section>
+      {/* ── Promo carousel (only real, active promo codes) ── */}
+      {currentPromo && <section>
         <div className={`relative bg-gradient-to-br ${currentPromo.bg} rounded-3xl p-5 md:p-7 overflow-hidden transition-all duration-700 card-3d`}
           style={{ border: `1px solid ${currentPromo.accent}30`, boxShadow: `0 8px 32px ${currentPromo.accent}20` }}>
           <div className="orb w-48 h-48 opacity-30 -top-10 -right-10"
@@ -151,22 +125,7 @@ export default function Home() {
             ))}
           </div>
         </div>
-      </section>
-
-      {/* ── Stats strip ─────────────────────────────── */}
-      <section className="grid grid-cols-3 gap-3">
-        {[
-          { icon: Truck,  label: 'Free Delivery', val: '₱500+',  color: 'text-ember-400' },
-          { icon: Clock,  label: 'Avg. Delivery',  val: '30 min', color: 'text-forest-300' },
-          { icon: Tag,    label: 'Active Promos',  val: activePromos.length || '3+',    color: 'text-ember-300' },
-        ].map(({ icon: Icon, label, val, color }) => (
-          <div key={label} className="glass card-3d rounded-2xl p-3 flex flex-col items-center gap-1 text-center">
-            <Icon className={`w-5 h-5 ${color}`} />
-            <p className="text-white font-bold text-sm">{val}</p>
-            <p className="text-forest-200/60 text-xs">{label}</p>
-          </div>
-        ))}
-      </section>
+      </section>}
 
       {/* ── Categories ───────────────────────────────── */}
       <section>
