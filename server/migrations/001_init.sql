@@ -281,6 +281,13 @@ CREATE TABLE issues (
   resolution_notes TEXT         DEFAULT NULL,
   resolved_by      INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
   resolved_at      TIMESTAMPTZ  DEFAULT NULL,
+  handler            VARCHAR(12) NOT NULL DEFAULT 'admin',  -- who decides: 'restaurant' or 'admin'
+  refund_status      VARCHAR(14) DEFAULT NULL,  -- to_send, sent, not_received, received
+  refund_sent_note   TEXT        DEFAULT NULL,
+  refund_sent_at     TIMESTAMPTZ DEFAULT NULL,
+  refund_received_at TIMESTAMPTZ DEFAULT NULL,
+  escalated_at       TIMESTAMPTZ DEFAULT NULL,
+  escalation_reason  TEXT        DEFAULT NULL,
   created_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW(),
   updated_at       TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
