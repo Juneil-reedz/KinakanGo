@@ -169,6 +169,18 @@
   --color-ember-300: #f4d57f;  --color-ember-400: #efc552;
 }
 
+/* Dark mode ("dim"): the cards stay white clay; only the page and bars go deeper */
+:root.light.dim {
+  color-scheme: dark;
+  --app-bg: var(--map-lines),
+            radial-gradient(ellipse at 15% 0%, rgba(1,106,112,.45) 0%, transparent 55%),
+            linear-gradient(165deg, #013a3e 0%, #002c2f 55%, #002226 100%);
+  --clay-ink: 0 0 0;
+}
+:root.dim .glass-dark.clay-forest-bar {
+  background: var(--map-lines), linear-gradient(165deg, #012f33 0%, #01272a 55%, #002024 100%);
+}
+
 /* "Paper": light clay surfaces on the teal page. Inside them text is ink. */
 :root.light :is(.glass, .glass-green, .glass-orange, .glass-teal, .glass-blue, .clay-card, .card-3d,
                 .clay-modal, .input-glass, .clay-input, .glass-dark:not(.clay-forest-bar)):not(:is(.keep-dark, .clay-forest, .clay-forest-bar, [class*="from-forest-"], [class*="from-red-"]) *) {
