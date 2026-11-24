@@ -24,10 +24,21 @@ const PROMO_STYLES = [
   { bg: 'from-forest-600/80 to-ember-800/80', accent: '#3db870' },
 ];
 
-const POSTER = {
-  id: 'poster',
-  poster: `${import.meta.env.BASE_URL}promos/good-food-good-mood.jpg`,
-  alt: 'Good Food, Good Mood! Fresh meals from Bongao\'s favorite restaurants, delivered to your door. Order now.',
+const POSTER_URL = (f) => `${import.meta.env.BASE_URL}promos/${f}.jpg`;
+
+// Always-on posters (made in Canva). They follow any live promo codes.
+const POSTERS = [
+  { id: 'poster-good-food', poster: POSTER_URL('good-food-good-mood'),
+    alt: "Good Food, Good Mood! Fresh meals from Bongao's favorite restaurants, delivered to your door. Order now." },
+  { id: 'poster-pizza', poster: POSTER_URL('craving-pizza'),
+    alt: "Craving Pizza? Hot, cheesy slices from Bongao's pizza spots, delivered fast. Order now." },
+  { id: 'poster-pay', poster: POSTER_URL('pay-your-way'),
+    alt: 'Pay your way: GCash or Cash on Delivery. Track your rider live to your door. Order now.' },
+];
+
+// A live promo code with its own Canva poster shows the poster instead of the plain card
+const CODE_POSTERS = {
+  POWER12: { poster: POSTER_URL('code-power12'), alt: '2% off your order with code POWER12.' },
 };
 
 const promoTitle = (promo) => {
@@ -73,18 +84,19 @@ export default function Home() {
   }, []);
 
   // The KinakanGo poster always leads the carousel; live promo codes follow it
-  const promoCards = [POSTER, ...(activePromos.length
-    ? activePromos.map((item, index) => {
-        const style = PROMO_STYLES[index % PROMO_STYLES.length];
-        return {
-          id: item.id,
-          tag: item.code || 'Promo',
-          title: promoTitle(item),
-          sub: item.description || `Use code ${item.code}`,
-          ...style,
-        };
-      })
-    : [])];
+  const codeCards = activePromos.map((item, index) => {
+    const poster = CODE_POSTERS[String(item.code || '').toUpperCase()];
+    if (poster) return { id: `code-${item.id}`, ...poster };
+    const style = PROMO_STYLES[index % PROMO_STYLES.length];
+    return {
+      id: item.id,
+      tag: item.code || 'Promo',
+      title: promoTitle(item),
+      sub: item.description || `Use code ${item.code}`,
+      ...style,
+    };
+  });
+  const promoCards = [...codeCards, ...POSTERS];
 
   useEffect(() => {
     if (promoCards.length < 2) return undefined;
