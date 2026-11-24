@@ -1,9 +1,10 @@
 import { useState, useEffect } from 'react';
+import { ClayProductCard } from '../components/clay';
 import { useParams, useNavigate } from 'react-router-dom';
 import { restaurantsApi, menuApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Heart, Star, Plus, Minus, X, ArrowLeft, Clock, Truck, ChevronRight, ShoppingCart, UtensilsCrossed } from 'lucide-react';
+import { Star, Plus, Minus, X, ArrowLeft, Clock, Truck, ChevronRight, ShoppingCart, UtensilsCrossed } from 'lucide-react';
 import useGoBack from '../hooks/useGoBack';
 import { foodRating } from '../utils/foodRating';
 
@@ -121,38 +122,13 @@ export default function Restaurant() {
 
       {/* Menu grid */}
       {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5 gap-3">
+        <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5 gap-4">
           {filtered.map((item, idx) => (
-            <div key={item.id} onClick={() => { setSelectedItem(item); setQuantity(1); }}
-              className="restaurant-card card-3d glass cursor-pointer group animate-fade-up"
-              style={{ animationDelay:`${idx * 30}ms` }}>
-              <div className="relative aspect-square overflow-hidden">
-                {item.image_url
-                  ? <img src={item.image_url} alt={item.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  : <div className="w-full h-full glass-dark flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-forest-300/30" /></div>
-                }
-                <div className="absolute inset-0 bg-gradient-to-t from-black/60 to-transparent" />
-                <button onClick={e => { e.stopPropagation(); toggleFavorite(item, restaurant); }}
-                  className="absolute top-2 right-2 w-7 h-7 glass rounded-full flex items-center justify-center">
-                  <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
-                </button>
-                <p className="absolute bottom-2 left-2 text-white font-bold text-sm text-glow-orange">₱{Number(item.price).toFixed(2)}</p>
-              </div>
-              <div className="p-2.5">
-                <p className="text-white font-semibold text-xs truncate">{item.name}</p>
-                <p className="text-forest-200/50 text-xs truncate mb-2">{item.category_name || 'Food'}</p>
-                <div className="flex items-center justify-between">
-                  <div className="flex items-center gap-1">
-                    <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
-                    <span className="text-ember-300 text-xs">{foodRating(item)}</span>
-                  </div>
-                  <button onClick={e => { e.stopPropagation(); setSelectedItem(item); setQuantity(1); }}
-                    className="w-6 h-6 btn-glow-orange rounded-lg flex items-center justify-center">
-                    <Plus className="w-3 h-3 text-white" />
-                  </button>
-                </div>
-              </div>
-            </div>
+            <ClayProductCard key={item.id} item={item} rating={foodRating(item)}
+              favorite={isFavorite(item.id)} onFavorite={() => toggleFavorite(item, restaurant)}
+              onOpen={() => { setSelectedItem(item); setQuantity(1); }}
+              onAdd={() => { setSelectedItem(item); setQuantity(1); }}
+              style={{ animationDelay:`${idx * 30}ms` }} />
           ))}
         </div>
       ) : (

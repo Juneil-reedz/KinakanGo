@@ -63,7 +63,7 @@ export default function RiderLayout({ children }) {
         {NAV.map(({ path, label, icon:Icon }) => (
           <button key={path} onClick={() => goTo(path)}
             className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-all text-left
-              ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:glass hover:text-white'}`}>
+              ${isActive(path) ? 'clay-active' : 'text-forest-100/70 hover:glass hover:text-white'}`}>
             <Icon className="w-4 h-4 flex-shrink-0" /><span>{label}</span>
           </button>
         ))}
@@ -131,7 +131,7 @@ export default function RiderLayout({ children }) {
           {NAV.map(({ path, label, icon:Icon }) => (
             <button key={path} onClick={() => goTo(path)}
               className={`rounded-xl py-2 flex flex-col items-center gap-1 text-[11px] font-semibold transition-all
-                ${isActive(path) ? 'btn-glow-orange text-white' : 'text-forest-200/55'}`}>
+                ${isActive(path) ? 'clay-active' : 'text-forest-200/70'}`}>
               <Icon className="w-4 h-4" />{label}
             </button>
           ))}

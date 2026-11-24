@@ -30,10 +30,10 @@ export function DialogProvider({ children }) {
     <DialogContext.Provider value={ask}>
       {children}
       {dlg && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(0,0,0,.6)', backdropFilter: 'blur(6px)' }}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(16,40,32,.45)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => { if (e.target === e.currentTarget) close(dlg.input ? null : false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="app-dialog-title"
-            className="glass w-full max-w-sm rounded-3xl p-6 space-y-3" style={{ background: 'var(--panel-bg)' }}>
+            className="clay-modal w-full max-w-sm p-6 space-y-3">
             <p id="app-dialog-title" className="text-white font-heading font-bold text-lg">{dlg.title}</p>
             {dlg.message && <p className="text-forest-200/70 text-sm whitespace-pre-line">{dlg.message}</p>}
             {dlg.input && (
