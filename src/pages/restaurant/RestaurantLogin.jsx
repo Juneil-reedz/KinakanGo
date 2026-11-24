@@ -11,7 +11,7 @@ export default function RestaurantLogin() {
   const { login } = useRestaurant();
   const { showSuccess, showError } = useNotification();
 
-  const [form, setForm]         = useState({ email:'owner@pizzapalace.com', password:'demo123' });
+  const [form, setForm]         = useState({ email:'', password:'' });
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors]     = useState({});
   const [loading, setLoading]   = useState(false);
@@ -55,9 +55,6 @@ export default function RestaurantLogin() {
             <p className="text-forest-200/60 text-sm mt-1">Manage your restaurant</p>
           </div>
 
-          <div className="glass-green rounded-xl px-4 py-3 mb-5">
-            <p className="text-forest-200 text-xs"><span className="font-semibold text-white">Demo:</span> owner@pizzapalace.com / demo123</p>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

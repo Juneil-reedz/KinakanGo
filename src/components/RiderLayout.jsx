@@ -55,7 +55,7 @@ export default function RiderLayout({ children }) {
           <p className="text-white font-semibold text-sm truncate">{rider.name}</p>
           <div className="flex items-center gap-2 mt-1">
             <Star className="w-3 h-3 fill-ember-400 text-ember-400" />
-            <span className="text-ember-300 text-xs">{rider.rating || 'New'}</span>
+            <span className="text-ember-300 text-xs">{Number(rider.rating) > 0 ? Number(rider.rating).toFixed(1) : 'New'}</span>
             {rider.vehicle && <span className="text-forest-200/50 text-xs">· {rider.vehicle}</span>}
           </div>
         </div>

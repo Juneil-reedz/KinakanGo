@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { useRider, riderRequest } from '../../context/RiderContext';
 import { useNotification } from '../../context/NotificationContext';
-import { Banknote, Package, TrendingUp, Star, Clock, MapPin, Store, Download, CreditCard } from 'lucide-react';
+import { Banknote, Package, TrendingUp, Star, MapPin, Store, Download, CreditCard } from 'lucide-react';
 
 export default function RiderEarnings() {
   const { rider }          = useRider();
@@ -15,7 +15,7 @@ export default function RiderEarnings() {
     (async () => {
       try {
         setLoading(true);
-        const res = await riderRequest('/orders?rider_orders=true&status=delivered&limit=20');
+        const res = await riderRequest('/orders?rider_orders=true&status=delivered&limit=1000');
         setTrips(res.data || res || []);
       } catch {
         // silently fail
@@ -25,27 +25,39 @@ export default function RiderEarnings() {
     })();
   }, []);
 
-  // Compute summary from real delivered orders
-  const totalEarned   = trips.reduce((s, o) => s + Number(o.total || o.totalAmount || 0) * 0.1, 0);
-  const deliveries    = trips.length;
+  // A rider earns the delivery fee of each delivered order (same as Dashboard and History).
+  // "This Week" = the last 7 days, "This Month" = this calendar month (Philippine time).
+  const tz = 'Asia/Manila';
+  const dayKey = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: tz });
+  const now = Date.now();
+  const weekDays = [...Array(7)].map((_, i) => dayKey(now - (6 - i) * 86400000));
+  const monthKey = dayKey(now).slice(0, 7);
+  const when = (o) => o.delivered_at || o.created_at;
+  const inRange = trips.filter(o => when(o) && (range === 'week'
+    ? weekDays.includes(dayKey(when(o)))
+    : dayKey(when(o)).startsWith(monthKey)));
+  const earnOf        = (o) => Number(o.delivery_fee || 0);
+  const totalEarned   = inRange.reduce((s, o) => s + earnOf(o), 0);
+  const deliveries    = inRange.length;
   const avg           = deliveries > 0 ? totalEarned / deliveries : 0;
 
-  // Group by day for breakdown chart (last 7 days)
+  // One bar per day: every day of the last week, or each day this month with trips
   const dayMap = {};
-  trips.forEach(o => {
-    const day = o.createdAt ? new Date(o.createdAt).toLocaleDateString('en-US', { weekday:'short' }) : 'Other';
-    if (!dayMap[day]) dayMap[day] = { day, earnings:0, deliveries:0, hours:0 };
-    dayMap[day].earnings  += Number(o.total || o.totalAmount || 0) * 0.1;
-    dayMap[day].deliveries += 1;
+  const label = (k) => new Date(`${k}T12:00:00+08:00`).toLocaleDateString('en-US', range === 'week'
+    ? { weekday: 'short', timeZone: tz } : { month: 'short', day: 'numeric', timeZone: tz });
+  if (range === 'week') weekDays.forEach(k => { dayMap[k] = { day: label(k), earnings: 0, deliveries: 0 }; });
+  inRange.forEach(o => {
+    const k = dayKey(when(o));
+    if (!dayMap[k]) dayMap[k] = { day: label(k), earnings: 0, deliveries: 0 };
+    dayMap[k].earnings   += earnOf(o);
+    dayMap[k].deliveries += 1;
   });
-  const breakdown = Object.values(dayMap).slice(-7);
+  const breakdown = Object.keys(dayMap).sort().map(k => dayMap[k]);
   const max = breakdown.length ? Math.max(...breakdown.map(b => b.earnings)) : 1;
 
   const metrics = [
-    { label:'Rating',         value:`${rider?.rating || '—'}`, icon:Star,      sub:'out of 5.0' },
+    { label:'Rating',         value: Number(rider?.rating) > 0 ? Number(rider.rating).toFixed(1) : 'New', icon:Star, sub: Number(rider?.rating) > 0 ? 'out of 5.0' : 'no ratings yet' },
     { label:'All-time Trips', value:rider?.totalDeliveries || deliveries, icon:Package, sub:'completed' },
-    { label:'Acceptance',     value:'—', icon:TrendingUp, sub:'rate' },
-    { label:'On-Time',        value:'—', icon:Clock,      sub:'rate' },
   ];
 
   const sendAdminRequest = async (requestType) => {
@@ -164,7 +176,7 @@ export default function RiderEarnings() {
           <div className="p-4 space-y-3">
             {[1,2,3].map(i => <div key={i} className="glass rounded-xl h-20 animate-pulse" />)}
           </div>
-        ) : trips.length === 0 ? (
+        ) : inRange.length === 0 ? (
           <div className="p-8 flex flex-col items-center gap-2">
             <Package className="w-8 h-8 text-forest-300/30" />
             <p className="text-forest-200/40 text-sm">No delivered orders yet</p>
@@ -172,10 +184,10 @@ export default function RiderEarnings() {
         ) : (
           <>
             <div className="divide-y divide-white/5">
-              {trips.map(trip => {
-                const restaurantName = trip.restaurant?.name || trip.restaurantName || 'Restaurant';
-                const customerName   = trip.customer?.name   || trip.customerName   || 'Customer';
-                const earning        = Number(trip.total || trip.totalAmount || 0) * 0.1;
+              {inRange.map(trip => {
+                const restaurantName = trip.restaurant_name || 'Restaurant';
+                const customerName   = trip.customer_name   || 'Customer';
+                const earning        = earnOf(trip);
                 return (
                   <div key={trip.id} className="p-4 hover:glass transition-all">
                     <div className="flex items-start justify-between gap-2">
@@ -196,7 +208,7 @@ export default function RiderEarnings() {
                       </div>
                       <div className="text-right flex-shrink-0">
                         <p className="text-white font-heading font-bold">₱{earning.toFixed(2)}</p>
-                        <p className="text-forest-300 text-xs">10% of order</p>
+                        <p className="text-forest-300 text-xs">Delivery fee</p>
                       </div>
                     </div>
                   </div>
@@ -204,7 +216,7 @@ export default function RiderEarnings() {
               })}
             </div>
             <div className="p-4 glass-dark flex items-center justify-between" style={{ borderTop:'1px solid rgba(var(--fg-rgb),.07)' }}>
-              <p className="text-forest-200/60 text-sm">Total ({trips.length} trips)</p>
+              <p className="text-forest-200/60 text-sm">Total ({inRange.length} trips)</p>
               <p className="text-white font-heading font-bold text-lg">
                 ₱{totalEarned.toFixed(2)}
               </p>

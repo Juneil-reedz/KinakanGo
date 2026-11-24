@@ -35,7 +35,19 @@ export default function Restaurants() {
   const [viewMode, setViewMode]           = useState('food');
   const [justAdded, setJustAdded]         = useState(null); // id of the item showing a ✓
 
-  useEffect(() => { fetchData(); }, [selectedCat, searchQuery, sortBy, viewMode]);
+  // Searching from the top bar while already here changes ?search= : follow it
+  const urlSearch = searchParams.get('search') || '';
+  useEffect(() => { setSearchQuery(urlSearch); }, [urlSearch]);
+  // A sort that only exists for the other view falls back to Recommended
+  useEffect(() => {
+    if ((viewMode === 'food' && sortBy === 'deliveryFee') || (viewMode === 'restaurants' && sortBy === 'price')) setSortBy('recommended');
+  }, [viewMode, sortBy]);
+
+  // Wait a moment after typing before searching, instead of one request per key
+  useEffect(() => {
+    const t = setTimeout(fetchData, 300);
+    return () => clearTimeout(t);
+  }, [selectedCat, searchQuery, sortBy, viewMode]);
 
   const fetchData = async () => {
     setLoading(true);
@@ -45,6 +57,7 @@ export default function Restaurants() {
         ...(selectedCat && selectedCat !== 'all' ? { category: selectedCat } : {}),
         ...(searchQuery ? { search: searchQuery } : {}),
         ...(sortBy !== 'recommended' ? { sortBy } : {}),
+        limit: 100,
       };
       if (viewMode === 'food') {
         const res = await getAllMenuItems(filters);
@@ -113,7 +126,7 @@ export default function Restaurants() {
             <option value="recommended" style={{background:'#0d2b1a'}}>Recommended</option>
             <option value="rating" style={{background:'#0d2b1a'}}>Top Rated</option>
             {viewMode==='restaurants'
-              ? <option value="deliveryTime" style={{background:'#0d2b1a'}}>Fastest</option>
+              ? <option value="deliveryFee" style={{background:'#0d2b1a'}}>Lowest delivery fee</option>
               : <option value="price" style={{background:'#0d2b1a'}}>Price ↑</option>}
           </select>
           <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50 pointer-events-none" />

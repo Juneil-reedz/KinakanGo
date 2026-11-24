@@ -38,6 +38,7 @@ function RateOrder({ order, onRated }) {
   }
   const [food, setFood] = useState(0);
   const [rest, setRest] = useState(0);
+  const [rider, setRider] = useState(0);
   const [comment, setComment] = useState('');
   const [saving, setSaving] = useState(false);
 
@@ -59,6 +60,7 @@ function RateOrder({ order, onRated }) {
             </div>
           ))}
           {order.restaurant_rating && row(`Restaurant${order.restaurant_name ? ` · ${order.restaurant_name}` : ''}`, order.restaurant_rating)}
+          {order.rider_rating && row(`Rider${order.rider_name ? ` · ${order.rider_name}` : ''}`, order.rider_rating)}
           {order.review_comment && <p className="text-forest-200/60 italic">"{order.review_comment}"</p>}
         </div>
       </Section>
@@ -70,10 +72,10 @@ function RateOrder({ order, onRated }) {
     setSaving(true);
     try {
       const itemRatings = foods.map(f => ({ menuItemId: f.menu_item_id, rating: food }));
-      await ordersApi.review(order.id, { itemRatings, restaurantRating: rest, comment: comment.trim() || null });
+      await ordersApi.review(order.id, { itemRatings, restaurantRating: rest, riderRating: rider || null, comment: comment.trim() || null });
       addNotification('Thanks for your rating!', 'success');
       onRated({
-        food_rating: food, restaurant_rating: rest, review_comment: comment.trim() || null,
+        food_rating: food, restaurant_rating: rest, rider_rating: rider || null, review_comment: comment.trim() || null,
         items: (order.items || []).map(i => ({ ...i, my_rating: food })),
       });
     } catch (err) {
@@ -94,6 +96,7 @@ function RateOrder({ order, onRated }) {
             </p>
           </div>
           {row('How was the restaurant?', rest, setRest, 'Restaurant rating')}
+          {order.rider_id && row(`How was the rider?${order.rider_name ? ` (${order.rider_name})` : ''}`, rider, setRider, 'Rider rating')}
           <textarea value={comment} onChange={e => setComment(e.target.value)} maxLength={500} rows={2}
             placeholder="Anything to add? (optional)"
             className="w-full input-glass px-3 py-2.5 text-sm rounded-xl resize-none" />

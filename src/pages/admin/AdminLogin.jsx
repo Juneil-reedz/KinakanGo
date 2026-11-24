@@ -11,7 +11,7 @@ export default function AdminLogin() {
   const { login } = useAdmin();
   const { showSuccess, showError } = useNotification();
 
-  const [form, setForm]         = useState({ email:'admin@fooddelivery.com', password:'admin123' });
+  const [form, setForm]         = useState({ email:'', password:'' });
   const [showPass, setShowPass] = useState(false);
   const [errors, setErrors]     = useState({});
   const [loading, setLoading]   = useState(false);
@@ -55,9 +55,6 @@ export default function AdminLogin() {
             <p className="text-forest-200/60 text-sm mt-1">System administration access</p>
           </div>
 
-          <div className="glass-green rounded-xl px-4 py-3 mb-5">
-            <p className="text-forest-200 text-xs"><span className="font-semibold text-white">Demo:</span> admin@fooddelivery.com / admin123</p>
-          </div>
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>

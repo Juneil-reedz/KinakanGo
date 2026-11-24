@@ -1,3 +1,4 @@
+const { promoDiscount, promoAudienceOk } = require('./promoController');
 const crypto = require('crypto');
 const pool = require('../config/db');
 const { sendEmail } = require('../utils/email');
@@ -297,11 +298,9 @@ async function placeOrder(req, res) {
          AND (p.owner_id   IS NULL OR p.owner_id = (SELECT owner_id FROM restaurants WHERE id = $2))`,
       [String(promoCode).trim(), restaurantId]
     );
-    if (promos.length && gross >= Number(promos[0].min_order)) {
+    if (promos.length && gross >= Number(promos[0].min_order) && await promoAudienceOk(promos[0], req.user.id)) {
       const p = promos[0];
-      const value = Number(p.discount_value);
-      discount = p.discount_type === 'percent' ? (gross * value) / 100 : value;
-      discount = Math.min(Math.max(discount, 0), gross);   // never below zero, never more than the food
+      discount = promoDiscount(p, gross);
       promoId = p.id;
     }
   }
@@ -367,7 +366,9 @@ async function placeOrder(req, res) {
 }
 
 async function listOrders(req, res) {
-  const { status, page = 1, limit = 20, restaurant_id, rider_orders } = req.query;
+  const { status, restaurant_id, rider_orders } = req.query;
+  const page   = Math.max(parseInt(req.query.page) || 1, 1);
+  const limit  = Math.min(Math.max(parseInt(req.query.limit) || 20, 1), 1000);
   const offset = (page - 1) * limit;
   const { id, role } = req.user;
 
@@ -417,10 +418,10 @@ async function listOrders(req, res) {
      LEFT JOIN users ru ON ru.id = o.rider_id
      LEFT JOIN reviews rv ON rv.order_id = o.id
      ${cond} ORDER BY o.created_at DESC LIMIT $${idx++} OFFSET $${idx++}`,
-    [...params, parseInt(limit), offset]
+    [...params, limit, offset]
   );
   rows.forEach(r => resolveImageUrls(req, r, ['restaurant_image']));
-  res.json({ data: rows, page: parseInt(page), limit: parseInt(limit) });
+  res.json({ data: rows, page, limit });
 }
 
 // Only the order's customer, assigned rider, restaurant owner, or an admin may view it.
@@ -439,7 +440,7 @@ async function getOrder(req, res) {
             r.address AS restaurant_address, r.phone AS restaurant_phone, r.owner_id AS restaurant_owner_id,
             u.name  AS customer_name, u.phone AS customer_phone,
             ru.name  AS rider_name,   ru.phone AS rider_phone,
-            rv.food_rating, rv.restaurant_rating, rv.comment AS review_comment
+            rv.food_rating, rv.restaurant_rating, rv.rider_rating, rv.comment AS review_comment
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
      JOIN users u ON o.customer_id = u.id
@@ -688,6 +689,7 @@ async function emailReceipt(req, res) {
 // per item) and the restaurant (1–5 stars, required), plus an optional comment.
 async function submitReview(req, res) {
   const restaurantRating = Number(req.body.restaurantRating);
+  const riderRating = req.body.riderRating == null || req.body.riderRating === '' ? null : Number(req.body.riderRating);
   const comment = req.body.comment ? String(req.body.comment).trim().slice(0, 500) : null;
   const valid = (n) => Number.isInteger(n) && n >= 1 && n <= 5;
   if (!valid(restaurantRating)) {
@@ -699,6 +701,9 @@ async function submitReview(req, res) {
   const o = rows[0];
   if (!o || o.customer_id !== req.user.id) return res.status(404).json({ error: 'Order not found' });
   if (o.status !== 'delivered') return res.status(400).json({ error: 'You can rate an order once it has been delivered' });
+  if (riderRating !== null && (!o.rider_id || !valid(riderRating))) {
+    return res.status(400).json({ error: 'Rider rating must be 1 to 5 stars' });
+  }
 
   // Item ratings: only items that are in this order, each at most once
   const { rows: orderItems } = await pool.query('SELECT DISTINCT menu_item_id FROM order_items WHERE order_id = $1', [req.params.id]);
@@ -718,9 +723,9 @@ async function submitReview(req, res) {
   try {
     await client.query('BEGIN');
     const { rowCount } = await client.query(
-      `INSERT INTO reviews (order_id, customer_id, restaurant_id, rider_id, food_rating, restaurant_rating, comment)
-       VALUES ($1,$2,$3,$4,$5,$6,$7) ON CONFLICT (order_id) DO NOTHING`,
-      [req.params.id, req.user.id, o.restaurant_id, o.rider_id, foodAvg, restaurantRating, comment]
+      `INSERT INTO reviews (order_id, customer_id, restaurant_id, rider_id, food_rating, restaurant_rating, rider_rating, comment)
+       VALUES ($1,$2,$3,$4,$5,$6,$7,$8) ON CONFLICT (order_id) DO NOTHING`,
+      [req.params.id, req.user.id, o.restaurant_id, o.rider_id, foodAvg, restaurantRating, riderRating, comment]
     );
     if (!rowCount) {
       await client.query('ROLLBACK');
@@ -747,12 +752,28 @@ async function submitReview(req, res) {
        WHERE id = $1`,
       [o.restaurant_id]
     );
+    if (riderRating !== null) {
+      await client.query(
+        `INSERT INTO rider_profiles (user_id, rating)
+         SELECT $1, ROUND(AVG(rider_rating)::numeric, 2) FROM reviews WHERE rider_id = $1 AND rider_rating IS NOT NULL
+         ON CONFLICT (user_id) DO UPDATE SET rating = EXCLUDED.rating`,
+        [o.rider_id]
+      );
+    }
     await client.query('COMMIT');
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;
   } finally {
     client.release();
+  }
+
+  if (riderRating !== null) {
+    await notify(o.rider_id, {
+      audience: 'rider', type: 'info', link: '/rider/earnings',
+      title: `New rating · Order #${req.params.id}`,
+      message: `A customer rated your delivery ${riderRating}★`,
+    });
   }
 
   const { rows: names } = await pool.query(
@@ -766,7 +787,7 @@ async function submitReview(req, res) {
     title: `New rating · Order #${req.params.id}`,
     message: `Restaurant ${restaurantRating}★ · ${itemsText}${comment ? ` · "${comment.slice(0, 120)}"` : ''}`,
   });
-  res.status(201).json({ message: 'Thanks for your rating!', restaurantRating, comment,
+  res.status(201).json({ message: 'Thanks for your rating!', restaurantRating, riderRating, comment,
     itemRatings: [...itemRatings].map(([menuItemId, rating]) => ({ menuItemId, rating })) });
 }
 

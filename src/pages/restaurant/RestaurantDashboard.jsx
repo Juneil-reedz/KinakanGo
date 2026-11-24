@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { restaurantRequest, useRestaurant } from '../../context/RestaurantContext';
-import { DollarSign, Package, TrendingUp, ChefHat, Clock, User, MessageSquare, MapPin, Store, Ticket, Plus, X } from 'lucide-react';
+import { DollarSign, Package, TrendingUp, ChefHat, Clock, User, MessageSquare, MapPin, Store, Ticket, Plus, X, Star } from 'lucide-react';
 import { useNotification } from '../../context/NotificationContext';
 
 const STATUS_STYLE = {
@@ -26,7 +26,8 @@ export default function RestaurantDashboard() {
     (async () => {
       try {
         setLoading(true);
-        const res = await restaurantRequest('/orders?limit=5');
+        // Enough recent orders to cover today; the list is newest first
+        const res = await restaurantRequest('/orders?limit=200');
         setOrders(res.data || res || []);
         const inbox = await restaurantRequest('/messages?box=inbox').catch(() => null);
         setMessages(inbox?.data || []);
@@ -40,10 +41,16 @@ export default function RestaurantDashboard() {
     })();
   }, []);
 
-  // Derive simple stats from the fetched orders
-  const todayOrders = recentOrders.length;
-  const totalSales  = recentOrders.reduce((s, o) => s + Number(o.total || o.totalAmount || 0), 0);
+  // Today's numbers (Philippine time), counting only orders that weren't cancelled
+  const dayKey = (d) => new Date(d).toLocaleDateString('en-CA', { timeZone: 'Asia/Manila' });
+  const today = dayKey(Date.now());
+  const todays = recentOrders.filter(o => o.created_at && dayKey(o.created_at) === today
+    && !['cancelled', 'refunded'].includes(o.status));
+  const todayOrders  = todays.length;
+  const totalSales   = todays.reduce((s, o) => s + Number(o.total || 0), 0);
   const pendingCount = recentOrders.filter(o => o.status === 'pending').length;
+  const rating = Number(restaurant?.review_count) > 0
+    ? `${Number(restaurant.rating).toFixed(1)} (${restaurant.review_count})` : 'No ratings yet';
 
   const createPromo = async (e) => {
     e.preventDefault();
@@ -72,10 +79,10 @@ export default function RestaurantDashboard() {
   };
 
   const STAT_CARDS = [
-    { label:'Recent Orders',   value:todayOrders,                icon:Package,    color:'btn-glow-green',  trend:'+8%'  },
-    { label:'Total Revenue',   value:`₱${totalSales.toFixed(2)}`,icon:DollarSign, color:'btn-glow-orange', trend:'+10%' },
-    { label:'Pending',         value:pendingCount,               icon:ChefHat,    color:'glass-orange',    trend:''     },
-    { label:'Restaurant',      value:restaurant?.name ? '—' : '—', icon:TrendingUp, color:'glass-green',  trend:''     },
+    { label:"Today's Orders",  value:todayOrders,                icon:Package,    color:'btn-glow-green',  trend:'' },
+    { label:"Today's Sales",   value:`₱${totalSales.toFixed(2)}`,icon:DollarSign, color:'btn-glow-orange', trend:'' },
+    { label:'Waiting for you', value:pendingCount,               icon:ChefHat,    color:'glass-orange',    trend:'' },
+    { label:'Rating',          value:rating,                     icon:Star,       color:'glass-green',     trend:'' },
   ];
 
   return (

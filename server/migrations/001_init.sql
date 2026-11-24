@@ -258,6 +258,8 @@ CREATE TABLE promo_codes (
   starts_at      TIMESTAMPTZ  DEFAULT NULL,
   expires_at     TIMESTAMPTZ  DEFAULT NULL,
   owner_id       INT          DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+  max_discount   DECIMAL(8,2) DEFAULT NULL,
+  target_users   VARCHAR(10)  NOT NULL DEFAULT 'all',
   created_at     TIMESTAMPTZ  NOT NULL DEFAULT NOW()
 );
 
