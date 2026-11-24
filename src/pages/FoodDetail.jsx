@@ -1,9 +1,9 @@
-﻿import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { ArrowLeft, Heart, Star, Clock, Store, UtensilsCrossed, Plus, Minus, ShoppingCart } from 'lucide-react';
-import { menuApi } from '../services/api';
+import { ArrowLeft, Heart, Star, Clock, Store, UtensilsCrossed, Plus, Minus, ShoppingCart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { menuApi, getAllMenuItems } from '../services/api';
 import useGoBack from '../hooks/useGoBack';
 
 export default function FoodDetail() {
@@ -31,6 +31,20 @@ export default function FoodDetail() {
       .catch(() => { if (!stateItem) setStatus('missing'); });
   }, [id, stateItem]);
 
+  // Other foods of the same kind to spin through (passed from the list, or loaded)
+  const [pool, setPool] = useState(location.state?.options || null);
+  useEffect(() => {
+    if (pool) return;
+    getAllMenuItems({ limit: 100 })
+      .then(r => setPool(Array.isArray(r) ? r : r?.data || []))
+      .catch(() => setPool([]));
+  }, [pool]);
+  const [current, setCurrent] = useState(null); // the option the user spun to
+  const [turn, setTurn]       = useState(0);    // degrees from swipes
+  const [drag, setDrag]       = useState(0);    // live degrees while dragging
+  const [swapping, setSwapping] = useState(false);
+  const dragStart = useRef(null);
+
   if (status !== 'ready') {
     return (
       <div className="min-h-screen flex items-center justify-center px-4">
@@ -48,7 +62,39 @@ export default function FoodDetail() {
 
   const raw = stateItem ? { ...stateItem, ...(fetched && { avg_rating: fetched.avg_rating, rating_count: fetched.rating_count }) } : fetched;
   // API prices arrive as strings ("150.00"); keep the maths numeric
-  const foodItem = { ...raw, price: Number(raw.price) || 0 };
+  const baseItem = { ...raw, price: Number(raw.price) || 0 };
+  const foodItem = current ? { ...current, price: Number(current.price) || 0 } : baseItem;
+
+  // Same type first (all the burgers), else the same restaurant, else just this one
+  const kind = (i) => String(i?.category_name || i?.category || '').toLowerCase();
+  const list = pool || [];
+  let options = list.filter(i => kind(i) && kind(i) === kind(baseItem));
+  if (options.length < 2) options = list.filter(i => i.restaurant_id && i.restaurant_id === baseItem.restaurant_id);
+  if (!options.some(i => i.id === baseItem.id)) options = [baseItem, ...options];
+  const index = Math.max(0, options.findIndex(i => i.id === foodItem.id));
+  const many = options.length > 1;
+  const prevItem = many ? options[(index - 1 + options.length) % options.length] : null;
+  const nextItem = many ? options[(index + 1) % options.length] : null;
+
+  // Spin the plate to the next or previous option
+  const spinTo = (dir) => {
+    if (!many || swapping) return;
+    const target = dir > 0 ? nextItem : prevItem;
+    setSwapping(true);
+    setTurn(t => t + (dir > 0 ? -360 : 360));
+    setTimeout(() => { setCurrent(target); setQuantity(1); }, 300);
+    setTimeout(() => setSwapping(false), 720);
+  };
+
+  const onPointerDown = (e) => { dragStart.current = e.clientX; e.currentTarget.setPointerCapture?.(e.pointerId); };
+  const onPointerMove = (e) => { if (dragStart.current != null) setDrag((e.clientX - dragStart.current) * 0.6); };
+  const onPointerUp = (e) => {
+    if (dragStart.current == null) return;
+    const dx = e.clientX - dragStart.current;
+    dragStart.current = null;
+    setDrag(0);
+    if (Math.abs(dx) > 45) spinTo(dx < 0 ? 1 : -1);
+  };
 
   const total = foodItem.price * quantity;
 
@@ -93,17 +139,42 @@ export default function FoodDetail() {
       </header>
 
       <div className="relative flex-1 w-full max-w-5xl mx-auto">
-        {/* Big round photo, half off the right edge, turning as it lands */}
-        <div className="fd-plate-wrap" aria-hidden="true">
-          <div className={`fd-plate ${location.state?.morph ? 'fd-plate-morph' : ''}`} style={{ viewTransitionName: `food-${foodItem.id}` }}>
-            <img src={foodItem.image || foodItem.image_url} alt="" style={{ transform: `rotate(${spin}deg)` }} />
+        {/* The plate: drag or swipe it to spin to the next option */}
+        <div className="fd-stage" onPointerDown={onPointerDown} onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
+          {prevItem && (
+            <button type="button" className="fd-peek fd-peek-left" onClick={() => spinTo(-1)} aria-label={`Previous: ${prevItem.name}`}>
+              <img src={prevItem.image_url || prevItem.image} alt="" draggable="false" />
+            </button>
+          )}
+          <div className={`fd-plate ${location.state?.morph ? 'fd-plate-morph' : ''} ${swapping ? 'is-swapping' : ''} ${drag ? 'is-dragging' : ''}`}
+            style={{ viewTransitionName: `food-${baseItem.id}` }}>
+            <img src={foodItem.image || foodItem.image_url} alt={foodItem.name} draggable="false"
+              style={{ transform: `rotate(${turn + drag + spin}deg)` }} />
           </div>
+          {nextItem && (
+            <button type="button" className="fd-peek fd-peek-right" onClick={() => spinTo(1)} aria-label={`Next: ${nextItem.name}`}>
+              <img src={nextItem.image_url || nextItem.image} alt="" draggable="false" />
+            </button>
+          )}
         </div>
 
-        {/* Facts down the left, sliding in one by one */}
-        <div className="relative z-10 px-5 pt-10 sm:pt-16 flex flex-col gap-3.5 w-[58%] sm:w-[46%]">
+        {many && (
+          <div className="flex items-center justify-center gap-3 mt-3 fd-fade" style={{ animationDelay: '500ms' }}>
+            <button onClick={() => spinTo(-1)} aria-label="Previous option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10"><ChevronLeft className="w-5 h-5" /></button>
+            <div className="flex items-center gap-1.5">
+              {options.slice(0, 8).map((o, i) => (
+                <span key={o.id} className={`h-1.5 rounded-full transition-all ${i === index ? 'w-5 bg-ember-500' : 'w-1.5 bg-white/25'}`} />
+              ))}
+            </div>
+            <button onClick={() => spinTo(1)} aria-label="Next option" className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/70 hover:text-white hover:bg-white/10"><ChevronRight className="w-5 h-5" /></button>
+          </div>
+        )}
+
+        {/* Facts, sliding in one by one (again after each spin) */}
+        <div key={foodItem.id} className="relative z-10 px-5 mt-5 grid grid-cols-2 gap-3">
           {facts.map(({ label, value, Icon, tint }, i) => (
-            <div key={label} className="fd-fact fd-slide" style={{ animationDelay: `${200 + i * 90}ms` }}>
+            <div key={label} className="fd-fact fd-slide" style={{ animationDelay: `${(current ? 0 : 200) + i * 70}ms` }}>
               <div className="min-w-0">
                 <p className="text-forest-200/55 text-[11px] font-semibold uppercase tracking-wide">{label}</p>
                 <p className={`text-white text-sm font-semibold truncate ${label === 'Type' ? 'capitalize' : ''}`}>{value}</p>
@@ -111,9 +182,12 @@ export default function FoodDetail() {
               <span className={`fd-fact-badge ${tint}`}><Icon className="w-4 h-4" /></span>
             </div>
           ))}
+        </div>
 
-          {/* Quantity */}
-          <div className="fd-qty fd-slide mt-3" style={{ animationDelay: '580ms' }}>
+        {/* Quantity */}
+        <div className="relative z-10 px-5 mt-4 flex items-center justify-between fd-slide" style={{ animationDelay: '560ms' }}>
+          <p className="text-white font-semibold text-sm">Quantity</p>
+          <div className="fd-qty">
             <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity"
               className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
               <Minus className="w-4 h-4" />
@@ -127,7 +201,7 @@ export default function FoodDetail() {
         </div>
 
         {foodItem.description && (
-          <p className="relative z-10 px-5 mt-8 max-w-md text-forest-200/65 text-sm leading-relaxed fd-slide" style={{ animationDelay: '660ms' }}>
+          <p key={`d-${foodItem.id}`} className="relative z-10 px-5 mt-5 max-w-xl text-forest-200/65 text-sm leading-relaxed fd-slide" style={{ animationDelay: '660ms' }}>
             {foodItem.description}
           </p>
         )}
