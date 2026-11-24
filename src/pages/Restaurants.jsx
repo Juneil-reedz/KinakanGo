@@ -124,11 +124,11 @@ export default function Restaurants() {
         <div className="relative">
           <select value={sortBy} onChange={e => setSortBy(e.target.value)}
             className="input-glass pl-9 pr-3 py-2.5 text-sm appearance-none cursor-pointer">
-            <option value="recommended" style={{background:'#0d2b1a'}}>Recommended</option>
-            <option value="rating" style={{background:'#0d2b1a'}}>Top Rated</option>
+            <option value="recommended" style={{background:'#1a1511'}}>Recommended</option>
+            <option value="rating" style={{background:'#1a1511'}}>Top Rated</option>
             {viewMode==='restaurants'
-              ? <option value="deliveryFee" style={{background:'#0d2b1a'}}>Lowest delivery fee</option>
-              : <option value="price" style={{background:'#0d2b1a'}}>Price ↑</option>}
+              ? <option value="deliveryFee" style={{background:'#1a1511'}}>Lowest delivery fee</option>
+              : <option value="price" style={{background:'#1a1511'}}>Price ↑</option>}
           </select>
           <SlidersHorizontal className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50 pointer-events-none" />
         </div>

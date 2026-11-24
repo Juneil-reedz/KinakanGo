@@ -270,7 +270,7 @@ function ReportProblem({ order }) {
         ) : (
           <div className="space-y-3">
             <select value={type} onChange={e => setType(e.target.value)} className="w-full input-glass px-3 py-2.5 text-sm rounded-xl">
-              {ISSUE_TYPES.map(t => <option key={t.id} value={t.id} style={{ background: '#0d2b1a' }}>{t.label}</option>)}
+              {ISSUE_TYPES.map(t => <option key={t.id} value={t.id} style={{ background: '#1a1511' }}>{t.label}</option>)}
             </select>
             <p className="text-forest-200/50 text-xs">
               {type === 'rider'

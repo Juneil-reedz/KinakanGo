@@ -160,8 +160,8 @@ export default function RiderApplication() {
             <div>
               <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Vehicle Type <span className="text-red-400">*</span></label>
               <select name="vehicleType" value={formData.vehicleType} onChange={set} className={INPUT}>
-                <option value="" style={{ background:'#0d2b1a' }}>Select vehicle type</option>
-                {VEHICLE_TYPES.map(t => <option key={t} value={t} style={{ background:'#0d2b1a' }}>{t}</option>)}
+                <option value="" style={{ background:'#1a1511' }}>Select vehicle type</option>
+                {VEHICLE_TYPES.map(t => <option key={t} value={t} style={{ background:'#1a1511' }}>{t}</option>)}
               </select>
             </div>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -192,8 +192,8 @@ export default function RiderApplication() {
             <div>
               <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Valid ID — Type <span className="text-red-400">*</span></label>
               <select name="idType" value={formData.idType} onChange={set} className={`${INPUT} mb-3`}>
-                <option value="" style={{ background:'#0d2b1a' }}>Select ID type</option>
-                {ID_TYPES.map(t => <option key={t} value={t} style={{ background:'#0d2b1a' }}>{t}</option>)}
+                <option value="" style={{ background:'#1a1511' }}>Select ID type</option>
+                {ID_TYPES.map(t => <option key={t} value={t} style={{ background:'#1a1511' }}>{t}</option>)}
               </select>
               <FileUpload label="Valid ID Upload" file={formData.validId} onChange={e => setFile(e, 'validId')} inputId="valid-id-upload" />
             </div>

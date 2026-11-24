@@ -81,7 +81,7 @@ export default function CancelOrderDialog({ order, onClose, onCancelled }) {
         <div>
           <label className="block text-forest-200/60 text-xs font-medium mb-1">Why are you cancelling?</label>
           <select value={reason} onChange={e => setReason(e.target.value)} className="w-full input-glass px-3 py-2.5 text-sm rounded-xl">
-            {REASONS.map(r => <option key={r} value={r} style={{ background: '#0d2b1a' }}>{r}</option>)}
+            {REASONS.map(r => <option key={r} value={r} style={{ background: '#1a1511' }}>{r}</option>)}
           </select>
           {reason === 'Other' && (
             <input value={other} onChange={e => setOther(e.target.value)} maxLength={200} placeholder="Tell us more (optional)"

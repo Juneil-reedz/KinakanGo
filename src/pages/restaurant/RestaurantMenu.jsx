@@ -377,7 +377,7 @@ export default function RestaurantMenu() {
                 <label className="block text-forest-200/60 text-xs font-medium mb-1">Category</label>
                 <select value={form.category} onChange={e => f('category', e.target.value)}
                   className="w-full input-glass py-2.5 text-sm">
-                  {allCategories.map(c => <option key={c.id} value={c.id} style={{ background:'#0d1a10' }}>{c.name}</option>)}
+                  {allCategories.map(c => <option key={c.id} value={c.id} style={{ background:'#14100d' }}>{c.name}</option>)}
                 </select>
               </div>
               <div>

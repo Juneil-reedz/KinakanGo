@@ -30,7 +30,7 @@ export function DialogProvider({ children }) {
     <DialogContext.Provider value={ask}>
       {children}
       {dlg && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(16,40,32,.45)', backdropFilter: 'blur(4px)' }}
+        <div className="fixed inset-0 z-[100] flex items-center justify-center p-4" style={{ background: 'rgba(8,6,5,.6)', backdropFilter: 'blur(4px)' }}
           onClick={(e) => { if (e.target === e.currentTarget) close(dlg.input ? null : false); }}>
           <div role="dialog" aria-modal="true" aria-labelledby="app-dialog-title"
             className="clay-modal w-full max-w-sm p-6 space-y-3">

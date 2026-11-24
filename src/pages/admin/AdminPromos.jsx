@@ -107,8 +107,8 @@ export default function AdminPromos() {
         <div>
           <label className="block text-forest-200/60 text-xs font-medium mb-1">Discount Type *</label>
           <select value={form.type} onChange={e => f("type", e.target.value)} className="w-full input-glass py-2.5 text-sm" required>
-            <option value="percentage" style={{ background:"#0d2b1a" }}>Percentage (%)</option>
-            <option value="fixed"      style={{ background:"#0d2b1a" }}>Fixed Amount (₱)</option>
+            <option value="percentage" style={{ background:"#1a1511" }}>Percentage (%)</option>
+            <option value="fixed"      style={{ background:"#1a1511" }}>Fixed Amount (₱)</option>
           </select>
         </div>
         <div>
@@ -149,9 +149,9 @@ export default function AdminPromos() {
       <div>
         <label className="block text-forest-200/60 text-xs font-medium mb-1">Target Users *</label>
         <select value={form.targetUsers} onChange={e => f("targetUsers", e.target.value)} className="w-full input-glass py-2.5 text-sm" required>
-          <option value="all"       style={{ background:"#0d2b1a" }}>All Users</option>
-          <option value="new"       style={{ background:"#0d2b1a" }}>New Users Only</option>
-          <option value="returning" style={{ background:"#0d2b1a" }}>Returning Users Only</option>
+          <option value="all"       style={{ background:"#1a1511" }}>All Users</option>
+          <option value="new"       style={{ background:"#1a1511" }}>New Users Only</option>
+          <option value="returning" style={{ background:"#1a1511" }}>Returning Users Only</option>
         </select>
       </div>
       <div>

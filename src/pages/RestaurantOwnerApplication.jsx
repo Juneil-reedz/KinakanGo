@@ -152,8 +152,8 @@ export default function RestaurantOwnerApplication() {
             <div>
               <label className="block text-forest-200/60 text-xs font-medium mb-1.5">Cuisine Type <span className="text-red-400">*</span></label>
               <select name="cuisine" value={formData.cuisine} onChange={set} className={INPUT}>
-                <option value="" style={{ background:'#0d2b1a' }}>Select cuisine type</option>
-                {CUISINE_TYPES.map(t => <option key={t} value={t} style={{ background:'#0d2b1a' }}>{t}</option>)}
+                <option value="" style={{ background:'#1a1511' }}>Select cuisine type</option>
+                {CUISINE_TYPES.map(t => <option key={t} value={t} style={{ background:'#1a1511' }}>{t}</option>)}
               </select>
             </div>
             <div>
@@ -214,8 +214,8 @@ export default function RestaurantOwnerApplication() {
             <div>
               <label className="block text-forest-200/60 text-xs font-medium mb-1.5">ID Type <span className="text-red-400">*</span></label>
               <select name="ownerIdType" value={formData.ownerIdType} onChange={set} className={INPUT}>
-                <option value="" style={{ background:'#0d2b1a' }}>Select ID type</option>
-                {ID_TYPES.map(t => <option key={t} value={t} style={{ background:'#0d2b1a' }}>{t}</option>)}
+                <option value="" style={{ background:'#1a1511' }}>Select ID type</option>
+                {ID_TYPES.map(t => <option key={t} value={t} style={{ background:'#1a1511' }}>{t}</option>)}
               </select>
             </div>
             <FileUpload
