@@ -223,8 +223,33 @@ CREATE TABLE rider_profiles (
   location_updated_at TIMESTAMPTZ   DEFAULT NULL,
   bank_name        VARCHAR(80)   DEFAULT NULL,
   account_number   VARCHAR(40)   DEFAULT NULL,
-  account_name     VARCHAR(120)  DEFAULT NULL
+  account_name     VARCHAR(120)  DEFAULT NULL,
+  gcash_number     VARCHAR(30)   DEFAULT NULL,  -- where restaurants send delivery fees
+  gcash_name       VARCHAR(120)  DEFAULT NULL
 );
+
+-- Rider pay between a restaurant and a rider (see server/src/utils/riderPay.js).
+-- kind 'delivery': added when an order is delivered, amount = fee - cash collected.
+-- kind 'payment': money sent outside the app; counts once confirmed.
+-- Positive balance = the restaurant owes the rider.
+CREATE TABLE rider_settlements (
+  id              SERIAL PRIMARY KEY,
+  restaurant_id   INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+  rider_id        INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+  order_id        INT UNIQUE DEFAULT NULL REFERENCES orders(id) ON DELETE SET NULL,
+  kind            VARCHAR(10) NOT NULL,     -- delivery, payment
+  amount          DECIMAL(10,2) NOT NULL,
+  delivery_fee    DECIMAL(10,2) DEFAULT NULL,
+  cash_collected  DECIMAL(10,2) DEFAULT NULL,
+  status          VARCHAR(10) NOT NULL DEFAULT 'done',  -- payments: sent, confirmed, disputed, cancelled
+  reference       VARCHAR(120) DEFAULT NULL,
+  note            TEXT DEFAULT NULL,
+  disputed_reason TEXT DEFAULT NULL,
+  created_by      INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+  created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  confirmed_at    TIMESTAMPTZ DEFAULT NULL
+);
+CREATE INDEX idx_rider_settlements_pair ON rider_settlements (restaurant_id, rider_id);
 
 -- ─── APPLICATIONS ────────────────────────────────────────────────────────────
 

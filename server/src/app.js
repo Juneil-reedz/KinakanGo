@@ -161,6 +161,30 @@ pool.query(`
 `)).then(() => pool.query(`
   ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS is_archived BOOLEAN NOT NULL DEFAULT false
 `)).then(() => pool.query(`
+  ALTER TABLE rider_profiles
+    ADD COLUMN IF NOT EXISTS gcash_number VARCHAR(30)  DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS gcash_name   VARCHAR(120) DEFAULT NULL
+`)).then(() => pool.query(`
+  CREATE TABLE IF NOT EXISTS rider_settlements (
+    id              SERIAL PRIMARY KEY,
+    restaurant_id   INT NOT NULL REFERENCES restaurants(id) ON DELETE CASCADE,
+    rider_id        INT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    order_id        INT UNIQUE DEFAULT NULL REFERENCES orders(id) ON DELETE SET NULL,
+    kind            VARCHAR(10) NOT NULL,
+    amount          DECIMAL(10,2) NOT NULL,
+    delivery_fee    DECIMAL(10,2) DEFAULT NULL,
+    cash_collected  DECIMAL(10,2) DEFAULT NULL,
+    status          VARCHAR(10) NOT NULL DEFAULT 'done',
+    reference       VARCHAR(120) DEFAULT NULL,
+    note            TEXT DEFAULT NULL,
+    disputed_reason TEXT DEFAULT NULL,
+    created_by      INT DEFAULT NULL REFERENCES users(id) ON DELETE SET NULL,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+    confirmed_at    TIMESTAMPTZ DEFAULT NULL
+  )
+`)).then(() => pool.query(`
+  CREATE INDEX IF NOT EXISTS idx_rider_settlements_pair ON rider_settlements (restaurant_id, rider_id)
+`)).then(() => pool.query(`
   ALTER TABLE issues
     ADD COLUMN IF NOT EXISTS refund_method VARCHAR(10) DEFAULT NULL,
     ADD COLUMN IF NOT EXISTS payment_check BOOLEAN NOT NULL DEFAULT false,
@@ -240,6 +264,7 @@ const messageRoutes = require('./routes/messages');
 const imageRoutes   = require('./routes/images');
 const addressRoutes = require('./routes/addresses');
 const notificationRoutes = require('./routes/notifications');
+const riderPayRoutes = require('./routes/riderPay');
 
 const app = express();
 
@@ -273,6 +298,7 @@ app.use('/api/messages',     messageRoutes);
 app.use('/api/images',       imageRoutes);
 app.use('/api/addresses',    addressRoutes);
 app.use('/api/notifications', notificationRoutes);
+app.use('/api/rider-pay',    riderPayRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {

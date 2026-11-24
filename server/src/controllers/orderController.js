@@ -7,6 +7,7 @@ const { sendEmail } = require('../utils/email');
 const { notify } = require('../utils/notify');
 const storeCredit = require('../utils/storeCredit');
 const { refundCancelledOrder } = require('../utils/cancelRefund');
+const { recordDelivery } = require('../utils/riderPay');
 
 // Who may set which order status (admins may set any)
 const RESTAURANT_STATUSES = ['accepted', 'preparing', 'ready', 'cancelled'];
@@ -614,8 +615,10 @@ async function updateStatus(req, res) {
     return res.json({ message: 'Status updated', riderId: riderId || null });
   }
 
-  // When delivered, free the rider back to available
+  // When delivered, free the rider back to available and record what the
+  // restaurant and rider now owe each other (delivery fee vs cash collected)
   if (status === 'delivered') {
+    await recordDelivery(req.params.id).catch(err => console.warn('rider pay record failed:', err.message));
     if (before.rider_id) {
       await pool.query(
         `INSERT INTO rider_profiles (user_id, is_available, total_deliveries, today_deliveries, total_earnings, today_earnings)
