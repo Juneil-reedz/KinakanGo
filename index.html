@@ -10,9 +10,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Kinakan Go - Food Delivery</title>
     <script>
-      // Light clay is the default; apply a saved dark choice before first paint
+      // White clay cards in both modes; dark mode ("dim") only deepens the page and bars
       (function () { var dark = false; try { dark = localStorage.getItem('kkg_mode') === 'dark'; } catch (e) {}
-        if (!dark) document.documentElement.classList.add('light'); })();
+        document.documentElement.classList.add('light'); if (dark) document.documentElement.classList.add('dim'); })();
     </script>
     <script>
       // Restore path after SPA redirect from 404.html
