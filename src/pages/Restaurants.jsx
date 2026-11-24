@@ -115,7 +115,7 @@ export default function Restaurants() {
   // flies from the card into place (a shared-element view transition)
   const openFood = (item) => {
     const morph = !!document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-    const go = () => navigate(`/food/${item.id}`, { state: { foodItem: item, morph } });
+    const go = () => navigate(`/food/${item.id}`, { state: { foodItem: item, morph, options: foodItems } });
     if (morph) document.startViewTransition(() => flushSync(go));
     else go();
   };
