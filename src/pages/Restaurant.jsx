@@ -95,36 +95,35 @@ export default function Restaurant() {
         <ArrowLeft className="w-4 h-4" /> Restaurants
       </button>
 
-      {/* Restaurant hero */}
-      <div className="glass card-3d rounded-3xl overflow-hidden">
-        <div className="relative h-40">
-          {restaurant.image_url
-            ? <img src={restaurant.image_url} alt={restaurant.name} className="w-full h-full object-cover" />
-            : <div className="w-full h-full glass-dark flex items-center justify-center"><UtensilsCrossed className="w-12 h-12 text-forest-300/30" /></div>
-          }
-          <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-black/20 to-transparent" />
-          {!restaurant.is_open && (
-            <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-              <span className="glass text-white px-4 py-1.5 rounded-full font-semibold">Currently Closed</span>
-            </div>
-          )}
-          <div className="absolute bottom-4 left-5 right-5">
-            <h1 className="text-2xl font-heading font-bold text-white text-glow-green mb-1">{restaurant.name}</h1>
-            {restaurant.description && <p className="text-forest-200/80 text-xs line-clamp-1">{restaurant.description}</p>}
-          </div>
-        </div>
-        <div className="px-5 py-3 flex items-center gap-4 flex-wrap">
-          <span className="flex items-center gap-1.5 text-ember-300 text-sm font-semibold">
-            <Star className="w-4 h-4 fill-current" />{Number(restaurant.rating ?? 0).toFixed(1)}
-            <span className="text-forest-200/50 font-normal text-xs">({restaurant.review_count ?? 0} reviews)</span>
+      {/* Restaurant hero: a food-card style panel with the round photo
+          hanging off its bottom edge, then the name and description below */}
+      <div className="store-hero food-card relative mx-auto max-w-xl px-5 pt-4 pb-[5.5rem]">
+        <div className="flex items-center justify-center gap-2 flex-wrap text-xs">
+          <span className="flex items-center gap-1 text-ember-400 font-semibold">
+            <Star className="w-3.5 h-3.5 fill-current" />{Number(restaurant.rating ?? 0).toFixed(1)}
+            <span className="text-forest-200/50 font-normal">({restaurant.review_count ?? 0})</span>
           </span>
-          <span className="flex items-center gap-1.5 text-forest-200/70 text-sm">
+          <span className="text-white/20">•</span>
+          <span className="flex items-center gap-1 text-forest-200/70">
             <Truck className="w-3.5 h-3.5" />₱{restaurant.delivery_fee} delivery
           </span>
-          {restaurant.cuisine && (
-            <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full capitalize">{restaurant.cuisine}</span>
+          {restaurant.cuisine && (<>
+            <span className="text-white/20">•</span>
+            <span className="text-forest-200/70 capitalize">{restaurant.cuisine}</span>
+          </>)}
+        </div>
+        <div className="store-hero-photo">
+          {restaurant.image_url
+            ? <img src={restaurant.image_url} alt={restaurant.name} />
+            : <span className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-12 h-12 text-forest-300/40" /></span>}
+          {!restaurant.is_open && (
+            <span className="absolute inset-0 bg-black/55 flex items-center justify-center text-white text-xs font-bold">Closed</span>
           )}
         </div>
+      </div>
+      <div className="text-center px-4 pt-[5.25rem]">
+        <h1 className="text-2xl font-heading font-bold text-white">{restaurant.name}</h1>
+        {restaurant.description && <p className="text-forest-200/70 text-sm mt-1 max-w-md mx-auto">{restaurant.description}</p>}
       </div>
 
       {/* Category pills */}
