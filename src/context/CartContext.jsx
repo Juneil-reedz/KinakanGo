@@ -1,6 +1,5 @@
 import { createContext, useContext, useState, useEffect, useRef } from 'react';
 import { safeLocalSet } from '../services/api';
-import { useDialog } from './DialogContext';
 
 const CartContext = createContext();
 
@@ -12,13 +11,30 @@ export const useCart = () => {
   return context;
 };
 
+// The cart can hold food from several restaurants at once. Each restaurant is
+// checked out as its own order, so one of them is "active": cartItems, the
+// totals and checkout all work on that restaurant's food. allItems is everything.
+const sameRest = (a, b) => String(a) === String(b);
+
+// Read the saved cart once, before the first render, so the first save can never
+// write an empty cart over it. Older carts had no restaurantId on each item.
+function loadSaved() {
+  let items = [];
+  let rid = null;
+  try { items = JSON.parse(localStorage.getItem('cart') || '[]'); } catch { items = []; }
+  try { rid = JSON.parse(localStorage.getItem('cartRestaurantId') || 'null'); } catch { rid = null; }
+  if (!Array.isArray(items)) items = [];
+  items = items.map(i => (i.restaurantId == null && rid != null ? { ...i, restaurantId: rid } : i));
+  if (!items.some(i => sameRest(i.restaurantId, rid))) rid = items.length ? items[0].restaurantId ?? null : null;
+  return { items, rid };
+}
+
 export const CartProvider = ({ children }) => {
-  const ask = useDialog();
-  const [cartItems, setCartItems] = useState([]);
-  const [restaurantId, setRestaurantIdState] = useState(null);
-  // Kept in a ref too, so clearCart() followed by addToCart() in the same tap
-  // (reorder) sees the cleared cart instead of asking to start a new one
-  const restaurantRef = useRef(null);
+  const [saved] = useState(loadSaved);
+  const [allItems, setAllItems] = useState(saved.items);
+  const [restaurantId, setRestaurantIdState] = useState(saved.rid);
+  // Kept in a ref too, so a reorder (clear, then add) in one tap sees the cleared state
+  const restaurantRef = useRef(saved.rid);
   const setRestaurantId = (v) => { restaurantRef.current = v; setRestaurantIdState(v); };
   // Promo code the customer entered in the cart; checked again at checkout
   const [promoCode, setPromoCodeState] = useState(() => {
@@ -30,69 +46,45 @@ export const CartProvider = ({ children }) => {
     try { c ? safeLocalSet('cartPromo', c) : localStorage.removeItem('cartPromo'); } catch { /* storage unavailable */ }
   };
 
-  // Load cart from localStorage on mount
   useEffect(() => {
-    const savedCart = localStorage.getItem('cart');
-    const savedRestaurantId = localStorage.getItem('cartRestaurantId');
-    if (savedCart) {
-      setCartItems(JSON.parse(savedCart));
-    }
-    if (savedRestaurantId) {
-      setRestaurantId(JSON.parse(savedRestaurantId));
-    }
-  }, []);
+    safeLocalSet('cart', JSON.stringify(allItems));
+    if (restaurantId != null) safeLocalSet('cartRestaurantId', JSON.stringify(restaurantId));
+    else { try { localStorage.removeItem('cartRestaurantId'); } catch { /* storage unavailable */ } }
+  }, [allItems, restaurantId]);
 
-  // Save cart to localStorage whenever it changes
-  useEffect(() => {
-    safeLocalSet('cart', JSON.stringify(cartItems));
-    if (restaurantId) {
-      safeLocalSet('cartRestaurantId', JSON.stringify(restaurantId));
+  // After items leave the cart, keep the active restaurant valid
+  const settle = (next) => {
+    if (!next.some(i => sameRest(i.restaurantId, restaurantRef.current))) {
+      if (restaurantRef.current != null) setPromoCode('');
+      setRestaurantId(next.length ? next[0].restaurantId : null);
     }
-  }, [cartItems, restaurantId]);
+    return next;
+  };
+
+  const cartItems = restaurantId == null ? [] : allItems.filter(i => sameRest(i.restaurantId, restaurantId));
+
+  // Pick which restaurant's food the totals and checkout use
+  const selectRestaurant = (id) => {
+    if (sameRest(id, restaurantRef.current)) return;
+    setPromoCode('');
+    setRestaurantId(id);
+  };
 
   const addToCart = (item, restaurant) => {
-    // If cart has items from a different restaurant, ask user to clear cart
-    // Cart holds one restaurant at a time: ask (in-app) before starting over.
-    // Returns false now; the item is added once the customer agrees.
-    if (restaurantRef.current && restaurantRef.current !== restaurant.id) {
-      ask({
-        title: 'Start a new cart?',
-        message: `Your cart has food from ${cartItems[0]?.restaurant}. Clear it and add this from ${restaurant.name}?`,
-        confirmLabel: 'Clear and add',
-      }).then(ok => {
-        if (!ok) return;
-        clearCart();
-        setRestaurantId(restaurant.id);
-        setCartItems([{ ...item, restaurant: restaurant.name, restaurantId: restaurant.id }]);
-      });
-      return false;
-    }
-
+    if (!sameRest(restaurant.id, restaurantRef.current)) setPromoCode('');
     setRestaurantId(restaurant.id);
-
-    setCartItems((prevItems) => {
-      const existingItem = prevItems.find((i) => i.id === item.id);
-      if (existingItem) {
-        return prevItems.map((i) =>
-          i.id === item.id ? { ...i, quantity: i.quantity + item.quantity } : i
-        );
+    setAllItems((prev) => {
+      const existing = prev.find((i) => i.id === item.id && sameRest(i.restaurantId, restaurant.id));
+      if (existing) {
+        return prev.map((i) => (i === existing ? { ...i, quantity: i.quantity + item.quantity } : i));
       }
-      return [...prevItems, { ...item, restaurant: restaurant.name, restaurantId: restaurant.id }];
+      return [...prev, { ...item, restaurant: restaurant.name, restaurantId: restaurant.id }];
     });
-
     return true;
   };
 
   const removeFromCart = (itemId) => {
-    setCartItems((prevItems) => {
-      const newItems = prevItems.filter((i) => i.id !== itemId);
-      if (newItems.length === 0) {
-        setRestaurantId(null);
-        setPromoCode('');
-        localStorage.removeItem('cartRestaurantId');
-      }
-      return newItems;
-    });
+    setAllItems((prev) => settle(prev.filter((i) => i.id !== itemId)));
   };
 
   const updateQuantity = (itemId, quantity) => {
@@ -100,54 +92,47 @@ export const CartProvider = ({ children }) => {
       removeFromCart(itemId);
       return;
     }
-    setCartItems((prevItems) =>
-      prevItems.map((i) => (i.id === itemId ? { ...i, quantity } : i))
-    );
+    setAllItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, quantity } : i)));
   };
 
-  const clearCart = () => {
-    setCartItems([]);
+  // Clears one restaurant's food (the active one by default), e.g. after its order is placed
+  const clearCart = (id = restaurantRef.current) => {
     setPromoCode('');
-    setRestaurantId(null);
-    localStorage.removeItem('cart');
-    localStorage.removeItem('cartRestaurantId');
+    const next = id == null ? [] : allItems.filter(i => !sameRest(i.restaurantId, id));
+    setRestaurantId(next.length ? next[0].restaurantId : null);
+    setAllItems(prev => (id == null ? [] : prev.filter(i => !sameRest(i.restaurantId, id))));
   };
 
-  const getCartTotal = () => {
-    return cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
-  };
+  const getCartTotal = () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
 
-  // Bring the cart in line with the restaurant's current menu: new prices, and
-  // foods that were removed or marked sold out. Returns what changed, for a message.
+  // Bring the active restaurant's food in line with its current menu: new prices,
+  // and foods that were removed or marked sold out. Returns what changed, for a message.
   const syncWithMenu = (menuRows) => {
     const byId = new Map(menuRows.map(m => [String(m.id), m]));
     const changes = [];
-    const next = [];
+    const fixed = new Map();
     for (const item of cartItems) {
       const m = byId.get(String(item.id));
-      if (!m || m.is_available === false) { changes.push(`${item.name} is no longer available and was removed`); continue; }
+      if (!m || m.is_available === false) { changes.push(`${item.name} is no longer available and was removed`); fixed.set(item, null); continue; }
       const price = Number(m.price);
       if (Number.isFinite(price) && Math.abs(price - Number(item.price)) > 0.005) {
         changes.push(`${item.name} is now ₱${price.toFixed(2)}`);
-        next.push({ ...item, price });
-      } else {
-        next.push(item);
+        fixed.set(item, { ...item, price });
       }
     }
     if (changes.length) {
-      setCartItems(next);
-      if (!next.length) { setRestaurantId(null); setPromoCode(''); localStorage.removeItem('cartRestaurantId'); }
+      setAllItems(prev => settle(prev.flatMap(i => (fixed.has(i) ? (fixed.get(i) ? [fixed.get(i)] : []) : [i]))));
     }
     return changes;
   };
 
-  const getCartCount = () => {
-    return cartItems.reduce((sum, item) => sum + item.quantity, 0);
-  };
+  const getCartCount = () => allItems.reduce((sum, item) => sum + item.quantity, 0);
 
   const value = {
     cartItems,
+    allItems,
     restaurantId,
+    selectRestaurant,
     addToCart,
     removeFromCart,
     updateQuantity,
