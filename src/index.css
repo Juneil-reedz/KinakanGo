@@ -837,12 +837,32 @@
 @keyframes fd-fade-in  { from { opacity: 0; } to { opacity: 1; } }
 @keyframes fd-rise-in  { from { opacity: 0; transform: translateY(1.5rem); } to { opacity: 1; transform: none; } }
 
+/* Showcase "+" and the details view, where the food sits large on the right */
+.fd-plus {
+  background: rgb(255 255 255 / .08); box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), 0 0 0 1px rgb(255 255 255 / .12);
+  transition: transform .2s, background .2s;
+}
+.fd-plus:active { transform: scale(.9); }
+.fd-pop { align-self: center; animation: fd-pop .35s cubic-bezier(.34,1.56,.64,1) both; }
+@keyframes fd-pop { from { scale: .6; opacity: 0; } to { scale: 1; opacity: 1; } }
+.fd-info { min-height: min(100vw, 30rem); }
+.fd-hero {
+  position: absolute; z-index: 0; top: .5rem; right: -22vw; padding: 0;
+  width: min(92vw, 30rem); height: min(92vw, 30rem); border-radius: 9999px; overflow: hidden;
+  box-shadow: 0 0 0 10px rgb(255 255 255 / .04), 0 30px 60px -20px rgb(0 0 0 / .9);
+  animation: fd-to-right .9s cubic-bezier(.22,1,.36,1) both;
+}
+.fd-hero img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+/* From the middle of the screen (where the showcase plate was) out to the right */
+@keyframes fd-to-right { from { transform: translateX(-30vw) scale(.76); } to { transform: none; } }
+@media (min-width: 48rem) { .fd-hero { right: -4rem; } @keyframes fd-to-right { from { transform: translateX(-12rem) scale(.76); } to { transform: none; } } }
+
 /* Arriving by a view transition: the browser flies the photo in */
 .fd-plate.fd-plate-morph { animation: none; }
 /* Shared photo flight between the list and the food page */
 ::view-transition-group(*) { animation-duration: .55s; animation-timing-function: cubic-bezier(.22,1,.36,1); }
 @media (prefers-reduced-motion: reduce) {
-  .fd-plate, .fd-plate img, .fd-slide, .fd-fade, .fd-rise { animation: none; }
+  .fd-plate, .fd-plate img, .fd-slide, .fd-fade, .fd-rise, .fd-hero, .fd-pop { animation: none; }
 }
 
 /* Every page change: a slow, smooth fade and rise. "backwards" fill leaves no

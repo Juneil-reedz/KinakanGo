@@ -15,6 +15,10 @@ export default function FoodDetail() {
   const { isFavorite, toggleFavorite } = useFavorites();
 
   const [quantity, setQuantity]         = useState(1);
+  // 'show': the foods in a row with just "+", name and price.
+  // 'info': tap the food and it moves to the right, details come in on the left.
+  const [mode, setMode]     = useState('show');
+  const [picked, setPicked] = useState(false); // "+" tapped: quantity and cart bar appear
 
   // Normally passed from the list we came from; when opened directly (refresh,
   // shared link) load it from the API instead of showing placeholder data.
@@ -47,6 +51,9 @@ export default function FoodDetail() {
   const moved     = useRef(false);
   const lastMove  = useRef({ x: 0, t: 0, v: 0 });
   const frame     = useRef(0);
+  const cameBack  = useRef(false);
+  const downOn    = useRef(null);
+  useEffect(() => { if (mode === 'info') cameBack.current = true; }, [mode]);
 
   if (status !== 'ready') {
     return (
@@ -84,13 +91,17 @@ export default function FoodDetail() {
     if (n === index) return;
     setCurrent(options[n]);
     setQuantity(1);
+    setPicked(false);
   };
   const slotWidth = () => (stageRef.current?.offsetWidth || 360) * 0.62;
 
   // The row moves slower than the finger (a heavy, smooth drag) and eases into place
   const DRAG = 0.6;
   const onPointerDown = (e) => {
-    if (!many) return;
+    // Remember which food the finger landed on, for a tap (pointer capture
+    // below sends the click to the stage, not the food)
+    downOn.current = e.target.closest?.('[data-i]')?.dataset.i ?? null;
+    if (!many) { dragStart.current = null; return; }
     dragStart.current = e.clientX;
     lastMove.current = { x: e.clientX, t: performance.now(), v: 0 };
     setDragging(true);
@@ -108,8 +119,14 @@ export default function FoodDetail() {
     cancelAnimationFrame(frame.current);
     frame.current = requestAnimationFrame(() => setDragX(dx));
   };
+  const tapped = () => {
+    const i = downOn.current == null ? null : Number(downOn.current);
+    downOn.current = null;
+    if (i == null) return;
+    if (i === index) setMode('info'); else goTo(i);
+  };
   const onPointerUp = (e) => {
-    if (dragStart.current == null) return;
+    if (dragStart.current == null) { if (e.type === 'pointerup') tapped(); return; }
     cancelAnimationFrame(frame.current);
     const dx = (e.clientX - dragStart.current) * DRAG;
     const v = performance.now() - lastMove.current.t < 120 ? lastMove.current.v : 0;
@@ -122,6 +139,8 @@ export default function FoodDetail() {
     if (!steps && Math.abs(dx) > slot * 0.22) steps = dx < 0 ? 1 : -1;   // a short drag still moves one
     if (!steps && Math.abs(v) > 0.45) steps = v < 0 ? 1 : -1;            // a quick flick moves one
     if (steps) goTo(index + steps);
+    else if (!moved.current && e.type === 'pointerup') tapped();
+    else downOn.current = null;
   };
 
   const total = foodItem.price * quantity;
@@ -153,11 +172,13 @@ export default function FoodDetail() {
     <div className="food-detail min-h-screen relative overflow-hidden flex flex-col">
       {/* Header */}
       <header className="relative z-20 flex items-center gap-3 px-4 pt-[max(1rem,env(safe-area-inset-top))] pb-2 max-w-5xl w-full mx-auto">
-        <button onClick={() => goBack('/restaurants')} aria-label="Back"
+        <button onClick={() => (mode === 'info' ? setMode('show') : goBack('/restaurants'))} aria-label="Back"
           className="w-10 h-10 rounded-full flex items-center justify-center text-white flex-shrink-0">
           <ArrowLeft className="w-6 h-6" />
         </button>
-        <h1 className="flex-1 text-center text-white font-heading font-bold text-lg truncate fd-fade" style={{ animationDelay: '120ms' }}>{foodItem.name}</h1>
+        <h1 key={mode} className="flex-1 text-center text-white font-heading font-bold text-lg truncate fd-fade" style={{ animationDelay: '120ms' }}>
+          {mode === 'info' ? foodItem.name : (restaurantName || foodItem.category_name || 'Menu')}
+        </h1>
         <button onClick={() => toggleFavorite(foodItem)} aria-label="Favorite"
           className="w-10 h-10 rounded-full flex items-center justify-center flex-shrink-0">
           <Heart className={`w-5 h-5 ${isFavorite(foodItem.id) ? 'fill-ember-400 text-ember-400' : 'text-white/70'}`} />
@@ -165,7 +186,8 @@ export default function FoodDetail() {
       </header>
 
       <div className="relative flex-1 w-full max-w-5xl mx-auto">
-        {/* The foods side by side: swipe to slide the next one into the middle */}
+      {mode === 'show' ? (<>
+        {/* The foods side by side: swipe to slide the next one into the middle; tap it for details */}
         <div ref={stageRef} className={`fd-stage ${dragging ? 'is-dragging' : ''}`}
           onPointerDown={onPointerDown} onPointerMove={onPointerMove}
           onPointerUp={onPointerUp} onPointerCancel={onPointerUp}>
@@ -177,10 +199,11 @@ export default function FoodDetail() {
             const t = Math.min(1, Math.abs(offset) / slot);
             const scale = 1 - t * 0.48;
             return (
-              <button key={o.id} type="button" tabIndex={rel === 0 ? -1 : 0}
-                onClick={() => { if (rel !== 0 && !moved.current) goTo(i); moved.current = false; }}
-                aria-label={rel === 0 ? o.name : `Show ${o.name}`}
-                className={`fd-plate ${rel === 0 && location.state?.morph && !current ? 'fd-plate-morph' : ''} ${rel === 0 ? 'is-center' : ''}`}
+              <button key={o.id} type="button" tabIndex={0}
+                data-i={i}
+                onClick={(e) => { if (e.detail === 0) { if (rel !== 0) goTo(i); else setMode('info'); } }}
+                aria-label={rel === 0 ? `See details of ${o.name}` : `Show ${o.name}`}
+                className={`fd-plate ${rel === 0 && location.state?.morph && !current && !cameBack.current ? 'fd-plate-morph' : ''} ${rel === 0 ? 'is-center' : ''}`}
                 style={{
                   transform: `translateX(calc(-50% + ${offset}px)) scale(${scale})`,
                   opacity: 1 - t * 0.45,
@@ -193,53 +216,79 @@ export default function FoodDetail() {
           })}
         </div>
 
-        {many && (
-          <div className="flex items-center justify-center gap-3 mt-4 fd-fade" style={{ animationDelay: '500ms' }}>
-            <div className="flex items-center gap-1.5">
-              {options.slice(0, 8).map((o, i) => (
-                <span key={o.id} className={`h-1.5 rounded-full transition-all ${i === index ? 'w-5 bg-ember-500' : 'w-1.5 bg-white/25'}`} />
-              ))}
+        {/* Just "+", the name and the price; "+" opens the quantity and the cart bar */}
+        <div key={`s-${foodItem.id}`} className="relative z-10 flex flex-col items-center mt-3 fd-fade">
+          {picked ? (
+            <div className="fd-qty fd-pop">
+              <button onClick={() => (quantity > 1 ? setQuantity(q => q - 1) : setPicked(false))} aria-label="Decrease quantity"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="text-white font-bold text-base w-7 text-center tabular-nums">{String(quantity).padStart(2, '0')}</span>
+              <button onClick={() => setQuantity(q => q + 1)} aria-label="Increase quantity"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
+          ) : (
+            <button onClick={() => setPicked(true)} aria-label={`Choose ${foodItem.name}`}
+              className="fd-plus w-11 h-11 rounded-full flex items-center justify-center text-white">
+              <Plus className="w-5 h-5" />
+            </button>
+          )}
+          <p className="text-forest-200/60 text-sm mt-4">{foodItem.name}</p>
+          <p className="text-white font-heading font-extrabold text-4xl leading-tight mt-0.5">
+            <span className="text-ember-500 text-xl mr-0.5">₱</span>{foodItem.price.toFixed(2)}
+          </p>
+        </div>
+
+        {many && (
+          <div className="flex items-center justify-center gap-1.5 mt-5">
+            {options.slice(0, 8).map((o, i) => (
+              <span key={o.id} className={`h-1.5 rounded-full transition-all ${i === index ? 'w-5 bg-ember-500' : 'w-1.5 bg-white/25'}`} />
+            ))}
           </div>
         )}
-
-        {/* Facts, sliding in one by one (again after each swipe) */}
-        <div key={foodItem.id} className="relative z-10 px-5 mt-5 grid grid-cols-2 gap-3">
-          {facts.map(({ label, value, Icon, tint }, i) => (
-            <div key={label} className="fd-fact fd-slide" style={{ animationDelay: `${(current ? 0 : 200) + i * 70}ms` }}>
-              <div className="min-w-0">
-                <p className="text-forest-200/55 text-[11px] font-semibold uppercase tracking-wide">{label}</p>
-                <p className={`text-white text-sm font-semibold truncate ${label === 'Type' ? 'capitalize' : ''}`}>{value}</p>
+      </>) : (<>
+        {/* Details: the food glides to the right, the facts slide in on the left */}
+        <div className="fd-info relative">
+          <button type="button" onClick={() => setMode('show')} aria-label="Back to the menu" className="fd-hero">
+            <img src={foodItem.image_url || foodItem.image} alt="" draggable="false" />
+          </button>
+          <div className="relative z-10 px-5 pt-6 w-[52%] max-w-[17rem] flex flex-col gap-3">
+            {facts.map(({ label, value, Icon, tint }, i) => (
+              <div key={label} className="fd-fact fd-slide" style={{ animationDelay: `${250 + i * 80}ms` }}>
+                <div className="min-w-0">
+                  <p className="text-forest-200/55 text-[11px] font-semibold uppercase tracking-wide">{label}</p>
+                  <p className={`text-white text-sm font-semibold truncate ${label === 'Type' ? 'capitalize' : ''}`}>{value}</p>
+                </div>
+                <span className={`fd-fact-badge ${tint}`}><Icon className="w-4 h-4" /></span>
               </div>
-              <span className={`fd-fact-badge ${tint}`}><Icon className="w-4 h-4" /></span>
+            ))}
+            <div className="fd-qty fd-slide mt-2" style={{ animationDelay: '600ms' }}>
+              <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
+                <Minus className="w-4 h-4" />
+              </button>
+              <span className="text-white font-bold text-base w-7 text-center tabular-nums">{String(quantity).padStart(2, '0')}</span>
+              <button onClick={() => setQuantity(q => q + 1)} aria-label="Increase quantity"
+                className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
+                <Plus className="w-4 h-4" />
+              </button>
             </div>
-          ))}
-        </div>
-
-        {/* Quantity */}
-        <div className="relative z-10 px-5 mt-4 flex items-center justify-between fd-slide" style={{ animationDelay: '560ms' }}>
-          <p className="text-white font-semibold text-sm">Quantity</p>
-          <div className="fd-qty">
-            <button onClick={() => setQuantity(q => Math.max(1, q - 1))} aria-label="Decrease quantity"
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
-              <Minus className="w-4 h-4" />
-            </button>
-            <span className="text-white font-bold text-base w-7 text-center tabular-nums">{String(quantity).padStart(2, '0')}</span>
-            <button onClick={() => setQuantity(q => q + 1)} aria-label="Increase quantity"
-              className="w-9 h-9 rounded-full flex items-center justify-center text-white hover:bg-white/10">
-              <Plus className="w-4 h-4" />
-            </button>
           </div>
         </div>
-
         {foodItem.description && (
-          <p key={`d-${foodItem.id}`} className="relative z-10 px-5 mt-5 max-w-xl text-forest-200/65 text-sm leading-relaxed fd-slide" style={{ animationDelay: '660ms' }}>
+          <p className="relative z-10 px-5 mt-6 max-w-xl text-forest-200/65 text-sm leading-relaxed fd-slide" style={{ animationDelay: '700ms' }}>
             {foodItem.description}
           </p>
         )}
+      </>)}
       </div>
 
-      {/* Bottom bar: the total on the left, a round add-to-cart button on the right */}
+      {/* Bottom bar: the total on the left, a round add-to-cart button on the right.
+          Shows once "+" is tapped, and always on the details view. */}
+      {(mode === 'info' || picked) && (
       <div className="relative z-20 w-full max-w-5xl mx-auto flex items-center justify-between gap-4 px-5 pt-4 pb-[max(1.25rem,env(safe-area-inset-bottom))] fd-rise" style={{ animationDelay: '450ms' }}>
         <div>
           <p className="text-forest-200/55 text-xs font-semibold uppercase tracking-wide">Total</p>
@@ -253,6 +302,7 @@ export default function FoodDetail() {
           </span>
         </button>
       </div>
+      )}
     </div>
   );
 }
