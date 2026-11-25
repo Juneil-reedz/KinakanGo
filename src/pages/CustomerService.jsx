@@ -25,7 +25,7 @@ const CATEGORIES = [
 
 const FAQS = [
   { id:1,  category:'orders',   question:'How do I place an order?',                    answer:'Open Food Order, add food from one restaurant to your cart, then check out. Enter your delivery address, choose Cash on Delivery or GCash, and confirm with the 6-digit code we email you.' },
-  { id:2,  category:'orders',   question:'Can I cancel my order?',                      answer:'Yes, while the restaurant hasn\'t accepted it yet. Go to Profile → Order History, open the order and tap "Cancel order". Once the restaurant accepts it, the order can\'t be cancelled from the app; use "Report a problem" on the order instead.' },
+  { id:2,  category:'orders',   question:'Can I cancel my order?',                      answer:'Yes, while the restaurant hasn\'t accepted it yet. Go to Orders, open the order and tap "Cancel order". Once the restaurant accepts it, the order can\'t be cancelled from the app; use "Report a problem" on the order instead.' },
   { id:3,  category:'orders',   question:'How do I track my order?',                    answer:'Tap Orders (the clock icon) to see your active order\'s status and, once a rider picks it up, where the rider is.' },
   { id:4,  category:'orders',   question:'Can I order from more than one restaurant?',  answer:'One restaurant per order. To order from another restaurant, place a separate order.' },
   { id:5,  category:'payment',  question:'How can I pay?',                              answer:'Cash on Delivery (pay the rider) or GCash. For GCash, send the payment to the restaurant\'s GCash number shown at checkout and upload a screenshot of the payment.' },
@@ -35,7 +35,7 @@ const FAQS = [
   { id:9,  category:'account',  question:'I forgot my password. What should I do?',    answer:'Tap "Forgot password" on the login page and enter your email. We\'ll email you a 6-digit code to set a new password.' },
   { id:10, category:'account',  question:'How do I update my profile?',                 answer:'Go to Profile, edit your name, phone or photo, and save. Manage delivery addresses under Addresses.' },
   { id:11, category:'account',  question:'How do I become a rider or restaurant owner?', answer:'Open the Upgrade page from the menu and apply. An admin reviews your application and you\'ll get a notification when it\'s approved.' },
-  { id:12, category:'refunds',  question:'How do I report a problem or ask for a refund?', answer:'Go to Profile → Order History, open the order and tap "Report a problem". Choose what went wrong, describe it, and tick "Ask for a refund" if you want your money back. The restaurant reviews it and, if it approves a refund, sends the money back to you (GCash or cash) and tells you how. Tap "I got it" on the order page once it arrives. Delivery problems go to KinakanGo instead.' },
+  { id:12, category:'refunds',  question:'How do I report a problem or ask for a refund?', answer:'Go to Orders, open the order, tap "Receipt" and then "Report a problem". Choose what went wrong, describe it, and tick "Ask for a refund" if you want your money back. The restaurant reviews it and, if it approves a refund, sends the money back to you (GCash or cash) and tells you how. Tap "I got it" on the order page once it arrives. Delivery problems go to KinakanGo instead.' },
   { id:16, category:'refunds',  question:'What is store credit?', answer:'When you ask for a refund you can choose store credit instead of GCash or cash. Once the refund is approved, the amount is added to your credit at that restaurant right away. Your cart shows your credit, and at checkout you can use it to pay part or all of your next order there. If that order is cancelled, the credit comes back.' },
   { id:15, category:'refunds',  question:'What if the restaurant declines or doesn\'t answer?', answer:'Open the order and tap "Ask KinakanGo to review". You can do this if the restaurant declines your report, doesn\'t answer within a day, or the refund never arrives. KinakanGo then decides, and if a refund is approved the restaurant is told to send it.' },
   { id:13, category:'refunds',  question:'What if my food arrived wrong or damaged?',   answer:'Report it from the order page ("Report a problem") as soon as you can and explain what was wrong. The restaurant reviews it first, and you can ask KinakanGo to review if you disagree.' },
@@ -43,7 +43,7 @@ const FAQS = [
 ];
 
 const CONTACT = [
-  { Icon: Package,       title: 'Problem with an order', description: 'Report it or ask for a refund from the order page', to: '/profile', state: { tab: 'orders' }, action: 'Open Order History', color: 'btn-glow-orange' },
+  { Icon: Package,       title: 'Problem with an order', description: 'Report it or ask for a refund from the order page', to: '/orders', action: 'Open Orders', color: 'btn-glow-orange' },
   { Icon: MessageCircle, title: 'Message a restaurant',  description: 'Ask the restaurant directly about your food',     to: '/messages', action: 'Open Messages', color: 'btn-glow-green' },
   { Icon: Truck,         title: 'Where is my order?',    description: 'See your order status and rider location',        to: '/orders',   action: 'Track Order',   color: 'glass-orange' },
 ];
@@ -193,9 +193,9 @@ export default function CustomerService() {
       <div className="max-w-4xl mx-auto mt-10">
         <div className="glass-green rounded-2xl p-8 text-center">
           <h3 className="text-white font-heading font-bold text-2xl mb-2">Still need help?</h3>
-          <p className="text-forest-200/60 mb-6">Open the order in your Order History and tap "Report a problem". The restaurant reviews it and you'll get a notification with the answer. If you disagree, you can ask KinakanGo to review.</p>
+          <p className="text-forest-200/60 mb-6">Open the order in Orders, tap "Receipt" and then "Report a problem". The restaurant reviews it and you'll get a notification with the answer. If you disagree, you can ask KinakanGo to review.</p>
           <div className="flex flex-wrap gap-3 justify-center">
-            <Link to="/profile" state={{ tab: 'orders' }} className="btn-glow-orange text-white font-semibold px-6 py-3 rounded-xl text-sm">
+            <Link to="/orders" className="btn-glow-orange text-white font-semibold px-6 py-3 rounded-xl text-sm">
               Report a problem
             </Link>
             <Link to="/messages" className="glass text-forest-100/80 hover:text-white font-semibold px-6 py-3 rounded-xl text-sm transition-all hover:glass-green">
