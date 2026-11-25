@@ -355,6 +355,8 @@ app.use('/api/rider-pay',    riderPayRoutes);
 
 // Global error handler
 app.use((err, _req, res, _next) => {
+  // Errors thrown on purpose with a 4xx status carry a message meant for the user
+  if (err.status >= 400 && err.status < 500) return res.status(err.status).json({ error: err.message });
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
