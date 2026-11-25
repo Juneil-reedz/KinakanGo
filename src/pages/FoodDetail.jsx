@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { ArrowLeft, Heart, Star, Clock, Store, UtensilsCrossed, Plus, Minus, ShoppingCart } from 'lucide-react';
+import { ArrowLeft, Heart, Star, Clock, Store, UtensilsCrossed, Plus, Minus, ShoppingCart, ChevronRight } from 'lucide-react';
 import { menuApi, getAllMenuItems } from '../services/api';
 import useGoBack from '../hooks/useGoBack';
 
@@ -159,6 +159,8 @@ export default function FoodDetail() {
   const restaurantName = typeof foodItem.restaurant === 'string'
     ? foodItem.restaurant
     : (foodItem.restaurant?.name || foodItem.restaurant_name);
+  const restaurantId = (typeof foodItem.restaurant === 'object' && foodItem.restaurant?.id) || foodItem.restaurant_id;
+  const openStore = () => { if (restaurantId) navigate(`/restaurant/${restaurantId}`); };
 
 
   const facts = [
@@ -237,6 +239,11 @@ export default function FoodDetail() {
             </button>
           )}
           <p className="text-forest-200/60 text-sm mt-4">{foodItem.name}</p>
+          {restaurantName && restaurantId && (
+            <button onClick={openStore} className="fd-store-link mt-1.5" aria-label={`Open ${restaurantName}`}>
+              <Store className="w-3.5 h-3.5" /> {restaurantName} <ChevronRight className="w-3.5 h-3.5" />
+            </button>
+          )}
           <p className="text-white font-heading font-extrabold text-4xl leading-tight mt-0.5">
             <span className="text-ember-500 text-xl mr-0.5">₱</span>{foodItem.price.toFixed(2)}
           </p>
@@ -257,7 +264,8 @@ export default function FoodDetail() {
           </button>
           <div className="relative z-10 px-5 pt-6 w-[52%] max-w-[17rem] flex flex-col gap-3">
             {facts.map(({ label, value, Icon, tint }, i) => (
-              <div key={label} className="fd-fact fd-slide" style={{ animationDelay: `${250 + i * 80}ms` }}>
+              <div key={label} className={`fd-fact fd-slide ${label === 'From' && restaurantId ? 'cursor-pointer' : ''}`} style={{ animationDelay: `${250 + i * 80}ms` }}
+                {...(label === 'From' && restaurantId ? { role: 'link', tabIndex: 0, onClick: openStore, onKeyDown: e => { if (e.key === 'Enter') openStore(); }, 'aria-label': `Open ${restaurantName}` } : {})}>
                 <div className="min-w-0">
                   <p className="text-forest-200/55 text-[11px] font-semibold uppercase tracking-wide">{label}</p>
                   <p className={`text-white text-sm font-semibold truncate ${label === 'Type' ? 'capitalize' : ''}`}>{value}</p>
