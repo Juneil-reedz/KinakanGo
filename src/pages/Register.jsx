@@ -2,7 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { Eye, EyeOff, User, Mail, Phone, Lock, ChevronRight, Check } from 'lucide-react';
+import { Eye, EyeOff, User, Mail, Phone, Lock, Check } from 'lucide-react';
 import AuthShell from '../components/AuthShell';
 
 export default function Register() {
@@ -153,7 +153,7 @@ export default function Register() {
             ${loading ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
           {loading
             ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Creating account…</>
-            : <>Create Account <ChevronRight className="w-4 h-4" /></>}
+            : <>Create Account</>}
         </button>
       </form>
     </AuthShell>

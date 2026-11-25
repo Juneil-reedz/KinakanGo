@@ -3,8 +3,8 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { Utensils } from 'lucide-react';
 import useGoBack from '../hooks/useGoBack';
 
-// Shared frame for Sign in / Sign up: the KinakanGo wordmark, a two-tab switch
-// and a card. Swipe left on Sign in to get Sign up, swipe right to go back.
+// Shared frame for Sign in / Sign up: the KinakanGo wordmark, a card and a
+// link at the bottom to the other page. Swipe left on Sign in to get Sign up, swipe right to go back.
 const TABS = [
   { key: 'login',    label: 'Sign in', path: '/login' },
   { key: 'register', label: 'Sign up', path: '/register' },
@@ -46,24 +46,11 @@ export default function AuthShell({ active, title, subtitle, children }) {
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
-        <div className="text-center mb-7 page-rise">
+        <div className="text-center mb-14 page-rise">
           <h1 className="brand-wordmark text-white text-[2.6rem] leading-none select-none">
             Kinakan<span className="text-ember-500">Go</span>
           </h1>
           <p className="text-forest-200/70 text-sm mt-2 font-medium">Tap it. Get it.</p>
-        </div>
-
-        {/* Sign in / Sign up switch */}
-        <div role="tablist" aria-label="Account" className="auth-tabs relative grid grid-cols-2 p-1 rounded-full mb-12 page-rise"
-          style={{ animationDelay: '.05s' }}>
-          <span aria-hidden="true" className="auth-tab-pill absolute top-1 bottom-1 left-1 rounded-full btn-glow-orange"
-            style={{ width: 'calc(50% - .25rem)', transform: `translateX(${idx * 100}%)` }} />
-          {TABS.map(t => (
-            <button key={t.key} role="tab" aria-selected={t.key === active} onClick={() => go(t.key)}
-              className={`relative z-10 py-2.5 text-sm font-heading font-bold transition-colors ${t.key === active ? 'text-white' : 'text-forest-200/70'}`}>
-              {t.label}
-            </button>
-          ))}
         </div>
 
         {/* Card with the round plate hanging over its top edge */}
@@ -77,6 +64,13 @@ export default function AuthShell({ active, title, subtitle, children }) {
             <p className="text-forest-200/60 text-sm mt-1">{subtitle}</p>
           </div>
           {children}
+          <p className="text-center text-forest-200/60 text-sm mt-6">
+            {active === 'login' ? "Don't have an account? " : 'Already have an account? '}
+            <button type="button" onClick={() => go(active === 'login' ? 'register' : 'login')}
+              className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">
+              {active === 'login' ? 'Register' : 'Login'}
+            </button>
+          </p>
         </div>
 
         {/* Swipe hint */}
