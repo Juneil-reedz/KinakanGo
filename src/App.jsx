@@ -16,6 +16,7 @@ import CustomerLayout from './components/CustomerLayout';
 import RestaurantLayout from './components/RestaurantLayout';
 import RiderLayout from './components/RiderLayout';
 import AdminLayout from './components/AdminLayout';
+import Splash from './components/Splash';
 import Home from './pages/Home';
 import FoodDetail from './pages/FoodDetail';
 import Restaurants from './pages/Restaurants';
@@ -141,6 +142,7 @@ function App() {
             <RiderProvider>
               <AdminProvider>
                 <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
+                  <Splash />
                   <Routes>
                   {/* Welcome Route */}
                   <Route path="/welcome" element={<Welcome />} />

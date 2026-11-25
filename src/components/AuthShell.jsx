@@ -42,11 +42,11 @@ export default function AuthShell({ active, title, subtitle, children }) {
   };
 
   return (
-    <div className="min-h-screen relative overflow-hidden px-5 pt-10 pb-10 flex flex-col items-center"
+    <div className={`min-h-screen relative overflow-hidden px-5 pb-10 flex flex-col items-center ${active === 'register' ? 'pt-5' : 'pt-10'}`}
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
-        <div className="text-center mb-14 page-rise">
+        <div className={`text-center page-rise ${active === 'register' ? 'mb-12' : 'mb-14'}`}>
           <h1 className="brand-wordmark text-white text-[2.6rem] leading-none select-none">
             Kinakan<span className="text-ember-500">Go</span>
           </h1>
