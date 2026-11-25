@@ -261,9 +261,7 @@ export default function Home() {
 
       {/* ── Ad video (silent, loops) ─────────────────── */}
       <section aria-label="What KinakanGo offers">
-        <div className="glass rounded-3xl overflow-hidden p-1.5">
-          <AdVideo />
-        </div>
+        <AdVideo />
       </section>
 
       {/* ── Featured restaurants ─────────────────────── */}
