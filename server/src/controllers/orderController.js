@@ -483,6 +483,7 @@ async function getOrder(req, res) {
             r.address AS restaurant_address, r.phone AS restaurant_phone, r.owner_id AS restaurant_owner_id,
             u.name  AS customer_name, u.phone AS customer_phone,
             ru.name  AS rider_name,   ru.phone AS rider_phone,
+            CASE WHEN ru.id IS NULL THEN NULL ELSE ${imageUrlSql('ru', 'users', 'avatar_url')} END AS rider_avatar,
             rv.food_rating, rv.restaurant_rating, rv.rider_rating, rv.comment AS review_comment
      FROM orders o
      JOIN restaurants r ON o.restaurant_id = r.id
@@ -508,7 +509,7 @@ async function getOrder(req, res) {
     delete order.delivery_proof_image;
   }
   delete order.restaurant_owner_id;
-  resolveImageUrls(req, order, ['restaurant_image']);
+  resolveImageUrls(req, order, ['restaurant_image', 'rider_avatar']);
 
   const { rows: items } = await pool.query(
     `SELECT oi.*, ${imageUrlSql('mi', 'menu-items')} AS image_url, oir.rating AS my_rating
