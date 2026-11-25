@@ -1,9 +1,8 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { Minus, Plus, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight, Trash2, Store, Check } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, Truck, Tag, ChevronRight, Trash2, Store, Check } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
-import useGoBack from '../hooks/useGoBack';
 import useCartTotals from '../hooks/useCartTotals';
 
 const REVEAL = 92; // px the card slides to show the delete button
@@ -102,7 +101,6 @@ function SwipeItem({ item, index, open, setOpen, onQty, onRemove, picked, pickin
 
 export default function Cart() {
   const navigate = useNavigate();
-  const goBack = useGoBack();
   const { allItems, cartItems: marked, restaurantId, togglePick, pickAll, clearPicks, isPicked, updateQuantity, removeFromCart } = useCart();
   const picking = marked.length > 0;
   // One section per restaurant, in the order they were added. Each is its own order.
@@ -146,14 +144,9 @@ export default function Cart() {
     <div className="min-h-screen relative">
       <div className="orb w-72 h-72 bg-forest-600/15 top-0 right-0" />
 
-      {/* Header */}
-      <div className="glass-dark sticky top-0 z-10 px-4 py-3 flex items-center gap-3"
-        style={{ borderBottom:'1px solid rgba(var(--fg-rgb),.07)' }}>
-        <button onClick={() => goBack('/')}
-          className="w-9 h-9 glass rounded-xl flex items-center justify-center text-forest-100 hover:glass-green transition-all">
-          <ArrowLeft className="w-4 h-4" />
-        </button>
-        <h1 className="text-white font-heading font-bold text-lg flex-1">Your Cart</h1>
+      {/* Header: plain title, no bar or back arrow */}
+      <div className="max-w-2xl mx-auto px-4 pt-12 flex items-end justify-between gap-3">
+        <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">Your Cart</h1>
         <button onClick={() => navigate('/restaurants')}
           className="text-ember-400 text-xs font-medium hover:text-ember-300 transition-colors">
           + Add more
