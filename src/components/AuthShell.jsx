@@ -56,8 +56,8 @@ export default function AuthShell({ active, title, subtitle, children }) {
         {/* Card with the round plate hanging over its top edge */}
         <div key={active} className={`auth-card relative rounded-[2rem] px-6 pb-7 pt-14 ${dir === 'left' ? 'auth-in-left' : dir === 'right' ? 'auth-in-right' : 'page-rise'}`}
           style={!dir ? { animationDelay: '.1s' } : undefined}>
-          <div className="auth-plate absolute left-1/2 -top-10 -translate-x-1/2 w-20 h-20 rounded-full btn-glow-orange flex items-center justify-center">
-            <KinakanLogo className="w-12 h-12 text-white" />
+          <div className="auth-plate absolute left-1/2 -top-10 -translate-x-1/2 w-20 h-20 rounded-full flex items-center justify-center">
+            <KinakanLogo className="w-full h-full scale-[1.07]" />
           </div>
           <div className="text-center mb-6">
             <h2 className="text-2xl font-heading font-bold text-white">{title}</h2>
