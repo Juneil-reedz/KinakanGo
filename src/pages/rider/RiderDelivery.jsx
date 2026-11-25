@@ -333,10 +333,10 @@ export default function RiderDelivery() {
             scrollWheelZoom
             zoomControl>
             <TileLayer
-              url="https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png"
+              url="https://tile.openstreetmap.org/{z}/{x}/{y}.png"
               maxZoom={20}
-              maxNativeZoom={20}
-              attribution='&copy; <a href="https://carto.com/">CARTO</a>'
+              maxNativeZoom={19}
+              attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>'
             />
             <FitBounds points={activeMarkers} />
 

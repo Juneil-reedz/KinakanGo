@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react';
-import { MapContainer, TileLayer, Marker, Polyline, useMap } from 'react-leaflet';
+import { MapContainer, TileLayer, Marker, Polyline, AttributionControl, useMap } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet/dist/leaflet.css';
 import {
@@ -9,6 +9,11 @@ import {
 import { request } from '../services/api';
 
 const RIDER_LIVE_MS = 5000;
+
+// OpenStreetMap's own tiles: free, no API key (CARTO's now ask for one).
+// Dark mode darkens them with a CSS filter (.trk-tiles-dark).
+const TILE_URL = 'https://tile.openstreetmap.org/{z}/{x}/{y}.png';
+const TILE_ATTRIBUTION = '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>';
 
 // Four steps, like the reference: placed → cooking → on the way → delivered
 const STEPS = [
@@ -144,75 +149,86 @@ export default function OrderTracker({ order, onClose }) {
     : null;
   const darkTiles = !document.documentElement.classList.contains('light-nav');
 
+  const stepsBar = !cancelled && (
+    <div className="flex items-center justify-center mt-1 mb-1" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
+      {STEPS.map((s, i) => (
+        <div key={s.id} className="flex items-center">
+          <div className="flex flex-col items-center gap-1 w-14">
+            <span className={`trk-step ${i < step || status === 'delivered' ? 'is-done' : i === step ? 'is-now' : ''}`}>
+              {i < step || status === 'delivered' ? <Check className="w-4 h-4" strokeWidth={3} /> : i + 1}
+            </span>
+            <span className={`text-[10px] font-semibold ${i <= step ? 'text-white' : 'text-forest-200/40'}`}>{s.label}</span>
+          </div>
+          {i < STEPS.length - 1 && <span className={`trk-bar ${i < step ? 'is-done' : ''}`} />}
+        </div>
+      ))}
+    </div>
+  );
+
   return (
     <div className="trk fixed inset-0 z-[200] overflow-y-auto" role="dialog" aria-modal="true" aria-label={`Tracking order ${order.id}`}>
       <div className="max-w-lg mx-auto min-h-full flex flex-col px-4 pb-8">
-        {/* Header */}
-        <div className="sticky top-0 z-20 -mx-4 px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-3 trk-head flex items-center gap-3">
-          <button onClick={onClose} aria-label="Back to order details" className="w-10 h-10 rounded-full glass flex items-center justify-center flex-shrink-0">
-            <ArrowLeft className="w-5 h-5 text-white" />
-          </button>
-          <div className="flex-1 text-center pr-10">
-            <p className="text-white font-heading font-bold leading-tight">Order Tracking</p>
-            <p className="text-forest-200/60 text-xs">#{order.id} · {order.restaurant_name}</p>
-          </div>
-        </div>
-
-        {/* Steps */}
-        {!cancelled && (
-          <div className="flex items-center justify-center gap-0 mt-2 mb-5" aria-label={`Step ${step + 1} of ${STEPS.length}`}>
-            {STEPS.map((s, i) => (
-              <div key={s.id} className="flex items-center">
-                <div className="flex flex-col items-center gap-1 w-14">
-                  <span className={`trk-step ${i < step || status === 'delivered' ? 'is-done' : i === step ? 'is-now' : ''}`}>
-                    {i < step || status === 'delivered' ? <Check className="w-4 h-4" strokeWidth={3} /> : i + 1}
-                  </span>
-                  <span className={`text-[10px] font-semibold ${i <= step ? 'text-white' : 'text-forest-200/40'}`}>{s.label}</span>
-                </div>
-                {i < STEPS.length - 1 && <span className={`trk-bar ${i < step ? 'is-done' : ''}`} />}
+        {showMap ? (<>
+          {/* Map fills the top half of the screen; back button floats on it */}
+          <div className="trk-map relative -mx-4 overflow-hidden" style={{ height: '50svh', minHeight: '18rem' }}>
+            <MapContainer center={[(rest || home || rider || { lat: 5.0293 }).lat, (rest || home || rider || { lng: 119.7731 }).lng]}
+              zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl={false}>
+              <AttributionControl position="topright" prefix={false} />
+              <TileLayer url={TILE_URL} attribution={TILE_ATTRIBUTION} maxZoom={19}
+                className={darkTiles ? 'trk-tiles-dark' : ''} />
+              <Fit points={points} />
+              {line && <Polyline positions={line.map(p => [p.lat, p.lng])}
+                pathOptions={{ color: darkTiles ? '#fba94c' : '#2a211b', weight: 3, dashArray: '2 9', lineCap: 'round' }} />}
+              {points.map(p => (
+                <Marker key={p.kind} position={[p.lat, p.lng]} opacity={p.faint ? 0.55 : 1}
+                  icon={p.kind === 'rider' ? pin('🛵', '#f7931e', riderName, true)
+                    : p.kind === 'rest' ? pin('🍽️', '#e11d48', restName)
+                    : pin('🏠', '#0d9488', 'Home')} />
+              ))}
+            </MapContainer>
+            <div className="absolute left-0 right-0 top-0 z-[500] px-4 pt-[max(.75rem,env(safe-area-inset-top))] flex items-center gap-2 pointer-events-none">
+              <button onClick={onClose} aria-label="Back to order details" className="trk-chip !p-0 w-10 h-10 flex items-center justify-center flex-shrink-0 pointer-events-auto">
+                <ArrowLeft className="w-5 h-5" />
+              </button>
+              <div className="trk-chip !py-1.5 min-w-0">
+                <p className="text-xs font-bold leading-tight truncate">Order #{order.id}</p>
+                <p className="text-[11px] opacity-60 leading-tight truncate">{order.restaurant_name}</p>
               </div>
-            ))}
-          </div>
-        )}
-
-        {/* Map, from the moment the restaurant accepts */}
-        {showMap ? (
-          <div className="trk-map relative rounded-[1.75rem] overflow-hidden">
-            <div style={{ height: 'min(62vw, 20rem)' }}>
-              <MapContainer center={[(rest || home || rider || { lat: 5.0293 }).lat, (rest || home || rider || { lng: 119.7731 }).lng]}
-                zoom={14} style={{ height: '100%', width: '100%' }} zoomControl={false} attributionControl>
-                <TileLayer
-                  url={`https://{s}.basemaps.cartocdn.com/${darkTiles ? 'dark_all' : 'light_all'}/{z}/{x}/{y}{r}.png`}
-                  attribution='&copy; <a href="https://carto.com/">CARTO</a> &copy; OpenStreetMap' />
-                <Fit points={points} />
-                {line && <Polyline positions={line.map(p => [p.lat, p.lng])}
-                  pathOptions={{ color: darkTiles ? '#fba94c' : '#2a211b', weight: 3, dashArray: '2 9', lineCap: 'round' }} />}
-                {points.map(p => (
-                  <Marker key={p.kind} position={[p.lat, p.lng]} opacity={p.faint ? 0.55 : 1}
-                    icon={p.kind === 'rider' ? pin('🛵', '#f7931e', riderName, true)
-                      : p.kind === 'rest' ? pin('🍽️', '#e11d48', restName)
-                      : pin('🏠', '#0d9488', 'Home')} />
-                ))}
-              </MapContainer>
             </div>
             {distLabel && (
-              <div className="absolute left-3 right-3 top-3 z-[500] trk-chip flex items-center gap-2">
+              <div className="absolute left-4 right-4 bottom-10 z-[500] trk-chip flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-ember-400 flex-shrink-0" />
                 <span className="text-xs font-semibold truncate">{distLabel}</span>
                 {riderStage && rider && <span className="ml-auto flex items-center gap-1 text-[11px] text-rose-400 flex-shrink-0"><span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-pulse" />Live</span>}
               </div>
             )}
           </div>
-        ) : (
+          {/* Details sheet slides up over the bottom of the map */}
+          <div className="trk-sheet relative z-10 -mx-4 -mt-6 px-4 pt-5 rounded-t-[2rem]">
+            <span className="block w-10 h-1 rounded-full mx-auto mb-4 opacity-20" style={{ background: 'rgb(var(--fg-rgb))' }} />
+            {stepsBar}
+          </div>
+        </>) : (<>
+          {/* Header */}
+          <div className="sticky top-0 z-20 -mx-4 px-4 pt-[max(.75rem,env(safe-area-inset-top))] pb-3 trk-head flex items-center gap-3">
+            <button onClick={onClose} aria-label="Back to order details" className="w-10 h-10 rounded-full glass flex items-center justify-center flex-shrink-0">
+              <ArrowLeft className="w-5 h-5 text-white" />
+            </button>
+            <div className="flex-1 text-center pr-10">
+              <p className="text-white font-heading font-bold leading-tight">Order Tracking</p>
+              <p className="text-forest-200/60 text-xs">#{order.id} · {order.restaurant_name}</p>
+            </div>
+          </div>
+          {stepsBar}
           <div className="flex justify-center py-6">
             <div className={`trk-hero ${cancelled ? 'is-off' : status === 'delivered' ? 'is-done' : ''}`}>
               <StageIcon className="w-14 h-14" strokeWidth={1.6} />
             </div>
           </div>
-        )}
+        </>)}
 
         {/* Stage */}
-        <div className="text-center mt-5">
+        <div className={`text-center ${showMap ? "mt-3" : "mt-5"}`}>
           <p className="text-white font-heading font-extrabold text-xl uppercase tracking-wide">{title}</p>
           <p className="text-forest-200/60 text-sm mt-1 max-w-xs mx-auto">{desc}</p>
           {eta && <p className="text-forest-200/50 text-xs mt-3 flex items-center justify-center gap-1"><Clock className="w-3.5 h-3.5" />Estimated arrival {eta}</p>}
