@@ -2,12 +2,11 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
-import { Eye, EyeOff, User, Mail, Phone, Lock, Utensils, ChevronRight, ArrowLeft, Check } from 'lucide-react';
-import useGoBack from '../hooks/useGoBack';
+import { Eye, EyeOff, User, Mail, Phone, Lock, ChevronRight, Check } from 'lucide-react';
+import AuthShell from '../components/AuthShell';
 
 export default function Register() {
   const navigate = useNavigate();
-  const goBack = useGoBack();
   const { register } = useAuth();
   const { addNotification } = useNotification();
 
@@ -79,111 +78,84 @@ export default function Register() {
   ];
 
   return (
-    <div className="min-h-screen flex items-center justify-center relative overflow-hidden px-4 py-10">
-      <div className="orb w-96 h-96 bg-forest-600/20 top-[-5rem] left-[-5rem]" />
-      <div className="orb w-72 h-72 bg-ember-500/15 bottom-[-4rem] right-[-4rem]" />
-
-      <div className="w-full max-w-md relative z-10 animate-fade-up">
-        <button onClick={() => goBack('/welcome')}
-          className="flex items-center gap-1.5 text-forest-200/60 hover:text-forest-100 text-sm mb-6 transition-colors">
-          <ArrowLeft className="w-4 h-4" /> Back
-        </button>
-
-        <div className="glass rounded-3xl p-8 card-3d" style={{ boxShadow:'0 32px 64px rgba(0,0,0,.5)' }}>
-          <div className="flex flex-col items-center mb-7">
-            <div className="w-16 h-16 btn-glow-green rounded-2xl flex items-center justify-center mb-3">
-              <Utensils className="w-8 h-8 text-white" />
+    <AuthShell active="register" title="Create account" subtitle="Join KinakanGo today">
+      <form onSubmit={handleSubmit} className="space-y-4">
+        {fields.map(({ id, label, type, icon: Icon, placeholder }) => (
+          <div key={id}>
+            <label className="block text-forest-200/80 text-xs font-medium mb-1.5">{label}</label>
+            <div className="relative">
+              <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+              <input type={type} value={form[id]} onChange={set(id)} placeholder={placeholder}
+                className={`w-full input-glass pl-10 pr-4 py-3 text-sm ${errors[id] ? 'border-red-500/50' : ''}`} />
             </div>
-            <h1 className="text-2xl font-heading font-bold text-white">Create Account</h1>
-            <p className="text-forest-200/60 text-sm mt-1">Join KinakanGo today</p>
+            {errors[id] && <p className="text-red-400 text-xs mt-1">{errors[id]}</p>}
           </div>
+        ))}
 
-          <form onSubmit={handleSubmit} className="space-y-4">
-            {fields.map(({ id, label, type, icon: Icon, placeholder }) => (
-              <div key={id}>
-                <label className="block text-forest-200/80 text-xs font-medium mb-1.5">{label}</label>
-                <div className="relative">
-                  <Icon className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
-                  <input type={type} value={form[id]} onChange={set(id)} placeholder={placeholder}
-                    className={`w-full input-glass pl-10 pr-4 py-3 text-sm ${errors[id] ? 'border-red-500/50' : ''}`} />
-                </div>
-                {errors[id] && <p className="text-red-400 text-xs mt-1">{errors[id]}</p>}
-              </div>
-            ))}
-
-            {/* Password */}
-            <div>
-              <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
-                <input type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')}
-                  placeholder="••••••••"
-                  className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.password ? 'border-red-500/50' : ''}`} />
-                <button type="button" onClick={() => setShowPass(s=>!s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200 transition-colors">
-                  {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {form.password && (
-                <div className="mt-2">
-                  <div className="flex gap-1 mb-1">
-                    {[1,2,3,4,5].map(i => (
-                      <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : 'bg-forest-800'}`} />
-                    ))}
-                  </div>
-                  <p className="text-xs text-forest-200/50">{strengthLabel}</p>
-                </div>
-              )}
-              {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
-            </div>
-
-            {/* Confirm Password */}
-            <div>
-              <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Confirm Password</label>
-              <div className="relative">
-                <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
-                <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')}
-                  placeholder="••••••••"
-                  className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.confirmPassword ? 'border-red-500/50' : ''}`} />
-                <button type="button" onClick={() => setShowConfirm(s=>!s)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200 transition-colors">
-                  {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                </button>
-              </div>
-              {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
-            </div>
-
-            {/* Terms */}
-            <label className="flex items-start gap-3 cursor-pointer">
-              <div onClick={() => setForm(f => ({ ...f, agreeToTerms: !f.agreeToTerms }))}
-                className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-all cursor-pointer
-                  ${form.agreeToTerms ? 'btn-glow-green border-transparent' : 'border-forest-600 glass'}`}>
-                {form.agreeToTerms && <Check className="w-3 h-3 text-white" />}
-              </div>
-              <span className="text-forest-200/60 text-xs leading-relaxed">
-                I agree to the <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Terms of Service</span>{' '}
-                and <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Privacy Policy</span>
-              </span>
-            </label>
-            {errors.agreeToTerms && <p className="text-red-400 text-xs">{errors.agreeToTerms}</p>}
-
-            <button type="submit" disabled={loading}
-              className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mt-2
-                ${loading ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
-              {loading
-                ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Creating account…</>
-                : <>Create Account <ChevronRight className="w-4 h-4" /></>}
+        {/* Password */}
+        <div>
+          <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Password</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+            <input type={showPass ? 'text' : 'password'} value={form.password} onChange={set('password')}
+              placeholder="••••••••"
+              className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.password ? 'border-red-500/50' : ''}`} />
+            <button type="button" onClick={() => setShowPass(s=>!s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200 transition-colors">
+              {showPass ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
-          </form>
-
-          <p className="text-center text-forest-200/50 text-sm mt-5">
-            Already have an account?{' '}
-            <button onClick={() => navigate('/login')} className="text-ember-400 font-semibold hover:text-ember-300 transition-colors">
-              Sign In
-            </button>
-          </p>
+          </div>
+          {form.password && (
+            <div className="mt-2">
+              <div className="flex gap-1 mb-1">
+                {[1,2,3,4,5].map(i => (
+                  <div key={i} className={`h-1 flex-1 rounded-full transition-all ${i <= strength ? strengthColor : 'bg-forest-800'}`} />
+                ))}
+              </div>
+              <p className="text-xs text-forest-200/50">{strengthLabel}</p>
+            </div>
+          )}
+          {errors.password && <p className="text-red-400 text-xs mt-1">{errors.password}</p>}
         </div>
-      </div>
-    </div>
+
+        {/* Confirm Password */}
+        <div>
+          <label className="block text-forest-200/80 text-xs font-medium mb-1.5">Confirm Password</label>
+          <div className="relative">
+            <Lock className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-forest-300/50" />
+            <input type={showConfirm ? 'text' : 'password'} value={form.confirmPassword} onChange={set('confirmPassword')}
+              placeholder="••••••••"
+              className={`w-full input-glass pl-10 pr-10 py-3 text-sm ${errors.confirmPassword ? 'border-red-500/50' : ''}`} />
+            <button type="button" onClick={() => setShowConfirm(s=>!s)}
+              className="absolute right-3 top-1/2 -translate-y-1/2 text-forest-300/50 hover:text-forest-200 transition-colors">
+              {showConfirm ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+            </button>
+          </div>
+          {errors.confirmPassword && <p className="text-red-400 text-xs mt-1">{errors.confirmPassword}</p>}
+        </div>
+
+        {/* Terms */}
+        <label className="flex items-start gap-3 cursor-pointer">
+          <div onClick={() => setForm(f => ({ ...f, agreeToTerms: !f.agreeToTerms }))}
+            className={`w-5 h-5 rounded-md border-2 flex-shrink-0 flex items-center justify-center mt-0.5 transition-all cursor-pointer
+              ${form.agreeToTerms ? 'btn-glow-green border-transparent' : 'border-forest-600 glass'}`}>
+            {form.agreeToTerms && <Check className="w-3 h-3 text-white" />}
+          </div>
+          <span className="text-forest-200/60 text-xs leading-relaxed">
+            I agree to the <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Terms of Service</span>{' '}
+            and <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Privacy Policy</span>
+          </span>
+        </label>
+        {errors.agreeToTerms && <p className="text-red-400 text-xs">{errors.agreeToTerms}</p>}
+
+        <button type="submit" disabled={loading}
+          className={`w-full py-3.5 rounded-xl font-bold text-sm flex items-center justify-center gap-2 transition-all mt-2
+            ${loading ? 'glass text-forest-200/50 cursor-not-allowed' : 'btn-glow-orange text-white'}`}>
+          {loading
+            ? <><div className="w-4 h-4 rounded-full border-2 border-white/30 border-t-white animate-spin" /> Creating account…</>
+            : <>Create Account <ChevronRight className="w-4 h-4" /></>}
+        </button>
+      </form>
+    </AuthShell>
   );
 }
