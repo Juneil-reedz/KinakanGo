@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const { firstImageError } = require('../utils/image');
 const { notify } = require('../utils/notify');
+const { restaurantNameTaken, nameTakenMessage } = require('../utils/restaurantName');
 
 async function submitRequest(req, res) {
   const { plan, amount, payment_method, reference_number, proof_image, notes } = req.body;
@@ -10,6 +11,13 @@ async function submitRequest(req, res) {
 
   if (!plan) {
     return res.status(400).json({ error: 'Plan is required' });
+  }
+
+  // The restaurant name they applied with must not belong to another restaurant
+  let parsed = null;
+  try { parsed = typeof notes === 'string' ? JSON.parse(notes) : notes; } catch {}
+  if (parsed?.restaurantName && await restaurantNameTaken(parsed.restaurantName)) {
+    return res.status(409).json({ error: nameTakenMessage(parsed.restaurantName) });
   }
 
   // Check for existing pending request
@@ -88,6 +96,11 @@ async function approveRequest(req, res) {
       if (!existing.length) {
         const { rows: userRows } = await client.query(`SELECT name FROM users WHERE id=$1`, [upgradeReq.user_id]);
         const restoName  = notes?.restaurantName || `${userRows[0]?.name || 'New'}'s Restaurant`;
+        if (await restaurantNameTaken(restoName, { db: client })) {
+          const err = new Error(nameTakenMessage(restoName) + ' Ask the applicant to apply again with another name.');
+          err.status = 409;
+          throw err;
+        }
         const restoAddr  = notes?.address        || 'Tawi-Tawi';
         const restoCuisine = notes?.category     || 'Filipino';
         await client.query(

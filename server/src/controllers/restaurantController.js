@@ -1,4 +1,5 @@
 const pool = require('../config/db');
+const { restaurantNameTaken, nameTakenMessage } = require('../utils/restaurantName');
 const { firstImageError, unlessOwn } = require('../utils/image');
 
 async function list(req, res) {
@@ -51,6 +52,7 @@ async function getOne(req, res) {
 async function create(req, res) {
   const { name, description, address, cuisine, deliveryFee, minOrder } = req.body;
   const ownerId = req.user.id;
+  if (await restaurantNameTaken(name)) return res.status(409).json({ error: nameTakenMessage(name) });
   const { rows } = await pool.query(
     `INSERT INTO restaurants (owner_id, name, description, address, cuisine, delivery_fee, min_order)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id`,
@@ -75,6 +77,9 @@ async function update(req, res) {
     if (v != null && v !== '' && (!Number.isFinite(Number(v)) || Number(v) < 0 || Number(v) > 100000)) {
       return res.status(400).json({ error: `${label} must be ₱0 or more` });
     }
+  }
+  if (name != null && String(name).trim() && await restaurantNameTaken(name, { exceptId: Number(req.params.id) })) {
+    return res.status(409).json({ error: nameTakenMessage(name) });
   }
   const { rows } = await pool.query(
     `UPDATE restaurants SET
