@@ -90,6 +90,8 @@ const STATUSES = [
   { id:'delivered',  label:'Delivered', icon:CheckCircle2,  desc:'Order successfully delivered' },
 ];
 
+const isActiveOrder = (o) => !['delivered', 'cancelled', 'refunded'].includes(o.status);
+
 // The order's photo: its first food that has one
 const orderPhoto = (order) => order.items?.find(i => i.image_url)?.image_url || order.restaurant_image || null;
 
@@ -133,10 +135,12 @@ export default function OrderTracking() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const res = await ordersApi.list({ limit: 10 });
+      const res = await ordersApi.list({ limit: 20 });
       const list = res?.data ?? [];
-      const active = list.filter(o => !['delivered','cancelled','refunded'].includes(o.status));
-      const base   = active.length ? active : list.slice(0, 5);
+      // Every order still on its way, then the last few finished ones, so earlier
+      // orders don't vanish from the page while a newer one is active
+      const active = list.filter(isActiveOrder);
+      const base   = [...active, ...list.filter(o => !isActiveOrder(o)).slice(0, 5)];
 
       // Only refetch an order's details when it's new or its status/rider changed;
       // the list response already carries the fields that change while polling.
@@ -250,7 +254,7 @@ export default function OrderTracking() {
         <div className="w-16 h-16 glass rounded-3xl flex items-center justify-center mx-auto mb-5">
           <Package className="w-8 h-8 text-forest-300/60" />
         </div>
-        <p className="text-white font-bold text-lg mb-2">No active orders</p>
+        <p className="text-white font-bold text-lg mb-2">No orders yet</p>
         <p className="text-forest-200/50 text-sm mb-6">Place an order to track it here.</p>
         <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white px-8 py-3 rounded-xl font-bold">
           Order Now
@@ -276,7 +280,11 @@ export default function OrderTracking() {
         </div>
       </div>
 
-      {groupByRestaurant(orders).map(g => (
+      {[['', orders.filter(isActiveOrder)], ['Past orders', orders.filter(o => !isActiveOrder(o))]]
+        .filter(([, list]) => list.length).map(([title, list]) => (
+      <div key={title || 'active'} className="space-y-6">
+        {title && <h2 className="text-forest-200/70 text-sm font-semibold uppercase tracking-wider pt-2">{title}</h2>}
+      {groupByRestaurant(list).map(g => (
       <section key={g.id} className="space-y-3">
         <div className="flex items-center gap-3">
           <span className="w-9 h-9 rounded-full glass-orange flex items-center justify-center flex-shrink-0">
@@ -555,6 +563,8 @@ export default function OrderTracking() {
         );
       })}
       </section>
+      ))}
+      </div>
       ))}
       {cancelOrder && (
         <CancelOrderDialog order={cancelOrder} onClose={() => setCancelOrder(null)}
