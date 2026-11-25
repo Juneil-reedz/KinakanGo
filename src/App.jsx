@@ -32,6 +32,7 @@ import Register from './pages/Register';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
 import Welcome from './pages/Welcome';
+import Legal from './pages/Legal';
 import Favorites from './pages/Favorites';
 import Addresses from './pages/Addresses';
 import Messages from './pages/Messages';
@@ -146,6 +147,8 @@ function App() {
                   <Routes>
                   {/* Welcome Route */}
                   <Route path="/welcome" element={<Welcome />} />
+                  <Route path="/terms" element={<Legal kind="terms" />} />
+                  <Route path="/privacy" element={<Legal kind="privacy" />} />
 
                   {/* Auth Routes (No Header/Footer) */}
                   <Route path="/login" element={<CustomerGuest><Login /></CustomerGuest>} />

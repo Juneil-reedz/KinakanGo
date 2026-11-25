@@ -4,6 +4,8 @@ import { useAuth } from '../context/AuthContext';
 import { useNotification } from '../context/NotificationContext';
 import { Eye, EyeOff, User, Mail, Phone, Lock, Check } from 'lucide-react';
 import AuthShell from '../components/AuthShell';
+import LegalSheet from '../components/LegalSheet';
+import { TERMS, PRIVACY } from '../content/legal';
 
 export default function Register() {
   const navigate = useNavigate();
@@ -15,6 +17,7 @@ export default function Register() {
   const [showConfirm, setShowConfirm] = useState(false);
   const [errors, setErrors]         = useState({});
   const [loading, setLoading]       = useState(false);
+  const [legal, setLegal]           = useState(null); // TERMS / PRIVACY sheet
 
   const set = (field) => (e) => {
     const val = e.target.type === 'checkbox' ? e.target.checked : e.target.value;
@@ -142,8 +145,10 @@ export default function Register() {
             {form.agreeToTerms && <Check className="w-3 h-3 text-white" />}
           </div>
           <span className="text-forest-200/60 text-xs leading-relaxed">
-            I agree to the <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Terms of Service</span>{' '}
-            and <span className="text-ember-400 hover:text-ember-300 cursor-pointer">Privacy Policy</span>
+            I agree to the <button type="button" onClick={e => { e.preventDefault(); setLegal(TERMS); }}
+              className="text-ember-400 hover:text-ember-300 underline-offset-2 hover:underline">Terms of Service</button>{' '}
+            and <button type="button" onClick={e => { e.preventDefault(); setLegal(PRIVACY); }}
+              className="text-ember-400 hover:text-ember-300 underline-offset-2 hover:underline">Privacy Policy</button>
           </span>
         </label>
         {errors.agreeToTerms && <p className="text-red-400 text-xs">{errors.agreeToTerms}</p>}
@@ -156,6 +161,7 @@ export default function Register() {
             : <>Create Account</>}
         </button>
       </form>
+      <LegalSheet doc={legal} onClose={() => setLegal(null)} />
     </AuthShell>
   );
 }

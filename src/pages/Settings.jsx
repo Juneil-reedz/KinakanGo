@@ -1,4 +1,4 @@
-import { Lock, Moon, HelpCircle, ChevronRight } from 'lucide-react';
+import { Lock, Moon, HelpCircle, ChevronRight, FileText, ShieldCheck } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
 
@@ -61,6 +61,8 @@ export default function Settings() {
         {[
           { label:'Change Password', icon:Lock,        action:() => navigate('/change-password') },
           { label:'Help & Support',  icon:HelpCircle,  action:() => navigate('/customer-service') },
+          { label:'Terms of Service', icon:FileText,   action:() => navigate('/terms') },
+          { label:'Privacy Policy',  icon:ShieldCheck, action:() => navigate('/privacy') },
         ].map(({ label, icon:Icon, action }) => (
           <button key={label} onClick={action}
             className="w-full flex items-center justify-between px-4 py-3 glass rounded-xl hover:glass-green transition-all group">
