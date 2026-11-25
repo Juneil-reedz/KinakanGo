@@ -90,6 +90,28 @@ pool.query(`
         AND o.recipient_side = 'restaurant'
     ) THEN 'restaurant' ELSE 'customer' END
     WHERE m.sender_side IS NULL`);
+
+  // One-time repair: older replies to a restaurant were saved under the owner's
+  // personal name (they were addressed by email), so they landed in the owner's
+  // personal inbox. If someone ever wrote to an owner's restaurant, everything
+  // in that conversation from before this repair belongs to the restaurant side.
+  await pool.query(`CREATE TABLE IF NOT EXISTS app_migrations (name VARCHAR(80) PRIMARY KEY, ran_at TIMESTAMPTZ NOT NULL DEFAULT NOW())`);
+  const { rowCount } = await pool.query(
+    `INSERT INTO app_migrations (name) VALUES ('messages_restaurant_threads_v1') ON CONFLICT DO NOTHING`);
+  if (!rowCount) return;
+  const restaurantThread = (customer, owner) => `EXISTS (
+      SELECT 1 FROM messages o JOIN restaurants r ON r.owner_id = o.recipient_user_id
+      WHERE o.sender_id = ${customer} AND o.recipient_user_id = ${owner} AND o.recipient_side = 'restaurant')`;
+  const fixedIn = await pool.query(`
+    UPDATE messages m SET recipient_side = 'restaurant',
+      recipient_label = COALESCE((SELECT name FROM restaurants WHERE owner_id = m.recipient_user_id LIMIT 1), m.recipient_label)
+    WHERE m.recipient_side = 'customer' AND m.sender_side = 'customer'
+      AND ${restaurantThread('m.sender_id', 'm.recipient_user_id')}`);
+  const fixedOut = await pool.query(`
+    UPDATE messages m SET sender_side = 'restaurant'
+    WHERE m.sender_side = 'customer' AND m.recipient_side = 'customer'
+      AND ${restaurantThread('m.recipient_user_id', 'm.sender_id')}`);
+  console.log(`messages repair: ${fixedIn.rowCount} to restaurants, ${fixedOut.rowCount} from restaurants`);
 }).catch(err => console.warn('messages side columns warning:', err.message));
 
 // In-app notifications (see utils/notify.js); index runs after the table exists
