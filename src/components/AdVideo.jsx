@@ -7,7 +7,7 @@ const BASE = import.meta.env.BASE_URL;
 // React doesn't write, so we set it by hand and call play() ourselves. If the
 // browser still refuses (e.g. iPhone Low Power Mode), it starts on the first
 // touch or scroll anywhere on the page.
-export default function AdVideo() {
+export default function AdVideo({ name = 'kinakango-ad', label = 'KinakanGo ad: browse food, order, and track your rider' }) {
   const ref = useRef(null);
 
   useEffect(() => {
@@ -39,12 +39,12 @@ export default function AdVideo() {
 
   return (
     <video ref={ref} className="ad-video w-full aspect-video rounded-3xl object-cover block pointer-events-none select-none"
-      src={`${BASE}assets/kinakango-ad.mp4`}
-      poster={`${BASE}assets/kinakango-ad-poster.jpg`}
+      src={`${BASE}assets/${name}.mp4`}
+      poster={`${BASE}assets/${name}-poster.jpg`}
       autoPlay muted loop playsInline preload="auto"
       controls={false} disablePictureInPicture disableRemotePlayback
       controlsList="nodownload nofullscreen noremoteplayback"
       tabIndex={-1}
-      aria-label="KinakanGo ad: browse food, order, and track your rider" />
+      aria-label={label} />
   );
 }

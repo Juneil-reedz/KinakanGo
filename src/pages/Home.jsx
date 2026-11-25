@@ -1,5 +1,5 @@
 import StoreCard from '../components/StoreCard';
-import AdVideo from '../components/AdVideo';
+import AdCarousel from '../components/AdCarousel';
 import { useState, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -261,7 +261,7 @@ export default function Home() {
 
       {/* ── Ad video (silent, loops) ─────────────────── */}
       <section aria-label="What KinakanGo offers">
-        <AdVideo />
+        <AdCarousel />
       </section>
 
       {/* ── Featured restaurants ─────────────────────── */}
