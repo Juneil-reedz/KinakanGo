@@ -1,6 +1,6 @@
 import { useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Utensils } from 'lucide-react';
+import KinakanLogo from './KinakanLogo';
 import useGoBack from '../hooks/useGoBack';
 
 // Shared frame for Sign in / Sign up: the KinakanGo wordmark, a card and a
@@ -57,7 +57,7 @@ export default function AuthShell({ active, title, subtitle, children }) {
         <div key={active} className={`auth-card relative rounded-[2rem] px-6 pb-7 pt-14 ${dir === 'left' ? 'auth-in-left' : dir === 'right' ? 'auth-in-right' : 'page-rise'}`}
           style={!dir ? { animationDelay: '.1s' } : undefined}>
           <div className="auth-plate absolute left-1/2 -top-10 -translate-x-1/2 w-20 h-20 rounded-full btn-glow-orange flex items-center justify-center">
-            <Utensils className="w-9 h-9 text-white" />
+            <KinakanLogo className="w-12 h-12 text-white" />
           </div>
           <div className="text-center mb-6">
             <h2 className="text-2xl font-heading font-bold text-white">{title}</h2>
@@ -73,15 +73,12 @@ export default function AuthShell({ active, title, subtitle, children }) {
           </p>
         </div>
 
-        {/* Swipe hint */}
+        {/* Page dots */}
         <div className="flex items-center justify-center gap-2 mt-6" aria-hidden="true">
           {TABS.map(t => (
             <span key={t.key} className={`h-1.5 rounded-full transition-all ${t.key === active ? 'w-5 bg-ember-500' : 'w-1.5 bg-[rgba(var(--fg-rgb),.25)]'}`} />
           ))}
         </div>
-        <p className="text-center text-forest-200/40 text-xs mt-2 lg:hidden">
-          {idx === 0 ? 'Swipe left to sign up' : 'Swipe right to sign in'}
-        </p>
       </div>
     </div>
   );
