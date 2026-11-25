@@ -1107,3 +1107,33 @@
 @keyframes page-rise { from { opacity: 0; transform: translateY(56px); } to { opacity: 1; transform: none; } }
 .page-rise { animation: page-rise .9s cubic-bezier(.22, 1, .36, 1) backwards; }
 @media (prefers-reduced-motion: reduce) { .page-rise { animation: none; } }
+
+/* Sign in / Sign up */
+.auth-card { background: rgba(var(--fg-rgb), .05); box-shadow: inset 0 0 0 1px rgba(var(--fg-rgb), .08), 0 30px 60px -30px rgb(0 0 0 / .55);
+  -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
+.auth-plate { box-shadow: 0 0 0 6px var(--app-bg), 0 14px 28px -8px rgb(247 147 30 / .6); }
+@keyframes auth-in-left  { from { opacity: 0; transform: translateX(60px); }  to { opacity: 1; transform: none; } }
+@keyframes auth-in-right { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: none; } }
+.auth-in-left  { animation: auth-in-left  .45s cubic-bezier(.22, 1, .36, 1) backwards; }
+.auth-in-right { animation: auth-in-right .45s cubic-bezier(.22, 1, .36, 1) backwards; }
+@media (prefers-reduced-motion: reduce) { .auth-in-left, .auth-in-right { animation: none; } }
+
+/* Opening splash */
+.splash { background: var(--app-bg); }
+.splash-out { animation: splash-out .45s ease forwards; }
+.splash-plate { animation: splash-pop .7s cubic-bezier(.34, 1.56, .64, 1) backwards; }
+.splash-plate svg { animation: splash-spin .9s .25s cubic-bezier(.22, 1, .36, 1) backwards; }
+.splash-word { animation: splash-up .6s .35s cubic-bezier(.22, 1, .36, 1) backwards; }
+.splash-go { animation: splash-go .5s .8s cubic-bezier(.34, 1.56, .64, 1) backwards; }
+.splash-tag { animation: splash-up .6s .6s cubic-bezier(.22, 1, .36, 1) backwards; }
+.splash-bar { animation: splash-up .5s .7s ease backwards; }
+.splash-bar span { animation: splash-fill 1.2s .8s ease-in-out backwards; }
+@keyframes splash-pop  { from { opacity: 0; transform: scale(.3); } to { opacity: 1; transform: none; } }
+@keyframes splash-spin { from { transform: rotate(-90deg) scale(.6); } to { transform: none; } }
+@keyframes splash-up   { from { opacity: 0; transform: translateY(18px); } to { opacity: 1; transform: none; } }
+@keyframes splash-go   { 0% { opacity: 0; transform: translateX(-14px) scale(.8); } 100% { opacity: 1; transform: none; } }
+@keyframes splash-fill { from { width: 0; } to { width: 100%; } }
+@keyframes splash-out  { to { opacity: 0; transform: scale(1.04); visibility: hidden; } }
+@media (prefers-reduced-motion: reduce) {
+  .splash-plate, .splash-plate svg, .splash-word, .splash-go, .splash-tag, .splash-bar, .splash-bar span { animation: none; }
+}
