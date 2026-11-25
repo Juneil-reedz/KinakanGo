@@ -11,9 +11,10 @@ export const useCart = () => {
   return context;
 };
 
-// The cart can hold food from several restaurants at once. Each restaurant is
-// checked out as its own order, so one of them is "active": cartItems, the
-// totals and checkout all work on that restaurant's food. allItems is everything.
+// The cart can hold food from several restaurants at once. The customer marks
+// (long-presses) the foods to order; marked foods are always from one restaurant,
+// the "active" one, since each restaurant is its own order. cartItems is the
+// marked food, which the totals and checkout use. allItems is everything.
 const sameRest = (a, b) => String(a) === String(b);
 
 // Read the saved cart once, before the first render, so the first save can never
@@ -61,14 +62,39 @@ export const CartProvider = ({ children }) => {
     return next;
   };
 
-  const cartItems = restaurantId == null ? [] : allItems.filter(i => sameRest(i.restaurantId, restaurantId));
-
-  // Pick which restaurant's food the totals and checkout use
-  const selectRestaurant = (id) => {
-    if (sameRest(id, restaurantRef.current)) return;
-    setPromoCode('');
-    setRestaurantId(id);
+  // Marked food ids, kept across reloads so checkout still knows what to order
+  const [picked, setPickedState] = useState(() => {
+    try { const v = JSON.parse(localStorage.getItem('cartPicked') || '[]'); return Array.isArray(v) ? v : []; } catch { return []; }
+  });
+  const setPicked = (v) => {
+    setPickedState(prev => {
+      const next = typeof v === 'function' ? v(prev) : v;
+      try { next.length ? safeLocalSet('cartPicked', JSON.stringify(next)) : localStorage.removeItem('cartPicked'); } catch { /* storage unavailable */ }
+      return next;
+    });
   };
+  const isPicked = (id) => picked.some(p => String(p) === String(id));
+
+  const restItems = restaurantId == null ? [] : allItems.filter(i => sameRest(i.restaurantId, restaurantId));
+  const cartItems = restItems.filter(i => isPicked(i.id));
+
+  // Mark or unmark one food. Marking food from another restaurant starts a new
+  // selection there, because one order can only come from one restaurant.
+  const togglePick = (item) => {
+    if (!sameRest(item.restaurantId, restaurantRef.current)) {
+      setPromoCode('');
+      setRestaurantId(item.restaurantId);
+      setPicked([item.id]);
+      return;
+    }
+    setPicked(prev => (prev.some(p => String(p) === String(item.id)) ? prev.filter(p => String(p) !== String(item.id)) : [...prev, item.id]));
+  };
+  // Mark every food from one restaurant, or clear the marks
+  const pickAll = (rid) => {
+    if (!sameRest(rid, restaurantRef.current)) { setPromoCode(''); setRestaurantId(rid); }
+    setPicked(allItems.filter(i => sameRest(i.restaurantId, rid)).map(i => i.id));
+  };
+  const clearPicks = () => setPicked([]);
 
   const addToCart = (item, restaurant) => {
     if (!sameRest(restaurant.id, restaurantRef.current)) setPromoCode('');
@@ -84,6 +110,7 @@ export const CartProvider = ({ children }) => {
   };
 
   const removeFromCart = (itemId) => {
+    setPicked(prev => prev.filter(p => String(p) !== String(itemId)));
     setAllItems((prev) => settle(prev.filter((i) => i.id !== itemId)));
   };
 
@@ -95,12 +122,17 @@ export const CartProvider = ({ children }) => {
     setAllItems((prev) => prev.map((i) => (i.id === itemId ? { ...i, quantity } : i)));
   };
 
-  // Clears one restaurant's food (the active one by default), e.g. after its order is placed
-  const clearCart = (id = restaurantRef.current) => {
+  // clearCart() removes the marked food once its order is placed.
+  // clearCart(restaurantId) removes all of one restaurant's food (used by reorder).
+  const clearCart = (id) => {
     setPromoCode('');
-    const next = id == null ? [] : allItems.filter(i => !sameRest(i.restaurantId, id));
-    setRestaurantId(next.length ? next[0].restaurantId : null);
-    setAllItems(prev => (id == null ? [] : prev.filter(i => !sameRest(i.restaurantId, id))));
+    const gone = id === undefined
+      ? (i) => sameRest(i.restaurantId, restaurantRef.current) && isPicked(i.id)
+      : (i) => sameRest(i.restaurantId, id);
+    const next = allItems.filter(i => !gone(i));
+    setPicked([]);
+    if (!next.some(i => sameRest(i.restaurantId, restaurantRef.current))) setRestaurantId(next.length ? next[0].restaurantId : null);
+    setAllItems(prev => prev.filter(i => !gone(i)));
   };
 
   const getCartTotal = () => cartItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
@@ -111,7 +143,7 @@ export const CartProvider = ({ children }) => {
     const byId = new Map(menuRows.map(m => [String(m.id), m]));
     const changes = [];
     const fixed = new Map();
-    for (const item of cartItems) {
+    for (const item of restItems) {
       const m = byId.get(String(item.id));
       if (!m || m.is_available === false) { changes.push(`${item.name} is no longer available and was removed`); fixed.set(item, null); continue; }
       const price = Number(m.price);
@@ -132,7 +164,10 @@ export const CartProvider = ({ children }) => {
     cartItems,
     allItems,
     restaurantId,
-    selectRestaurant,
+    togglePick,
+    pickAll,
+    clearPicks,
+    isPicked,
     addToCart,
     removeFromCart,
     updateQuantity,

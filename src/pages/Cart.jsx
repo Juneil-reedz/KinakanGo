@@ -8,30 +8,54 @@ import useCartTotals from '../hooks/useCartTotals';
 
 const REVEAL = 92; // px the card slides to show the delete button
 
-// One cart line: round photo, name, - qty +, price. Drag it left to reveal delete.
-function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
+const HOLD = 450; // ms of pressing that marks a food
+
+// One cart line: round photo, name, - qty +, price.
+// Long-press to mark it for checkout (once something is marked, a tap also marks).
+// Drag it left to reveal delete.
+function SwipeItem({ item, index, open, setOpen, onQty, onRemove, picked, picking, onPick }) {
   const start = useRef(null);
+  const hold = useRef(null);
   const [dx, setDx] = useState(0);
   const [dragging, setDragging] = useState(false);
+  const [pressing, setPressing] = useState(false);
   const offset = dragging ? dx : (open ? -REVEAL : 0);
 
+  const stopHold = () => { clearTimeout(hold.current); hold.current = null; setPressing(false); };
   const down = (e) => {
     if (e.target.closest('button')) return;
-    start.current = { x: e.clientX, base: open ? -REVEAL : 0 };
+    start.current = { x: e.clientX, y: e.clientY, base: open ? -REVEAL : 0, moved: false, held: false };
     setDx(open ? -REVEAL : 0);
-    setDragging(true);
-    e.currentTarget.setPointerCapture?.(e.pointerId);
+    setPressing(true);
+    hold.current = setTimeout(() => {
+      if (!start.current || start.current.moved) return;
+      start.current.held = true;
+      setPressing(false);
+      navigator.vibrate?.(15);
+      onPick();
+    }, HOLD);
   };
   const move = (e) => {
-    if (!start.current) return;
-    const next = start.current.base + (e.clientX - start.current.x);
-    setDx(Math.max(-REVEAL - 24, Math.min(0, next)));
+    const st = start.current;
+    if (!st || st.held) return;
+    const mx = e.clientX - st.x, my = e.clientY - st.y;
+    if (!st.moved && Math.hypot(mx, my) > 8) {
+      st.moved = true;
+      stopHold();
+      if (Math.abs(mx) > Math.abs(my)) { setDragging(true); e.currentTarget.setPointerCapture?.(e.pointerId); }
+      else { start.current = null; return; } // scrolling the page
+    }
+    if (st.moved) setDx(Math.max(-REVEAL - 24, Math.min(0, st.base + mx)));
   };
   const up = () => {
-    if (!start.current) return;
+    const st = start.current;
+    stopHold();
+    if (!st) return;
     start.current = null;
-    setDragging(false);
-    setOpen(dx < -REVEAL / 2 ? item.id : null);
+    if (st.moved) { setDragging(false); setOpen(dx < -REVEAL / 2 ? item.id : null); return; }
+    if (st.held) return;
+    if (open) { setOpen(null); return; }   // a tap closes an open delete
+    if (picking) onPick();                 // already choosing: a tap marks too
   };
 
   return (
@@ -45,11 +69,17 @@ function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
 
       {/* Same rounded card as the food list, with the round photo hanging off its left edge */}
       <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-        className="cart-line relative ml-11 min-h-[6.5rem] flex items-center py-3 pr-4 pl-[4.25rem] touch-pan-y select-none"
-        style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : 'transform .45s cubic-bezier(.22,1,.36,1)' }}>
+        role="button" tabIndex={0} onKeyDown={e => { if (e.target === e.currentTarget && (e.key === 'Enter' || e.key === ' ')) { e.preventDefault(); onPick(); } }}
+        aria-pressed={picked} aria-label={`${item.name}${picked ? ', marked' : ''}. Press and hold to ${picked ? 'unmark' : 'mark'} for checkout`}
+        onContextMenu={e => e.preventDefault()}
+        className={`cart-line ${picked ? 'is-picked' : ''} ${pressing ? 'is-pressing' : ''} relative ml-11 min-h-[6.5rem] flex items-center py-3 pr-4 pl-[4.25rem] touch-pan-y select-none`}
+        style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'scale .25s, box-shadow .25s' : 'transform .45s cubic-bezier(.22,1,.36,1), scale .3s, box-shadow .25s' }}>
         <div className="cart-line-photo">
           <img src={item.image} alt="" draggable="false" />
         </div>
+        {picked && (
+          <span className="cart-line-check" aria-hidden="true"><Check className="w-3.5 h-3.5" strokeWidth={3} /></span>
+        )}
         <div className="flex-1 min-w-0">
           <p className="text-white font-heading font-bold text-[.95rem] truncate">{item.name}</p>
           <div className="flex items-center gap-3 my-1.5">
@@ -73,7 +103,8 @@ function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
 export default function Cart() {
   const navigate = useNavigate();
   const goBack = useGoBack();
-  const { allItems, restaurantId, selectRestaurant, updateQuantity, removeFromCart } = useCart();
+  const { allItems, cartItems: marked, restaurantId, togglePick, pickAll, clearPicks, isPicked, updateQuantity, removeFromCart } = useCart();
+  const picking = marked.length > 0;
   // One section per restaurant, in the order they were added. Each is its own order.
   const groups = [];
   for (const item of allItems) {
@@ -129,35 +160,39 @@ export default function Cart() {
         </button>
       </div>
 
-      <div className="max-w-2xl mx-auto p-4 space-y-4 pb-72 lg:pb-60">
-        {/* Food grouped by restaurant. Swipe a food left to delete it. */}
+      <div className={`max-w-2xl mx-auto p-4 space-y-4 ${picking ? 'pb-72 lg:pb-60' : 'pb-32'}`}>
+        <p className="text-center text-forest-200/60 text-xs px-4">
+          {picking
+            ? (many ? 'Each restaurant is a separate order, so you can mark food from one restaurant at a time.' : 'Tap more food to add it to this order.')
+            : 'Press and hold a food to choose it for checkout.'}
+        </p>
+
+        {/* Food grouped by restaurant. Long-press to mark, swipe left to delete. */}
         {groups.map((g, gi) => {
-          const active = String(g.id) === String(restaurantId);
+          const active = picking && String(g.id) === String(restaurantId);
+          const count = g.items.reduce((n, i) => n + i.quantity, 0);
           const sum = g.items.reduce((n, i) => n + i.price * i.quantity, 0);
+          const all = active && g.items.every(i => isPicked(i.id));
           return (
-            <section key={g.id} className={`cart-group ${many && active ? 'is-active' : ''}`}>
-              <button type="button" onClick={() => selectRestaurant(g.id)} disabled={!many}
-                aria-pressed={many ? active : undefined}
-                className="w-full flex items-center gap-3 mb-3 text-left disabled:cursor-default">
+            <section key={g.id} className={`cart-group ${active ? 'is-active' : ''}`}>
+              <div className="flex items-center gap-3 mb-3">
                 <span className="w-9 h-9 rounded-full glass-orange flex items-center justify-center flex-shrink-0">
                   <Store className="w-4 h-4 text-ember-300" />
                 </span>
                 <span className="flex-1 min-w-0">
                   <span className="block text-white font-heading font-bold truncate">{g.name}</span>
-                  <span className="block text-forest-200/60 text-xs">
-                    {g.items.reduce((n, i) => n + i.quantity, 0)} item{g.items.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'} · ₱{sum.toFixed(2)}
-                  </span>
+                  <span className="block text-forest-200/60 text-xs">{count} item{count === 1 ? '' : 's'} · ₱{sum.toFixed(2)}</span>
                 </span>
-                {many && (
-                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 ${active ? 'bg-ember-500 text-white' : 'glass text-forest-200/70'}`}>
-                    {active ? <><Check className="w-3.5 h-3.5" /> Checking out</> : 'Check out this'}
-                  </span>
-                )}
-              </button>
+                <button type="button" onClick={() => (all ? clearPicks() : pickAll(g.id))}
+                  className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 ${all ? 'bg-ember-500 text-white' : 'glass text-forest-200/70 hover:text-white'}`}>
+                  {all ? <><Check className="w-3.5 h-3.5" /> All marked</> : 'Mark all'}
+                </button>
+              </div>
               <div className="space-y-3">
                 {g.items.map((item, idx) => (
                   <SwipeItem key={item.id} item={item} index={gi * 3 + idx}
                     open={openId === item.id} setOpen={setOpenId}
+                    picked={active && isPicked(item.id)} picking={picking} onPick={() => togglePick(item)}
                     onQty={q => updateQuantity(item.id, q)} onRemove={() => removeFromCart(item.id)} />
                 ))}
               </div>
@@ -165,14 +200,8 @@ export default function Cart() {
           );
         })}
 
-        {many && (
-          <p className="text-center text-forest-200/60 text-xs px-4">
-            Each restaurant is a separate order. Pick one to check out; the rest stay in your cart.
-          </p>
-        )}
-
-        {/* Promo */}
-        {promoCode ? (
+        {/* Promo: only once food is marked, since it applies to that order */}
+        {!picking ? null : promoCode ? (
           <div className="w-full glass rounded-2xl px-4 py-3.5 flex items-center gap-3">
             <Tag className="w-4 h-4 text-ember-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
@@ -206,14 +235,18 @@ export default function Cart() {
 
       {/* Fixed bottom summary */}
       <div className="fixed bottom-0 left-0 right-0 z-20">
-      <div className="glass-dark p-4"
+      {/* Totals and checkout appear only once food is marked */}
+      {picking && (
+      <div className="glass-dark p-4 cart-summary-in"
         style={{ borderTop:'1px solid rgba(var(--fg-rgb),.08)', boxShadow:'0 -8px 32px rgba(0,0,0,.4)' }}>
         <div className="max-w-2xl mx-auto space-y-2 mb-4">
-          {many && (
-            <p className="text-white text-sm font-bold flex items-center gap-1.5 truncate">
+          <div className="flex items-center gap-2">
+            <p className="flex-1 min-w-0 text-white text-sm font-bold flex items-center gap-1.5 truncate">
               <Store className="w-4 h-4 text-ember-400 flex-shrink-0" /> {restaurant?.name || groups.find(g => String(g.id) === String(restaurantId))?.name}
+              <span className="text-forest-200/60 font-medium">· {marked.reduce((n, i) => n + i.quantity, 0)} marked</span>
             </p>
-          )}
+            <button onClick={clearPicks} className="text-forest-200/60 text-xs font-semibold hover:text-white">Clear</button>
+          </div>
           {[
             { label:'Subtotal',    val:`₱${subtotal.toFixed(2)}` },
             ...(discount > 0 ? [{ label:`Promo (${promoCode})`, val:`−₱${discount.toFixed(2)}`, icon: Tag }] : []),
@@ -252,6 +285,7 @@ export default function Cart() {
           Proceed to Checkout <ChevronRight className="w-5 h-5" />
         </button>
       </div>
+      )}
       <CustomerBottomNav fixed={false} />
       </div>
     </div>

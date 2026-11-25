@@ -8,7 +8,7 @@ import { useNotification } from '../context/NotificationContext';
 export const TAX_RATE = 0.08;
 
 export default function useCartTotals() {
-  const { cartItems, restaurantId, getCartTotal, promoCode, setPromoCode, syncWithMenu } = useCart();
+  const { cartItems, allItems, restaurantId, getCartTotal, promoCode, setPromoCode, syncWithMenu } = useCart();
   const { addNotification } = useNotification();
   const [menu, setMenu] = useState(null);
 
@@ -22,7 +22,7 @@ export default function useCartTotals() {
     return () => { live = false; };
   }, [restaurantId]);
   useEffect(() => {
-    if (!menu || !cartItems.length) return;
+    if (!menu || !allItems.length) return;
     const changes = syncWithMenu(menu);
     if (changes.length) addNotification(`Your cart was updated: ${changes.join('; ')}.`, 'info');
   }, [menu]); // eslint-disable-line react-hooks/exhaustive-deps
