@@ -867,6 +867,23 @@
   box-shadow: 0 0 0 4px rgb(255 255 255 / .06), 0 14px 24px -12px rgb(0 0 0 / .85);
 }
 .cart-line-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+/* Marked for checkout: orange edge and a check; a slow press squeezes the card */
+.cart-line { transition: box-shadow .25s, scale .25s, background .25s; }
+.cart-line.is-pressing { scale: .97; transition-duration: .45s; }
+.cart-line.is-picked {
+  box-shadow: inset 0 0 0 2px #f7931e, 0 0 0 4px rgb(247 147 30 / .18), 0 14px 26px -18px rgb(0 0 0 / .9);
+}
+:root.light-nav .cart-line.is-picked { box-shadow: inset 0 0 0 2px #f7931e, 0 0 0 4px rgb(247 147 30 / .22), 0 16px 28px -18px rgb(0 0 0 / .85); }
+.cart-line-check {
+  position: absolute; top: .6rem; right: .7rem; width: 1.5rem; height: 1.5rem; border-radius: 9999px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  background: linear-gradient(135deg, #ffa53d, #e0730a); box-shadow: 0 4px 10px -3px rgb(247 147 30 / .7);
+  animation: cart-check-in .35s cubic-bezier(.34,1.56,.64,1);
+}
+@keyframes cart-check-in { from { scale: 0; } to { scale: 1; } }
+.cart-summary-in { animation: cart-summary-in .45s cubic-bezier(.22,1,.36,1); }
+@keyframes cart-summary-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
+@media (prefers-reduced-motion: reduce) { .cart-line-check, .cart-summary-in { animation: none; } }
 /* A restaurant's section in the cart; the one being checked out gets an orange edge */
 .cart-group { border-radius: 1.75rem; padding: .25rem; transition: background .3s, box-shadow .3s; }
 .cart-group.is-active { padding: .75rem; background: rgb(247 147 30 / .06); box-shadow: inset 0 0 0 1px rgb(247 147 30 / .35); }
