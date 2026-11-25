@@ -67,6 +67,22 @@ const pin = (emoji, color, label, pulse = false) => L.divIcon({
   </div>`,
 });
 
+// The rider's profile photo, or a bike badge if they have none (or it fails)
+function RiderPhoto({ src, name }) {
+  const [broken, setBroken] = useState(false);
+  if (!src || broken) return (
+    <span className="w-14 h-14 rounded-full btn-glow-orange flex items-center justify-center flex-shrink-0">
+      <Bike className="w-6 h-6 text-white" />
+    </span>
+  );
+  return (
+    <span className="trk-rider-photo flex-shrink-0">
+      <img src={src} alt={name ? `${name}'s photo` : 'Rider photo'} onError={() => setBroken(true)} />
+      <span className="trk-rider-badge" aria-hidden="true"><Bike className="w-3 h-3" /></span>
+    </span>
+  );
+}
+
 function Fit({ points }) {
   const map = useMap();
   const key = points.map(p => `${p.lat.toFixed(4)},${p.lng.toFixed(4)}`).join('|');
@@ -238,11 +254,9 @@ export default function OrderTracker({ order, onClose }) {
         {order.rider_id && !cancelled && status !== 'delivered' && (
           <div className="glass rounded-3xl p-4 mt-6">
             <div className="flex items-center gap-3">
-              <span className="w-12 h-12 rounded-full btn-glow-orange flex items-center justify-center flex-shrink-0">
-                <Bike className="w-6 h-6 text-white" />
-              </span>
+              <RiderPhoto src={order.rider_avatar} name={order.rider_name} />
               <p className="flex-1 min-w-0 text-white font-heading font-bold leading-snug">
-                I’m {riderName}, your delivery partner
+                I’m {riderName}, your delivery rider
               </p>
               {order.rider_phone && (
                 <a href={`tel:${order.rider_phone}`} aria-label={`Call ${riderName}`}
