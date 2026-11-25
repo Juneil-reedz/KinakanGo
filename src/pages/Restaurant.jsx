@@ -1,10 +1,11 @@
 import { useState, useEffect } from 'react';
-import { ClayProductCard } from '../components/clay';
+import { flushSync } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { restaurantsApi, menuApi } from '../services/api';
 import { useCart } from '../context/CartContext';
 import { useFavorites } from '../context/FavoritesContext';
-import { Star, Plus, Minus, X, ArrowLeft, Clock, Truck, ChevronRight, ShoppingCart, UtensilsCrossed } from 'lucide-react';
+import { Star, Plus, Check, Heart, ArrowLeft, Truck, UtensilsCrossed } from 'lucide-react';
+import { useNotification } from '../context/NotificationContext';
 import useGoBack from '../hooks/useGoBack';
 import { foodRating } from '../utils/foodRating';
 
@@ -18,9 +19,9 @@ export default function Restaurant() {
   const [restaurant, setRestaurant] = useState(null);
   const [menuItems, setMenuItems]   = useState([]);
   const [loading, setLoading]       = useState(true);
-  const [selectedItem, setSelectedItem] = useState(null);
   const [selectedCat, setSelectedCat]   = useState('All');
-  const [quantity, setQuantity]         = useState(1);
+  const [justAdded, setJustAdded]       = useState(null);
+  const { addNotification } = useNotification();
 
   useEffect(() => {
     if (!id || id === 'undefined') { setLoading(false); return; }
@@ -34,14 +35,26 @@ export default function Restaurant() {
     }).catch(() => {}).finally(() => setLoading(false));
   }, [id]);
 
-  const handleAddToCart = () => {
-    if (!selectedItem) return;
-    addToCart(
-      { id: selectedItem.id, name: selectedItem.name, price: selectedItem.price, image: selectedItem.image_url, quantity },
+  // "+" adds one to the cart and stays here
+  const addItem = (item) => {
+    const added = addToCart(
+      { id: item.id, name: item.name, price: Number(item.price), image: item.image_url, quantity: 1 },
       { id: restaurant.id, name: restaurant.name }
     );
-    setSelectedItem(null);
-    setQuantity(1);
+    if (!added) return;
+    addNotification(`${item.name} added to cart`, 'success');
+    setJustAdded(item.id);
+    setTimeout(() => setJustAdded(v => (v === item.id ? null : v)), 1200);
+  };
+
+  // Open the food page (photo flies into place where supported); swiping
+  // there moves through the same category
+  const openFood = (item, options) => {
+    const foodItem = { ...item, restaurant_id: restaurant.id, restaurant_name: restaurant.name };
+    const morph = !!document.startViewTransition && !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+    const go = () => navigate(`/food/${item.id}`, { state: { foodItem, morph, options: options.map(o => ({ ...o, restaurant_id: restaurant.id, restaurant_name: restaurant.name })) } });
+    if (morph) document.startViewTransition(() => flushSync(go));
+    else go();
   };
 
   if (loading) return (
@@ -65,7 +78,14 @@ export default function Restaurant() {
   );
 
   const categories = ['All', ...new Set(menuItems.map(i => i.category_name).filter(Boolean))];
-  const filtered   = selectedCat === 'All' ? menuItems : menuItems.filter(i => i.category_name === selectedCat);
+  // Food grouped by category, in menu order; a picked pill shows only that one
+  const byCat = new Map();
+  for (const it of menuItems) {
+    const c = it.category_name || 'Other';
+    if (!byCat.has(c)) byCat.set(c, []);
+    byCat.get(c).push(it);
+  }
+  const sections = [...byCat].filter(([c]) => selectedCat === 'All' || c === selectedCat);
 
   return (
     <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
@@ -120,18 +140,47 @@ export default function Restaurant() {
         </div>
       )}
 
-      {/* Menu grid */}
-      {filtered.length > 0 ? (
-        <div className="grid grid-cols-2 lg:grid-cols-3 2xl:grid-cols-4 3xl:grid-cols-5 gap-4">
-          {filtered.map((item, idx) => (
-            <ClayProductCard key={item.id} item={item} rating={foodRating(item)}
-              favorite={isFavorite(item.id)} onFavorite={() => toggleFavorite(item, restaurant)}
-              onOpen={() => { setSelectedItem(item); setQuantity(1); }}
-              onAdd={() => { setSelectedItem(item); setQuantity(1); }}
-              style={{ animationDelay:`${idx * 30}ms` }} />
-          ))}
-        </div>
-      ) : (
+      {/* Menu: one row per category, swipe right through its food */}
+      {sections.length > 0 ? sections.map(([cat, items], si) => (
+        <section key={cat} className="animate-fade-up" style={{ animationDelay: `${si * 80}ms` }}>
+          <div className="flex items-end justify-between px-1">
+            <h2 className="text-white font-heading font-bold text-lg">{cat}</h2>
+            <span className="text-forest-200/50 text-xs">{items.length} item{items.length === 1 ? '' : 's'}</span>
+          </div>
+          <div className="flex gap-3 overflow-x-auto scrollbar-hide snap-x snap-mandatory scroll-px-4 -mx-4 px-4 pt-12 pb-3">
+            {items.map((item, idx) => (
+              <div key={item.id} role="button" tabIndex={0}
+                onClick={() => openFood(item, items)}
+                onKeyDown={e => { if (e.key === 'Enter') openFood(item, items); }}
+                className="food-card relative flex-shrink-0 w-[10.5rem] snap-start cursor-pointer animate-fade-up text-center px-3 pb-4 pt-[4.6rem]"
+                style={{ animationDelay: `${idx * 50}ms` }}>
+                <div className="food-card-photo" style={{ viewTransitionName: `food-${item.id}` }}>
+                  {item.image_url
+                    ? <img src={item.image_url} alt="" loading="lazy" />
+                    : <span className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-forest-300/40" /></span>}
+                </div>
+                <button onClick={e => { e.stopPropagation(); toggleFavorite(item, restaurant); }}
+                  aria-label={isFavorite(item.id) ? `Remove ${item.name} from favorites` : `Add ${item.name} to favorites`}
+                  className="absolute top-10 right-1.5 w-7 h-7 rounded-full flex items-center justify-center bg-white/5">
+                  <Heart className={`w-3.5 h-3.5 ${isFavorite(item.id) ? 'fill-ember-400 text-ember-400' : 'text-white/60'}`} />
+                </button>
+                <p className="text-white font-heading font-bold text-[.95rem] leading-snug line-clamp-2">{item.name}</p>
+                <p className="flex items-center justify-center gap-1 text-ember-400 text-[11px] font-semibold mt-1.5">
+                  <Star className="w-3 h-3 fill-current" /> {foodRating(item)}
+                </p>
+                <div className="flex items-center justify-center gap-2 mt-2">
+                  <p className="text-white font-heading font-extrabold text-xl"><span className="text-ember-500 text-sm mr-0.5">₱</span>{Number(item.price).toFixed(2)}</p>
+                  <button onClick={e => { e.stopPropagation(); addItem(item); }}
+                    aria-label={`Add ${item.name} to cart`}
+                    className="w-7 h-7 btn-glow-orange rounded-full flex items-center justify-center flex-shrink-0">
+                    {justAdded === item.id ? <Check className="w-3.5 h-3.5 text-white" /> : <Plus className="w-3.5 h-3.5 text-white" />}
+                  </button>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )) : (
         <div className="glass rounded-3xl py-16 flex flex-col items-center gap-3">
           <UtensilsCrossed className="w-12 h-12 text-forest-300/40" />
           <p className="text-white font-semibold">No items in this category</p>
@@ -140,53 +189,6 @@ export default function Restaurant() {
               Show All
             </button>
           )}
-        </div>
-      )}
-
-      {/* Item modal */}
-      {selectedItem && (
-        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-4"
-          style={{ background:'rgba(0,0,0,.7)', backdropFilter:'blur(8px)' }}
-          onClick={() => setSelectedItem(null)}>
-          <div className="glass w-full max-w-sm rounded-3xl overflow-hidden card-3d animate-fade-up"
-            onClick={e => e.stopPropagation()}>
-            <div className="relative h-52">
-              {selectedItem.image_url
-                ? <img src={selectedItem.image_url} alt={selectedItem.name} className="w-full h-full object-cover" />
-                : <div className="w-full h-full glass-dark flex items-center justify-center"><UtensilsCrossed className="w-14 h-14 text-forest-300/30" /></div>
-              }
-              <div className="absolute inset-0 bg-gradient-to-t from-black/70 to-transparent" />
-              <button onClick={() => setSelectedItem(null)}
-                className="absolute top-3 right-3 w-8 h-8 glass rounded-full flex items-center justify-center text-white">
-                <X className="w-4 h-4" />
-              </button>
-              <p className="absolute bottom-3 left-4 text-white font-bold text-xl text-glow-orange">₱{Number(selectedItem.price).toFixed(2)}</p>
-            </div>
-            <div className="p-5">
-              <p className="text-white font-heading font-bold text-lg mb-1">{selectedItem.name}</p>
-              {selectedItem.description && <p className="text-forest-200/60 text-sm mb-4">{selectedItem.description}</p>}
-              <div className="flex items-center justify-between mb-5">
-                <span className="text-forest-200/60 text-sm">Quantity</span>
-                <div className="flex items-center gap-3">
-                  <button onClick={() => setQuantity(q => Math.max(1, q - 1))}
-                    className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-orange transition-all">
-                    <Minus className="w-4 h-4 text-forest-200" />
-                  </button>
-                  <span className="text-white font-bold w-5 text-center">{quantity}</span>
-                  <button onClick={() => setQuantity(q => q + 1)}
-                    className="w-8 h-8 glass rounded-xl flex items-center justify-center hover:glass-green transition-all">
-                    <Plus className="w-4 h-4 text-forest-200" />
-                  </button>
-                </div>
-              </div>
-              <button onClick={handleAddToCart}
-                className="w-full py-3.5 btn-glow-orange text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                <ShoppingCart className="w-4 h-4" />
-                Add to Cart — ₱{(Number(selectedItem.price) * quantity).toFixed(2)}
-                <ChevronRight className="w-4 h-4" />
-              </button>
-            </div>
-          </div>
         </div>
       )}
     </div>
