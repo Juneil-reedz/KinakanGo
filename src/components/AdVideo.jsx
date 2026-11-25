@@ -38,7 +38,7 @@ export default function AdVideo() {
   }, []);
 
   return (
-    <video ref={ref} className="ad-video w-full aspect-video rounded-[1.25rem] object-cover block pointer-events-none select-none"
+    <video ref={ref} className="ad-video w-full aspect-video rounded-3xl object-cover block pointer-events-none select-none"
       src={`${BASE}assets/kinakango-ad.mp4`}
       poster={`${BASE}assets/kinakango-ad-poster.jpg`}
       autoPlay muted loop playsInline preload="auto"
