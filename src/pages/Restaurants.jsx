@@ -1,3 +1,4 @@
+import StoreCard from '../components/StoreCard';
 import { useState, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate, useSearchParams } from 'react-router-dom';
@@ -228,33 +229,10 @@ export default function Restaurants() {
       {/* Restaurants grid */}
       {!loading && viewMode === 'restaurants' && (
         restaurants.length > 0 ? (
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
             {restaurants.map((r, idx) => (
-              <button key={r.id} onClick={() => navigate(`/restaurant/${r.id}`)}
-                className="restaurant-card card-3d glass text-left group animate-fade-up"
-                style={{ animationDelay:`${idx*40}ms` }}>
-                <div className="relative h-36 overflow-hidden">
-                  <img src={r.image_url || r.image} alt={r.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/10 to-transparent" />
-                  {!(r.is_open ?? r.isOpen) && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="glass text-white/70 text-xs px-3 py-1 rounded-full">Closed</span>
-                    </div>
-                  )}
-                  <div className="absolute bottom-2 left-3 right-3">
-                    <p className="text-white font-semibold text-sm truncate">{r.name}</p>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="flex items-center gap-0.5 text-ember-300 text-xs"><Star className="w-3 h-3 fill-current" />{r.rating}</span>
-                      <span className="text-white/40 text-xs">•</span>
-                      <span className="text-forest-200 text-xs">{r.delivery_time || r.deliveryTime} min</span>
-                    </div>
-                  </div>
-                </div>
-                <div className="p-3 flex items-center justify-between">
-                  <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full capitalize">{r.category}</span>
-                  <span className="text-forest-200/50 text-xs">₱{r.delivery_fee ?? r.deliveryFee} del.</span>
-                </div>
-              </button>
+              <StoreCard key={r.id} r={r} onClick={() => navigate(`/restaurant/${r.id}`)}
+                style={{ animationDelay: `${idx * 40}ms` }} />
             ))}
           </div>
         ) : (

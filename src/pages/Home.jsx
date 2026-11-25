@@ -1,3 +1,4 @@
+import StoreCard from '../components/StoreCard';
 import { useState, useEffect } from 'react';
 import { flushSync } from 'react-dom';
 import { useNavigate } from 'react-router-dom';
@@ -268,36 +269,10 @@ export default function Home() {
               See all <ChevronRight className="w-3.5 h-3.5" />
             </button>
           </div>
-          <div className="grid grid-cols-1 xs:grid-cols-2 gap-4">
+          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-x-4 gap-y-6">
             {restaurants.slice(0, 4).map((r, idx) => (
-              <button key={r.id} onClick={() => navigate(`/restaurant/${r.id}`)}
-                className="restaurant-card card-3d glass text-left group animate-fade-up"
-                style={{ animationDelay: `${idx * 80}ms` }}>
-                <div className="relative h-32 overflow-hidden">
-                  {r.image_url
-                    ? <img src={r.image_url} alt={r.name} className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500" />
-                    : <div className="w-full h-full glass flex items-center justify-center"><UtensilsCrossed className="w-8 h-8 text-forest-300/40" /></div>
-                  }
-                  <div className="absolute inset-0 bg-gradient-to-t from-black/70 via-black/20 to-transparent" />
-                  <div className="absolute bottom-3 left-3 right-3">
-                    <p className="text-white font-semibold text-sm truncate">{r.name}</p>
-                    <div className="flex items-center gap-2 mt-1">
-                      <span className="flex items-center gap-1 text-ember-300 text-xs">
-                        <Star className="w-3 h-3 fill-current" />{Number(r.rating ?? 0).toFixed(1)}
-                      </span>
-                    </div>
-                  </div>
-                  {!r.is_open && (
-                    <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-                      <span className="glass text-white/70 text-xs px-3 py-1 rounded-full">Closed</span>
-                    </div>
-                  )}
-                </div>
-                <div className="p-3 flex items-center justify-between">
-                  <span className="glass-green text-forest-200 text-xs px-2 py-0.5 rounded-full">{r.cuisine ?? 'Restaurant'}</span>
-                  <span className="text-forest-200/60 text-xs">₱{r.delivery_fee} delivery</span>
-                </div>
-              </button>
+              <StoreCard key={r.id} r={r} onClick={() => navigate(`/restaurant/${r.id}`)}
+                style={{ animationDelay: `${idx * 80}ms` }} />
             ))}
           </div>
         </section>
