@@ -258,6 +258,17 @@ export default function Home() {
         )}
       </section>
 
+      {/* ── Ad video (silent, loops) ─────────────────── */}
+      <section aria-label="What KinakanGo offers">
+        <div className="glass rounded-3xl overflow-hidden p-1.5">
+          <video className="w-full aspect-video rounded-[1.25rem] object-cover block"
+            src={`${import.meta.env.BASE_URL}assets/kinakango-ad.mp4`}
+            poster={`${import.meta.env.BASE_URL}assets/kinakango-ad-poster.jpg`}
+            autoPlay muted loop playsInline preload="metadata"
+            aria-label="KinakanGo ad: browse food, order, and track your rider" />
+        </div>
+      </section>
+
       {/* ── Featured restaurants ─────────────────────── */}
       {restaurants.length > 0 && (
         <section>
