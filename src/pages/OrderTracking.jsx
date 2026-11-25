@@ -340,13 +340,13 @@ export default function OrderTracking() {
         const isOpen = openIds.has(order.id);
 
         return (
-          <div key={order.id}>
+          <div key={order.id} className={`cart-line ${isOpen ? 'is-picked' : ''} relative ml-11`}>
 
             {/* Order row, shaped like a cart line: round photo off the left edge. Tap to open. */}
             <div role="button" tabIndex={0} aria-expanded={isOpen} aria-controls={`order-body-${order.id}`}
               onClick={() => toggleOpen(order.id)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(order.id); } }}
-              className={`cart-line ${isOpen ? 'is-picked' : ''} relative ml-11 min-h-[7rem] py-3.5 pr-4 pl-[4.25rem] cursor-pointer select-none`}>
+              className="relative min-h-[7rem] py-3.5 pr-4 pl-[4.25rem] cursor-pointer select-none">
               <div className="cart-line-photo">
                 {orderPhoto(order)
                   ? <img src={orderPhoto(order)} alt="" draggable="false" />
@@ -392,7 +392,8 @@ export default function OrderTracking() {
               )}
             </div>
 
-            {isOpen && (<div id={`order-body-${order.id}`} className="glass rounded-3xl overflow-hidden mt-3 animate-fade-up">
+            {/* Details open inside the same card, under the order */}
+            {isOpen && (<div id={`order-body-${order.id}`} className="order-card-body animate-fade-up">
 
             {order.status === 'pending' && (
               <div className="px-5 pt-4 flex items-center justify-between gap-3">

@@ -885,6 +885,9 @@
 .cart-summary-in { animation: cart-summary-in .45s cubic-bezier(.22,1,.36,1); }
 @keyframes cart-summary-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .cart-line-check, .cart-summary-in { animation: none; } }
+/* An order's details, inside its card under the row */
+.order-card-body { border-top: 1px solid rgba(var(--fg-rgb),.08); padding-top: .25rem; }
+
 /* A restaurant's section in the cart; the one being checked out gets an orange edge */
 .cart-group { border-radius: 1.75rem; padding: .25rem; transition: background .3s, box-shadow .3s; }
 .cart-group.is-active { padding: .75rem; background: rgb(247 147 30 / .06); box-shadow: inset 0 0 0 1px rgb(247 147 30 / .35); }
