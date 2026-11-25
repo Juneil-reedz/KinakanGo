@@ -90,6 +90,16 @@ const STATUSES = [
   { id:'delivered',  label:'Delivered', icon:CheckCircle2,  desc:'Order successfully delivered' },
 ];
 
+// Status tabs: each order sits in exactly one
+const TABS = [
+  { id: 'pending',   label: 'Pending',    has: ['pending'] },
+  { id: 'preparing', label: 'Preparing',  has: ['accepted', 'preparing', 'ready'] },
+  { id: 'on_way',    label: 'On the way', has: ['picked_up'] },
+  { id: 'delivered', label: 'Delivered',  has: ['delivered'] },
+  { id: 'cancelled', label: 'Cancelled',  has: ['cancelled', 'refunded'] },
+];
+const tabOf = (o) => (TABS.find(t => t.has.includes(o.status)) || TABS[0]).id;
+
 const isActiveOrder = (o) => !['delivered', 'cancelled', 'refunded'].includes(o.status);
 
 // The order's photo: its first food that has one
@@ -118,6 +128,7 @@ export default function OrderTracking() {
   const [lastLiveAt, setLastLiveAt] = useState(null);
   const pollLocRef = useRef(null);
   const [cancelOrder, setCancelOrder] = useState(null);
+  const [tab, setTab] = useState(null); // null: the first tab that has orders
   // Orders show as a compact list; tapping one opens its progress, map and items.
   // /orders?order=27 opens that one straight away.
   const [params] = useSearchParams();
@@ -140,7 +151,7 @@ export default function OrderTracking() {
       // Every order still on its way, then the last few finished ones, so earlier
       // orders don't vanish from the page while a newer one is active
       const active = list.filter(isActiveOrder);
-      const base   = [...active, ...list.filter(o => !isActiveOrder(o)).slice(0, 5)];
+      const base   = [...active, ...list.filter(o => !isActiveOrder(o))];
 
       // Only refetch an order's details when it's new or its status/rider changed;
       // the list response already carries the fields that change while polling.
@@ -263,6 +274,12 @@ export default function OrderTracking() {
     </div>
   );
 
+  // Open the first tab that has orders, unless the customer picked one
+  // (a link to one order opens that order's tab)
+  const linked = orders.find(o => String(o.id) === params.get('order'));
+  const currentTab = tab || (linked && tabOf(linked)) || (TABS.find(t => orders.some(o => tabOf(o) === t.id)) || TABS[0]).id;
+  const tabOrders  = orders.filter(o => tabOf(o) === currentTab);
+
   return (
     <div className="space-y-6 pb-20 lg:pb-0 animate-fade-up">
       <div className="flex items-center justify-between">
@@ -280,10 +297,31 @@ export default function OrderTracking() {
         </div>
       </div>
 
-      {[['', orders.filter(isActiveOrder)], ['Past orders', orders.filter(o => !isActiveOrder(o))]]
-        .filter(([, list]) => list.length).map(([title, list]) => (
-      <div key={title || 'active'} className="space-y-6">
-        {title && <h2 className="text-forest-200/70 text-sm font-semibold uppercase tracking-wider pt-2">{title}</h2>}
+      {/* Status tabs */}
+      <div className="-mx-4 px-4 flex gap-2 overflow-x-auto scrollbar-hide" role="tablist" aria-label="Order status">
+        {TABS.map(t => {
+          const n = orders.filter(o => tabOf(o) === t.id).length;
+          const on = t.id === currentTab;
+          return (
+            <button key={t.id} role="tab" aria-selected={on} onClick={() => setTab(t.id)}
+              className={`flex-shrink-0 px-4 py-2 rounded-full text-sm font-semibold flex items-center gap-1.5 transition-all ${
+                on ? 'bg-ember-500 text-white shadow-[0_8px_20px_-8px_rgb(247_147_30_/_.8)]' : 'glass text-forest-200/70 hover:text-white'}`}>
+              {t.label}
+              <span className={`min-w-[1.25rem] h-5 px-1 rounded-full text-[11px] flex items-center justify-center ${on ? 'bg-white/25' : 'bg-white/10'}`}>{n}</span>
+            </button>
+          );
+        })}
+      </div>
+
+      {!tabOrders.length && (
+        <div className="glass rounded-3xl py-10 px-6 text-center">
+          <Package className="w-10 h-10 text-forest-300/30 mx-auto mb-2" />
+          <p className="text-forest-200/60 text-sm">No {TABS.find(t => t.id === currentTab)?.label.toLowerCase()} orders.</p>
+        </div>
+      )}
+
+      {[['', tabOrders]].filter(([, list]) => list.length).map(([title, list]) => (
+      <div key={title || 'list'} className="space-y-6">
       {groupByRestaurant(list).map(g => (
       <section key={g.id} className="space-y-3">
         <div className="flex items-center gap-3">
