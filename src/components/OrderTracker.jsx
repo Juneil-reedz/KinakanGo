@@ -58,11 +58,42 @@ const km = (a, b) => {
 };
 const fmtKm = (d) => d == null ? null : d < 1 ? `${Math.round(d * 1000)} m` : `${d.toFixed(1)} km`;
 
-const pin = (emoji, color, label, pulse = false) => L.divIcon({
-  className: '', iconSize: [0, 0], iconAnchor: [20, 20],
-  html: `<div class="trk-pin" style="--c:${color}">
+// Map markers are plain shapes (no circle behind them), each with a white outline
+const SHAPES = {
+  // A delivery rider on a motorcycle, with a food box on the back
+  rider: `<svg viewBox="0 0 64 52" width="50" height="41" aria-hidden="true">
+    <rect x="3" y="15" width="15" height="13" rx="2.5" fill="var(--c)"/>
+    <path d="M9 34 H30 L37 25 H46 L51 36 Z" fill="var(--c)"/>
+    <path d="M44 25 L52 41" stroke="var(--c)" stroke-width="4" stroke-linecap="round"/>
+    <path d="M41 15 H47" stroke="#2a211b" stroke-width="3.5" stroke-linecap="round"/>
+    <path d="M27 15 L22 29 L33 31 L35 38" fill="none" stroke="#2a211b" stroke-width="5.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <path d="M28 17 L42 16" stroke="#2a211b" stroke-width="4" stroke-linecap="round"/>
+    <circle cx="29" cy="8" r="6" fill="#2a211b"/>
+    <path d="M24 7 A6 6 0 0 1 35 6.5 Z" fill="var(--c)"/>
+    <circle cx="14" cy="42" r="7.5" fill="#2a211b"/><circle cx="14" cy="42" r="2.8" fill="#fff"/>
+    <circle cx="52" cy="42" r="7.5" fill="#2a211b"/><circle cx="52" cy="42" r="2.8" fill="#fff"/>
+  </svg>`,
+  // A house: roof, chimney and door
+  home: `<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true">
+    <path d="M33 9 H39 V19 L33 14 Z" fill="var(--c)"/>
+    <path d="M24 4 L45 23 H39 V44 H9 V23 H3 Z" fill="var(--c)" stroke-linejoin="round"/>
+    <rect x="19" y="29" width="10" height="15" rx="1.5" fill="#fff"/>
+  </svg>`,
+  // A restaurant: striped awning over a shop front with a door and window
+  rest: `<svg viewBox="0 0 48 48" width="40" height="40" aria-hidden="true">
+    <rect x="7" y="20" width="34" height="24" fill="var(--c)"/>
+    <path d="M4 8 H44 L46 20 Q41 25 36 20 Q30 25 24 20 Q18 25 12 20 Q7 25 2 20 Z" fill="var(--c)"/>
+    <path d="M14 8 L12 20 M24 8 V20 M34 8 L36 20" stroke="#fff" stroke-width="2.5"/>
+    <rect x="12" y="28" width="9" height="16" rx="1.5" fill="#fff"/>
+    <rect x="26" y="28" width="10" height="8" rx="1.5" fill="#fff"/>
+  </svg>`,
+};
+
+const pin = (kind, color, label, pulse = false) => L.divIcon({
+  className: '', iconSize: [0, 0], iconAnchor: kind === 'rider' ? [25, 34] : [20, 36],
+  html: `<div class="trk-pin trk-pin-${kind}" style="--c:${color}">
     ${pulse ? '<span class="trk-pin-pulse"></span>' : ''}
-    <span class="trk-pin-dot">${emoji}</span>
+    <span class="trk-pin-shape">${SHAPES[kind]}</span>
     ${label ? `<span class="trk-pin-label">${label.replace(/[<>&"]/g, '')}</span>` : ''}
   </div>`,
 });
@@ -197,9 +228,9 @@ export default function OrderTracker({ order, onClose }) {
                 pathOptions={{ color: darkTiles ? '#fba94c' : '#2a211b', weight: 3, dashArray: '2 9', lineCap: 'round' }} />}
               {points.map(p => (
                 <Marker key={p.kind} position={[p.lat, p.lng]} opacity={p.faint ? 0.55 : 1}
-                  icon={p.kind === 'rider' ? pin('🛵', '#f7931e', riderName, true)
-                    : p.kind === 'rest' ? pin('🍽️', '#e11d48', restName)
-                    : pin('🏠', '#0d9488', 'Home')} />
+                  icon={p.kind === 'rider' ? pin('rider', '#f7931e', riderName, true)
+                    : p.kind === 'rest' ? pin('rest', '#e11d48', restName)
+                    : pin('home', '#0d9488', 'Home')} />
               ))}
             </MapContainer>
             <div className="absolute left-0 right-0 top-0 z-[500] px-4 pt-[max(.75rem,env(safe-area-inset-top))] flex items-center gap-2 pointer-events-none">
