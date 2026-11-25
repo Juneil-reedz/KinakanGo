@@ -1,18 +1,15 @@
 import { useState, useEffect, useRef } from 'react';
-import { useDialog } from '../context/DialogContext';
-import { Link, useNavigate, useLocation } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { useCart } from '../context/CartContext';
 import { useNotification } from '../context/NotificationContext';
 import { ordersApi } from '../services/api';
-import StarRating from '../components/StarRating';
 import {
   ArrowRight, X, Mail, Edit2, Package, Heart, Phone, MapPin,
-  LogOut, Settings, RotateCcw, Receipt, Star, Store, Check, User, Camera
+  LogOut, Settings, Check, User, Camera
 } from 'lucide-react';
 
 const QUICK_ACTIONS = [
-  { label:'Orders',        icon:Package,   color:'from-forest-600 to-forest-700', tab:'orders' },
+  { label:'Orders',        icon:Package,   color:'from-forest-600 to-forest-700', to:'/orders' },
   { label:'Favorites',     icon:Heart,     color:'from-forest-500 to-forest-600', to:'/favorites' },
   { label:'Addresses',     icon:MapPin,    color:'from-forest-700 to-forest-800', to:'/addresses' },
   { label:'Support',       icon:Mail,      color:'from-ember-400 to-ember-500',   to:'/customer-service' },
@@ -40,16 +37,9 @@ const resizeImage = (file, maxSize = 420, quality = 0.82) => new Promise((resolv
 
 export default function Profile() {
   const navigate = useNavigate();
-  const location = useLocation();
   const { user, logout, updateUser } = useAuth();
-  const { addToCart, clearCart }     = useCart();
   const { addNotification }          = useNotification();
 
-  const [activeTab, setActiveTab] = useState(location.state?.tab || 'profile');
-
-  useEffect(() => {
-    if (location.state?.tab) setActiveTab(location.state.tab);
-  }, [location.state]);
   const [isEditing, setIsEditing] = useState(false);
   const [form, setForm]           = useState({ name: user?.name || '', email: user?.email || '', phone: user?.phone || '' });
   const [orders, setOrders]       = useState([]);
@@ -104,69 +94,12 @@ export default function Profile() {
     navigate('/login', { replace: true });
   };
 
-  const ask = useDialog();
-  const handleReorder = async (order) => {
-    if (!(await ask({ title: `Reorder from ${order.restaurant_name}?`, confirmLabel: 'Reorder' }))) return;
-    const restaurantId = order.restaurant_id;
-    if (!restaurantId) {
-      addNotification('Restaurant details are missing for this order', 'error');
-      return;
-    }
-
-    try {
-      const fullOrder = await ordersApi.getOne(order.id);
-      const items = fullOrder.items || [];
-      if (!items.length) {
-        addNotification('No items found for this order', 'error');
-        return;
-      }
-
-      clearCart(restaurantId); // start this restaurant's food over; other restaurants stay
-      const restaurant = { id: restaurantId, name: order.restaurant_name };
-      items.forEach(item => {
-        addToCart({
-          id: item.menu_item_id || item.item_id || item.id,
-          name: item.name,
-          price: Number(item.price),
-          quantity: item.quantity,
-          image_url: item.image_url,
-          notes: item.notes,
-        }, restaurant);
-      });
-      addNotification('Previous order added to cart', 'success');
-      navigate('/cart');
-    } catch {
-      addNotification('Failed to reorder. Please try again.', 'error');
-    }
-  };
-
-  const statusBadge = (s) => ({
-    delivered:'glass-green text-forest-200',
-    cancelled:'text-red-300 glass',
-    refunded:'text-purple-300 glass',
-  }[s] || 'glass-orange text-ember-200');
-
   if (!user) return null;
 
   return (
     <div className="space-y-5 pb-20 lg:pb-0 animate-fade-up">
-      {/* Tabs */}
-      <div className="glass rounded-2xl p-1 flex gap-1">
-        {[{id:'profile',label:'Profile'},{id:'orders',label:'Order History'}].map(({id,label}) => (
-          <button key={id} onClick={() => {
-            setActiveTab(id);
-            // Remember the tab in this history entry so Back from an order returns here
-            navigate(location.pathname + location.search, { replace: true, state: { ...(location.state || {}), tab: id } });
-          }}
-            className={`flex-1 py-2.5 rounded-xl font-medium text-sm transition-all
-              ${activeTab === id ? 'btn-glow-orange text-white' : 'text-forest-100/60 hover:text-white'}`}>
-            {label}
-          </button>
-        ))}
-      </div>
-
       {/* PROFILE TAB */}
-      {activeTab === 'profile' && (
+      {(
         <div className="space-y-4">
           {/* Hero card */}
           <div className="glass card-3d rounded-3xl p-5 sm:p-6 overflow-hidden">
@@ -221,11 +154,10 @@ export default function Profile() {
             <p className="text-white font-semibold mb-3">Quick Actions</p>
             {/* 3 per row on phones, one row of 6 from tablet width (xl = 768px here) */}
             <div className="grid grid-cols-3 xl:grid-cols-6 gap-3">
-              {QUICK_ACTIONS.map(({ label, icon:Icon, color, tab, to, logout: isLogout }) => (
+              {QUICK_ACTIONS.map(({ label, icon:Icon, color, to, logout: isLogout }) => (
                 <button key={label}
                   onClick={() => {
                     if (isLogout) handleLogout();
-                    else if (tab) setActiveTab(tab);
                     else navigate(to);
                   }}
                   className="glass card-3d rounded-2xl px-2 py-3 min-w-0 flex flex-col items-center gap-2 hover:glass-green transition-all group">
@@ -273,74 +205,6 @@ export default function Profile() {
         </div>
       )}
 
-      {/* ORDERS TAB */}
-      {activeTab === 'orders' && (
-        <div className="space-y-4">
-          {ordersLoading ? (
-            [1,2,3].map(i => <div key={i} className="glass rounded-2xl h-32 animate-pulse" />)
-          ) : orders.length === 0 ? (
-            <div className="glass rounded-3xl py-16 flex flex-col items-center gap-3">
-              <Package className="w-12 h-12 text-forest-300/40" />
-              <p className="text-white font-semibold">No orders yet</p>
-              <button onClick={() => navigate('/restaurants')} className="btn-glow-orange text-white text-sm px-5 py-2.5 rounded-xl mt-2">Browse Food</button>
-            </div>
-          ) : (
-            orders.map((order, idx) => (
-              <div key={order.id} role="button" tabIndex={0}
-                onClick={() => navigate(`/order-receipt/${order.id}`)}
-                onKeyDown={e => { if (e.key === 'Enter') navigate(`/order-receipt/${order.id}`); }}
-                className="glass card-3d rounded-2xl p-5 animate-fade-up cursor-pointer hover:glass-green transition-all" style={{ animationDelay:`${idx * 60}ms` }}>
-                <div className="flex items-start justify-between mb-3">
-                  <div>
-                    <p className="text-white font-semibold">Order #{order.id}</p>
-                    <p className="text-forest-200/60 text-xs mt-0.5">{order.restaurant_name}</p>
-                    <p className="text-forest-200/40 text-xs">{new Date(order.created_at).toLocaleDateString('en-PH', { year:'numeric', month:'short', day:'numeric' })}</p>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-ember-400 font-heading font-bold text-lg">₱{Number(order.total).toFixed(2)}</p>
-                    <span className={`text-xs px-2 py-0.5 rounded-full ${statusBadge(order.status)}`}>
-                      {order.status.replace('_',' ').replace(/\b\w/g, c => c.toUpperCase())}
-                    </span>
-                  </div>
-                </div>
-
-                {order.status === 'delivered' && order.food_rating && (
-                  <div className="flex items-center gap-2 mb-3 text-xs text-forest-200/60">
-                    <span>You rated</span><StarRating value={order.food_rating} size="w-3.5 h-3.5" />
-                  </div>
-                )}
-                <div className="flex gap-2 flex-wrap" onClick={e => e.stopPropagation()}>
-                  {order.status === 'delivered' && !order.food_rating && (
-                    <Link to={`/order-receipt/${order.id}#rate`}
-                      className="flex items-center gap-1.5 glass-orange text-ember-200 text-xs px-3 py-2 rounded-xl transition-all">
-                      <Star className="w-3.5 h-3.5" /> Rate
-                    </Link>
-                  )}
-                  <Link to={`/order-receipt/${order.id}`}
-                    className="flex items-center gap-1.5 btn-glow-orange text-white text-xs px-3 py-2 rounded-xl transition-all">
-                    <Receipt className="w-3.5 h-3.5" /> Details
-                  </Link>
-                  <button onClick={() => handleReorder(order)}
-                    className="flex items-center gap-1.5 glass hover:glass-orange text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
-                    <RotateCcw className="w-3.5 h-3.5" /> Reorder
-                  </button>
-                  <button type="button" onClick={() => {
-                    if (order.restaurant_id) navigate(`/restaurant/${order.restaurant_id}`);
-                    else addNotification('Restaurant details are missing for this order', 'error');
-                  }}
-                    className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
-                    <Store className="w-3.5 h-3.5" /> Restaurant
-                  </button>
-                  <Link to={`/orders`}
-                    className="flex items-center gap-1.5 glass hover:glass-green text-forest-200 text-xs px-3 py-2 rounded-xl transition-all">
-                    <Receipt className="w-3.5 h-3.5" /> Track
-                  </Link>
-                </div>
-              </div>
-            ))
-          )}
-        </div>
-      )}
     </div>
   );
 }

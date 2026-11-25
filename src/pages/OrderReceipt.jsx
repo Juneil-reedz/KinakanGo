@@ -365,7 +365,7 @@ export default function OrderReceipt() {
   }, [orderId]);
 
   const back = (
-    <button onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/profile', { state: { tab: 'orders' } }))}
+    <button onClick={() => (window.history.state?.idx > 0 ? navigate(-1) : navigate('/orders'))}
       className="glass hover:glass-green transition-all text-forest-100/80 hover:text-white text-sm font-medium px-4 py-2.5 rounded-xl flex items-center gap-2">
       <ArrowLeft className="w-4 h-4" /> Back
     </button>
