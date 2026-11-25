@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useLocation } from 'react-router-dom';
-import { Utensils } from 'lucide-react';
+import KinakanLogo from './KinakanLogo';
 
 // Opening screen: the KinakanGo logo animates in, then after 2 seconds it fades
 // away to reveal the app (the login page for someone signed out, home otherwise).
@@ -26,7 +26,7 @@ export default function Splash() {
     <div className={`splash fixed inset-0 z-[200] flex flex-col items-center justify-center ${phase === 'out' ? 'splash-out' : ''}`}
       role="status" aria-label="Loading KinakanGo">
       <div className="splash-plate w-24 h-24 rounded-full btn-glow-orange flex items-center justify-center">
-        <Utensils className="w-11 h-11 text-white" />
+        <KinakanLogo className="w-16 h-16 text-white" />
       </div>
       <h1 className="splash-word brand-wordmark text-white text-[2.8rem] leading-none mt-6 select-none">
         Kinakan<span className="splash-go text-ember-500 inline-block">Go</span>
