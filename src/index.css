@@ -885,6 +885,42 @@
 .cart-summary-in { animation: cart-summary-in .45s cubic-bezier(.22,1,.36,1); }
 @keyframes cart-summary-in { from { opacity: 0; transform: translateY(100%); } to { opacity: 1; transform: none; } }
 @media (prefers-reduced-motion: reduce) { .cart-line-check, .cart-summary-in { animation: none; } }
+/* Order number badge in the circle: a progress ring around a dark glowing disc */
+.order-badge {
+  --ring: #f7931e;
+  position: absolute; left: -2.75rem; top: 50%; translate: 0 -50%;
+  width: 6.25rem; height: 6.25rem; border-radius: 9999px; padding: 4px;
+  background: conic-gradient(from -90deg, var(--ring) 0 var(--pct), rgb(255 255 255 / .1) var(--pct) 100%);
+  box-shadow: 0 0 0 4px rgb(255 255 255 / .05), 0 14px 26px -12px rgb(0 0 0 / .9), 0 0 24px -6px rgb(247 147 30 / .55);
+  transition: background .6s;
+}
+.order-badge.is-done { --ring: #34b07a; box-shadow: 0 0 0 4px rgb(255 255 255 / .05), 0 14px 26px -12px rgb(0 0 0 / .9), 0 0 24px -6px rgb(52 176 122 / .5); }
+.order-badge.is-cancelled { --ring: #e2554f; box-shadow: 0 0 0 4px rgb(255 255 255 / .05), 0 14px 26px -12px rgb(0 0 0 / .9); }
+.order-badge-core {
+  width: 100%; height: 100%; border-radius: 9999px;
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: .1rem;
+  background: radial-gradient(circle at 35% 25%, #3a2d24 0%, #1d1713 70%);
+  box-shadow: inset 0 1px 0 rgb(255 255 255 / .12), inset 0 -6px 14px rgb(0 0 0 / .45);
+}
+.order-badge-label { font-size: .55rem; font-weight: 700; letter-spacing: .22em; text-transform: uppercase; color: rgb(255 255 255 / .55); padding-left: .22em; }
+.order-badge-num {
+  font-family: var(--font-heading, inherit); font-weight: 800; font-size: 1.55rem; line-height: 1; letter-spacing: -.02em;
+  background: linear-gradient(180deg, #fff 10%, #ffc27a 60%, #f7931e 100%);
+  -webkit-background-clip: text; background-clip: text; color: transparent;
+}
+.order-badge-hash { font-size: .9rem; margin-right: .05rem; vertical-align: .35rem; opacity: .85; }
+.order-badge-icon {
+  position: absolute; bottom: -.2rem; right: .15rem; width: 1.75rem; height: 1.75rem; border-radius: 9999px;
+  display: flex; align-items: center; justify-content: center; color: #fff;
+  background: linear-gradient(135deg, #ffa53d, #e0730a); border: 2px solid #201914;
+}
+.order-badge.is-done .order-badge-icon { background: linear-gradient(135deg, #4fcf95, #23865b); }
+.order-badge.is-cancelled .order-badge-icon { background: linear-gradient(135deg, #f07a74, #b8322c); }
+:root.light-nav .order-badge-core { background: radial-gradient(circle at 35% 25%, #fffaf3 0%, #f1e6d8 75%); box-shadow: inset 0 1px 0 #fff, inset 0 -6px 14px rgb(120 80 40 / .15); }
+:root.light-nav .order-badge-label { color: rgb(60 40 25 / .6); }
+:root.light-nav .order-badge-num { background: linear-gradient(180deg, #3a2a1f 10%, #b5620e 70%, #f7931e 100%); -webkit-background-clip: text; background-clip: text; }
+:root.light-nav .order-badge-icon { border-color: #fff; }
+
 /* An order's details, inside its card under the row */
 .order-card-body { border-top: 1px solid rgba(var(--fg-rgb),.08); padding-top: .25rem; }
 
