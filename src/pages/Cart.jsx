@@ -121,9 +121,9 @@ export default function Cart() {
 
   if (allItems.length === 0) {
     return (
-      <div className="min-h-screen px-4 pt-12 pb-28 lg:pb-12 relative animate-fade-up">
+      <div className="min-h-screen px-4 pt-5 pb-28 lg:pb-12 relative">
         <div className="orb w-72 h-72 bg-forest-600/15 top-1/4 left-1/4" />
-        <div className="max-w-3xl mx-auto space-y-6">
+        <div className="page-rise max-w-3xl mx-auto space-y-6">
           <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">My Cart</h1>
           <div className="glass rounded-3xl py-16 px-6 flex flex-col items-center gap-3 text-center card-3d">
             <ShoppingCart className="w-16 h-16 text-forest-300/20" />
@@ -144,16 +144,16 @@ export default function Cart() {
     <div className="min-h-screen relative">
       <div className="orb w-72 h-72 bg-forest-600/15 top-0 right-0" />
 
-      {/* Header: plain title, no bar or back arrow */}
-      <div className="max-w-2xl mx-auto px-4 pt-12 flex items-end justify-between gap-3">
+      {/* Header: plain title and a + button to add more food */}
+      <div className="page-rise max-w-2xl mx-auto px-4 pt-5 flex items-center justify-between gap-3">
         <h1 className="text-[2rem] sm:text-2xl leading-none font-heading font-bold text-white">Your Cart</h1>
-        <button onClick={() => navigate('/restaurants')}
-          className="text-ember-400 text-xs font-medium hover:text-ember-300 transition-colors">
-          + Add more
+        <button onClick={() => navigate('/restaurants')} aria-label="Add more food" title="Add more food"
+          className="w-10 h-10 btn-glow-orange rounded-full flex items-center justify-center flex-shrink-0">
+          <Plus className="w-5 h-5 text-white" />
         </button>
       </div>
 
-      <div className={`max-w-2xl mx-auto p-4 space-y-4 ${picking ? 'pb-72 lg:pb-60' : 'pb-32'}`}>
+      <div style={{ animationDelay: '.1s' }} className={`page-rise max-w-2xl mx-auto p-4 space-y-4 ${picking ? 'pb-72 lg:pb-60' : 'pb-32'}`}>
         <p className="text-center text-forest-200/60 text-xs px-4">
           {picking
             ? (many ? 'Each restaurant is a separate order, so you can mark food from one restaurant at a time.' : 'Tap more food to add it to this order.')
