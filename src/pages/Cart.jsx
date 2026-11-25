@@ -1,12 +1,12 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
-import { Minus, Plus, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight, Trash2 } from 'lucide-react';
+import { Minus, Plus, ShoppingCart, ArrowLeft, Truck, Tag, ChevronRight, Trash2, Store, Check } from 'lucide-react';
 import CustomerBottomNav from '../components/CustomerBottomNav';
 import useGoBack from '../hooks/useGoBack';
 import useCartTotals from '../hooks/useCartTotals';
 
-const REVEAL = 88; // px the card slides to show the delete button
+const REVEAL = 92; // px the card slides to show the delete button
 
 // One cart line: round photo, name, - qty +, price. Drag it left to reveal delete.
 function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
@@ -38,16 +38,17 @@ function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
     <div className="relative animate-fade-up" style={{ animationDelay: `${index * 60}ms` }}>
       {/* Delete, behind the card on the right */}
       <button onClick={onRemove} aria-label={`Remove ${item.name}`} tabIndex={open ? 0 : -1}
-        className="absolute inset-y-0 right-0 w-20 rounded-2xl bg-red-600 text-white flex items-center justify-center transition-opacity"
+        className="absolute inset-y-0 right-0 w-[5.25rem] rounded-[1.5rem] bg-red-600 text-white flex items-center justify-center transition-opacity"
         style={{ opacity: offset < -8 ? 1 : 0 }}>
         <Trash2 className="w-6 h-6" />
       </button>
 
+      {/* Same rounded card as the food list, with the round photo hanging off its left edge */}
       <div onPointerDown={down} onPointerMove={move} onPointerUp={up} onPointerCancel={up}
-        className="cart-line relative flex items-center gap-4 p-3 pr-4 touch-pan-y select-none"
+        className="cart-line relative ml-11 min-h-[6.5rem] flex items-center py-3 pr-4 pl-[4.25rem] touch-pan-y select-none"
         style={{ transform: `translateX(${offset}px)`, transition: dragging ? 'none' : 'transform .45s cubic-bezier(.22,1,.36,1)' }}>
-        <div className="w-20 h-20 rounded-full p-[3px] bg-gradient-to-br from-ember-400 to-ember-600 flex-shrink-0">
-          <img src={item.image} alt="" draggable="false" className="w-full h-full rounded-full object-cover pointer-events-none" />
+        <div className="cart-line-photo">
+          <img src={item.image} alt="" draggable="false" />
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-white font-heading font-bold text-[.95rem] truncate">{item.name}</p>
@@ -64,10 +65,6 @@ function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
           </div>
           <p className="text-white font-heading font-extrabold"><span className="text-ember-500 text-sm mr-0.5">₱</span>{(item.price * item.quantity).toFixed(2)}</p>
         </div>
-        <button onClick={() => setOpen(open ? null : item.id)} aria-label={open ? 'Hide delete' : `Show delete for ${item.name}`}
-          className="w-8 h-8 rounded-full flex items-center justify-center text-forest-200/40 hover:text-red-300 flex-shrink-0">
-          <Trash2 className="w-4 h-4" />
-        </button>
       </div>
     </div>
   );
@@ -76,7 +73,15 @@ function SwipeItem({ item, index, open, setOpen, onQty, onRemove }) {
 export default function Cart() {
   const navigate = useNavigate();
   const goBack = useGoBack();
-  const { cartItems, updateQuantity, removeFromCart } = useCart();
+  const { allItems, restaurantId, selectRestaurant, updateQuantity, removeFromCart } = useCart();
+  // One section per restaurant, in the order they were added. Each is its own order.
+  const groups = [];
+  for (const item of allItems) {
+    let g = groups.find(x => String(x.id) === String(item.restaurantId));
+    if (!g) groups.push(g = { id: item.restaurantId, name: item.restaurant || 'Restaurant', items: [] });
+    g.items.push(item);
+  }
+  const many = groups.length > 1;
   const { restaurant, food: subtotal, discount, deliveryFee, tax, total, credit, promoCode, setPromoCode, promoError, promoChecking } = useCartTotals();
   const minOrder = Number(restaurant?.min_order || 0);
   const belowMin = minOrder > 0 && subtotal < minOrder;
@@ -85,7 +90,7 @@ export default function Cart() {
   const [promoInput, setPromoInput] = useState('');
   const [openId, setOpenId]         = useState(null);
 
-  if (cartItems.length === 0) {
+  if (allItems.length === 0) {
     return (
       <div className="min-h-screen px-4 pt-12 pb-28 lg:pb-12 relative animate-fade-up">
         <div className="orb w-72 h-72 bg-forest-600/15 top-1/4 left-1/4" />
@@ -125,14 +130,46 @@ export default function Cart() {
       </div>
 
       <div className="max-w-2xl mx-auto p-4 space-y-4 pb-72 lg:pb-60">
-        {/* Cart items: swipe one left to reveal delete */}
-        <div className="space-y-3">
-          {cartItems.map((item, idx) => (
-            <SwipeItem key={item.id} item={item} index={idx}
-              open={openId === item.id} setOpen={setOpenId}
-              onQty={q => updateQuantity(item.id, q)} onRemove={() => removeFromCart(item.id)} />
-          ))}
-        </div>
+        {/* Food grouped by restaurant. Swipe a food left to delete it. */}
+        {groups.map((g, gi) => {
+          const active = String(g.id) === String(restaurantId);
+          const sum = g.items.reduce((n, i) => n + i.price * i.quantity, 0);
+          return (
+            <section key={g.id} className={`cart-group ${many && active ? 'is-active' : ''}`}>
+              <button type="button" onClick={() => selectRestaurant(g.id)} disabled={!many}
+                aria-pressed={many ? active : undefined}
+                className="w-full flex items-center gap-3 mb-3 text-left disabled:cursor-default">
+                <span className="w-9 h-9 rounded-full glass-orange flex items-center justify-center flex-shrink-0">
+                  <Store className="w-4 h-4 text-ember-300" />
+                </span>
+                <span className="flex-1 min-w-0">
+                  <span className="block text-white font-heading font-bold truncate">{g.name}</span>
+                  <span className="block text-forest-200/60 text-xs">
+                    {g.items.reduce((n, i) => n + i.quantity, 0)} item{g.items.reduce((n, i) => n + i.quantity, 0) === 1 ? '' : 's'} · ₱{sum.toFixed(2)}
+                  </span>
+                </span>
+                {many && (
+                  <span className={`text-xs font-bold px-3 py-1.5 rounded-full flex items-center gap-1 ${active ? 'bg-ember-500 text-white' : 'glass text-forest-200/70'}`}>
+                    {active ? <><Check className="w-3.5 h-3.5" /> Checking out</> : 'Check out this'}
+                  </span>
+                )}
+              </button>
+              <div className="space-y-3">
+                {g.items.map((item, idx) => (
+                  <SwipeItem key={item.id} item={item} index={gi * 3 + idx}
+                    open={openId === item.id} setOpen={setOpenId}
+                    onQty={q => updateQuantity(item.id, q)} onRemove={() => removeFromCart(item.id)} />
+                ))}
+              </div>
+            </section>
+          );
+        })}
+
+        {many && (
+          <p className="text-center text-forest-200/60 text-xs px-4">
+            Each restaurant is a separate order. Pick one to check out; the rest stay in your cart.
+          </p>
+        )}
 
         {/* Promo */}
         {promoCode ? (
@@ -172,6 +209,11 @@ export default function Cart() {
       <div className="glass-dark p-4"
         style={{ borderTop:'1px solid rgba(var(--fg-rgb),.08)', boxShadow:'0 -8px 32px rgba(0,0,0,.4)' }}>
         <div className="max-w-2xl mx-auto space-y-2 mb-4">
+          {many && (
+            <p className="text-white text-sm font-bold flex items-center gap-1.5 truncate">
+              <Store className="w-4 h-4 text-ember-400 flex-shrink-0" /> {restaurant?.name || groups.find(g => String(g.id) === String(restaurantId))?.name}
+            </p>
+          )}
           {[
             { label:'Subtotal',    val:`₱${subtotal.toFixed(2)}` },
             ...(discount > 0 ? [{ label:`Promo (${promoCode})`, val:`−₱${discount.toFixed(2)}`, icon: Tag }] : []),

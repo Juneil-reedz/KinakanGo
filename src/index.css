@@ -854,12 +854,23 @@
 }
 @media (prefers-reduced-motion: reduce) { .page-enter { animation: none; } }
 
-/* Cart line card */
+/* Cart line card: the food-list card shape, photo hanging off the left edge */
 .cart-line {
-  border-radius: 1.4rem;
-  background: rgba(32,26,22,.92);
+  border-radius: 1.75rem;
+  background: rgba(36,29,24,.96);
   box-shadow: inset 0 1px 0 rgb(255 255 255 / .08), 0 0 0 1px rgb(255 255 255 / .06), 0 14px 26px -18px rgb(0 0 0 / .9);
 }
+.cart-line-photo {
+  position: absolute; left: -2.75rem; top: 50%; translate: 0 -50%;
+  width: 6.25rem; height: 6.25rem; border-radius: 9999px; overflow: hidden;
+  border: 3px solid #f7931e; background: #2a221d;
+  box-shadow: 0 0 0 4px rgb(255 255 255 / .06), 0 14px 24px -12px rgb(0 0 0 / .85);
+}
+.cart-line-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
+/* A restaurant's section in the cart; the one being checked out gets an orange edge */
+.cart-group { border-radius: 1.75rem; padding: .25rem; transition: background .3s, box-shadow .3s; }
+.cart-group.is-active { padding: .75rem; background: rgb(247 147 30 / .06); box-shadow: inset 0 0 0 1px rgb(247 147 30 / .35); }
+.cart-group + .cart-group { margin-top: 1.25rem; }
 /* Glassy orange button: frosted, see-through, glowing edge */
 .btn-glass-orange {
   color: #fff;

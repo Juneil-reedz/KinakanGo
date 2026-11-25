@@ -121,7 +121,7 @@ export default function Profile() {
         return;
       }
 
-      clearCart();
+      clearCart(restaurantId); // start this restaurant's food over; other restaurants stay
       const restaurant = { id: restaurantId, name: order.restaurant_name };
       items.forEach(item => {
         addToCart({

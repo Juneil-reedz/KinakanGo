@@ -25,7 +25,7 @@ const getActiveKey = (pathname) => {
 export default function CustomerBottomNav({ fixed = true }) {
   const navigate = useNavigate();
   const { pathname } = useLocation();
-  const { cartItems } = useCart();
+  const { allItems: cartItems } = useCart();
   const activeKey = getActiveKey(pathname);
   const activeIndex = ITEMS.findIndex(i => i.key === activeKey);
 

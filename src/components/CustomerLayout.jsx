@@ -30,7 +30,9 @@ export default function CustomerLayout() {
   const { user, logout } = useAuth();
   const { enterFromCustomer: enterRestaurant } = useRestaurant();
   const { enterFromCustomer: enterRider } = useRider();
-  const { cartItems, updateQuantity, removeFromCart, getCartTotal } = useCart();
+  const { allItems: cartItems, updateQuantity, removeFromCart } = useCart();
+  const drawerTotal = cartItems.reduce((n, i) => n + i.price * i.quantity, 0);
+  const manyStores  = new Set(cartItems.map(i => String(i.restaurantId))).size > 1;
   const [collapsed, setCollapsed]       = useState(false);
   const [mobileOpen, setMobileOpen]     = useState(false);
   const [dashLoading, setDashLoading]   = useState(false);
@@ -389,10 +391,10 @@ export default function CustomerLayout() {
               {/* Total */}
               <div className="glass-green rounded-xl p-3 flex justify-between items-center mb-3">
                 <span className="text-forest-100 text-sm font-medium">Total</span>
-                <span className="text-white font-heading font-bold text-xl">₱{getCartTotal().toFixed(2)}</span>
+                <span className="text-white font-heading font-bold text-xl">₱{drawerTotal.toFixed(2)}</span>
               </div>
 
-              <button onClick={() => cartItems.length > 0 && navigate('/checkout')}
+              <button onClick={() => cartItems.length > 0 && navigate(manyStores ? '/cart' : '/checkout')}
                 disabled={cartItems.length === 0}
                 className={`w-full py-3.5 rounded-xl font-bold text-sm transition-all ${
                   cartItems.length === 0
