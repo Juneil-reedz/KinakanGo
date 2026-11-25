@@ -273,7 +273,7 @@ app.set('trust proxy', 1);
 
 app.use(helmet());
 // CLIENT_URL: one or more allowed web addresses, comma separated. A "*" in an
-// entry matches any text, so https://kinakango*.vercel.app also lets Vercel's
+// entry matches any text, so https://kinakan-go*.vercel.app also lets Vercel's
 // preview links in. Unset means any site may call the API.
 const allowedOrigins = (process.env.CLIENT_URL || '').split(',').map(s => s.trim().replace(/\/$/, '')).filter(Boolean);
 const originRules = allowedOrigins.map(o => new RegExp('^' + o.replace(/[.+?^${}()|[\]\\]/g, '\\$&').replace(/\*/g, '[^/]*') + '$'));
