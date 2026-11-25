@@ -102,9 +102,6 @@ const tabOf = (o) => (TABS.find(t => t.has.includes(o.status)) || TABS[0]).id;
 
 const isActiveOrder = (o) => !['delivered', 'cancelled', 'refunded'].includes(o.status);
 
-// The order's photo: its first food that has one
-const orderPhoto = (order) => order.items?.find(i => i.image_url)?.image_url || order.restaurant_image || null;
-
 // One section per restaurant, like the cart, newest restaurant first
 function groupByRestaurant(orders) {
   const groups = [];
@@ -347,20 +344,32 @@ export default function OrderTracking() {
               onClick={() => toggleOpen(order.id)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(order.id); } }}
               className="relative min-h-[7rem] py-3.5 pr-4 pl-[4.25rem] cursor-pointer select-none">
-              <div className="cart-line-photo">
-                {orderPhoto(order)
-                  ? <img src={orderPhoto(order)} alt="" draggable="false" />
-                  : <span className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-7 h-7 text-ember-300/70" /></span>}
-              </div>
+              {/* Order number badge: a ring that fills as the order moves along */}
+              {(() => {
+                const pct = isCancelled ? 100 : Math.max(6, (curIdx / (STATUSES.length - 1)) * 100);
+                const Icon = isCancelled ? Package : (STATUSES[curIdx]?.icon ?? Package);
+                return (
+                  <div className={`order-badge ${isCancelled ? 'is-cancelled' : isDone ? 'is-done' : ''}`}
+                    style={{ '--pct': `${pct}%` }} aria-label={`Order number ${order.id}`}>
+                    <div className="order-badge-core">
+                      <span className="order-badge-label">Order</span>
+                      <span className="order-badge-num" style={String(order.id).length > 4 ? { fontSize: `${Math.max(0.9, 1.55 - (String(order.id).length - 4) * 0.22)}rem` } : undefined}><span className="order-badge-hash">#</span>{order.id}</span>
+                    </div>
+                    <span className="order-badge-icon" aria-hidden="true"><Icon className="w-3.5 h-3.5" /></span>
+                  </div>
+                );
+              })()}
               <div className="flex items-start justify-between gap-2">
-                <p className="text-white font-heading font-bold text-[.95rem] truncate">Order #{order.id}</p>
+                <p className="text-white font-heading font-bold text-[.95rem] truncate">
+                  {(() => { const n = (order.items || []).reduce((t, i) => t + Number(i.quantity || 0), 0); return n ? `${n} item${n === 1 ? '' : 's'}` : 'Your order'; })()}
+                </p>
                 <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${
                   isDone ? 'glass-green text-forest-200' : isCancelled ? 'text-red-300 glass' : 'glass-orange text-ember-200'}`}>
                   {displayStatus(order.status)}
                 </span>
               </div>
               <p className="text-forest-200/60 text-xs mt-0.5 truncate">
-                {order.items?.length ? order.items.map(i => `${i.quantity}× ${i.name}`).join(', ') : new Date(order.created_at).toLocaleString('en-PH')}
+                Placed {new Date(order.created_at).toLocaleString('en-PH', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })}
               </p>
               <div className="flex items-end justify-between gap-2 mt-1.5">
                 <div className="min-w-0">
