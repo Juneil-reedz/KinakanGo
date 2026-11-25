@@ -17,9 +17,10 @@ services:
         generateValue: true
       - key: JWT_REFRESH_SECRET
         generateValue: true
-      # Your GitHub Pages URL
+      # Sites allowed to call the API, comma separated ("*" matches anything):
+      # GitHub Pages, and Vercel's main address and preview links
       - key: CLIENT_URL
-        value: https://juneil-reedz.github.io
+        value: https://juneil-reedz.github.io,https://kinakango*.vercel.app
       # Brevo — app.brevo.com → SMTP & API → API Keys
       - key: BREVO_API_KEY
         sync: false
