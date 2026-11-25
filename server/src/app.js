@@ -68,6 +68,30 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
 `).catch(err => console.warn('messages updated_at column warning:', err.message));
 
+// Each message belongs to one side of each person: their customer app or their
+// restaurant panel. A restaurant owner who also orders food sees restaurant
+// messages only in the owner panel and personal ones only in the customer app.
+pool.query(`
+  ALTER TABLE messages
+    ADD COLUMN IF NOT EXISTS sender_side    VARCHAR(12) DEFAULT NULL,
+    ADD COLUMN IF NOT EXISTS recipient_side VARCHAR(12) DEFAULT NULL
+`).then(async () => {
+  const norm = (v) => `regexp_replace(lower(${v}), '[^a-z0-9]', '', 'g')`;
+  // Backfill older rows once: written to a restaurant (by its name) = restaurant side
+  await pool.query(`
+    UPDATE messages m SET recipient_side = CASE WHEN m.recipient_user_id IS NULL OR EXISTS (
+      SELECT 1 FROM restaurants r WHERE r.owner_id = m.recipient_user_id AND ${norm('r.name')} = ${norm('m.recipient_label')}
+    ) THEN 'restaurant' ELSE 'customer' END
+    WHERE m.recipient_side IS NULL`);
+  // A reply from an owner to someone who had written to their restaurant = restaurant side
+  await pool.query(`
+    UPDATE messages m SET sender_side = CASE WHEN EXISTS (
+      SELECT 1 FROM messages o WHERE o.sender_id = m.recipient_user_id AND o.recipient_user_id = m.sender_id
+        AND o.recipient_side = 'restaurant'
+    ) THEN 'restaurant' ELSE 'customer' END
+    WHERE m.sender_side IS NULL`);
+}).catch(err => console.warn('messages side columns warning:', err.message));
+
 // In-app notifications (see utils/notify.js); index runs after the table exists
 pool.query(`
   CREATE TABLE IF NOT EXISTS notifications (

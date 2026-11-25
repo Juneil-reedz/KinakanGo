@@ -32,8 +32,20 @@ async function resolveRecipient({ to, toUserId, fromRestaurant }, senderId) {
     );
     const restaurantName = await ownsRestaurant(id);
     if (!talked.length && !restaurantName) return null;
-    // Writing from the customer app to a restaurant owner goes to their restaurant inbox
-    const isRestaurant = !!restaurantName && !fromRestaurant;
+    // Replying keeps the conversation on the same side of the other person it started on
+    const mySide = fromRestaurant ? 'restaurant' : 'customer';
+    const { rows: prev } = await pool.query(
+      `SELECT side FROM (
+         SELECT sender_side AS side, created_at FROM messages
+          WHERE sender_id = $2 AND recipient_user_id = $1 AND recipient_side = $3
+         UNION ALL
+         SELECT recipient_side AS side, created_at FROM messages
+          WHERE sender_id = $1 AND recipient_user_id = $2 AND sender_side = $3
+       ) t WHERE side IS NOT NULL ORDER BY created_at DESC LIMIT 1`,
+      [senderId, id, mySide]
+    );
+    // A new conversation from the customer app to a restaurant owner goes to their restaurant inbox
+    const isRestaurant = !!restaurantName && (prev.length ? prev[0].side === 'restaurant' : !fromRestaurant);
     return { recipient_user_id: id, recipient_label: isRestaurant ? restaurantName : (users[0].name || users[0].email), isRestaurant };
   }
 
@@ -60,13 +72,15 @@ async function resolveRecipient({ to, toUserId, fromRestaurant }, senderId) {
 router.get('/', async (req, res) => {
   try {
     const box = req.query.box === 'sent' ? 'sent' : 'inbox';
+    // Which of this person's two inboxes: the customer app or their restaurant panel
+    const side = req.query.side === 'restaurant' ? 'restaurant' : 'customer';
     const where = box === 'sent'
-      ? 'm.sender_id = $1'
-      : `(
-          m.recipient_user_id = $1 OR (
-            m.recipient_user_id IS NULL AND ${restaurantRecipientSql}
-          )
-        )`;
+      ? `m.sender_id = $1 AND COALESCE(m.sender_side, 'customer') = '${side}'`
+      : side === 'restaurant'
+        ? `((m.recipient_user_id = $1 AND m.recipient_side = 'restaurant') OR (
+             m.recipient_user_id IS NULL AND ${restaurantRecipientSql}
+           ))`
+        : `m.recipient_user_id = $1 AND COALESCE(m.recipient_side, 'customer') = 'customer'`;
     const { rows } = await pool.query(
       `SELECT m.id, m.sender_id, m.recipient_user_id, m.recipient_label,
               m.subject, m.body, m.is_read, m.created_at, m.updated_at,
@@ -105,10 +119,11 @@ router.post('/', async (req, res) => {
       return res.status(400).json({ error: "You can't send a message to yourself" });
     }
     const { rows } = await pool.query(
-      `INSERT INTO messages (sender_id, recipient_user_id, recipient_label, subject, body)
-       VALUES ($1, $2, $3, $4, $5)
+      `INSERT INTO messages (sender_id, recipient_user_id, recipient_label, subject, body, sender_side, recipient_side)
+       VALUES ($1, $2, $3, $4, $5, $6, $7)
        RETURNING id, sender_id, recipient_user_id, recipient_label, subject, body, is_read, created_at, updated_at`,
-      [req.user.id, recipient.recipient_user_id, recipient.recipient_label, subject || 'New message', body]
+      [req.user.id, recipient.recipient_user_id, recipient.recipient_label, subject || 'New message', body,
+       req.body.fromRestaurant ? 'restaurant' : 'customer', recipient.isRestaurant ? 'restaurant' : 'customer']
     );
     const message = rows[0];
     const { rows: senderRestaurants } = await pool.query('SELECT name, image_url FROM restaurants WHERE owner_id = $1 LIMIT 1', [req.user.id]);

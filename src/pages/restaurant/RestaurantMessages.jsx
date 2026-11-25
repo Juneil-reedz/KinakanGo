@@ -48,8 +48,8 @@ export default function RestaurantMessages() {
     try {
       setLoading(true);
       const [inboxRes, sentRes] = await Promise.all([
-        restaurantRequest('/messages?box=inbox'),
-        restaurantRequest('/messages?box=sent'),
+        restaurantRequest('/messages?box=inbox&side=restaurant'),
+        restaurantRequest('/messages?box=sent&side=restaurant'),
       ]);
       const inbox = (inboxRes.data || []).map(message => ({ ...message, box: 'inbox' }));
       const sent = (sentRes.data || []).map(message => ({ ...message, box: 'sent' }));

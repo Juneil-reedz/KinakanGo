@@ -29,7 +29,7 @@ export default function RestaurantDashboard() {
         // Enough recent orders to cover today; the list is newest first
         const res = await restaurantRequest('/orders?limit=200');
         setOrders(res.data || res || []);
-        const inbox = await restaurantRequest('/messages?box=inbox').catch(() => null);
+        const inbox = await restaurantRequest('/messages?box=inbox&side=restaurant').catch(() => null);
         setMessages(inbox?.data || []);
         const promoRes = await restaurantRequest('/promos/owner').catch(() => null);
         setPromos(promoRes?.data || []);
