@@ -1060,7 +1060,7 @@
 .trk-step.is-done { color: #fff; background: linear-gradient(160deg, #fba94c, #e57b0c); box-shadow: 0 6px 14px -6px rgb(247 147 30 / .8); }
 .trk-bar { width: 1.25rem; height: 2px; margin-bottom: 1.1rem; background: rgba(var(--fg-rgb), .14); border-radius: 2px; }
 .trk-bar.is-done { background: #f7931e; }
-.trk-map { box-shadow: 0 0 0 1px rgba(var(--fg-rgb), .08), 0 20px 40px -24px rgb(0 0 0 / .8); isolation: isolate; }
+.trk-map { isolation: isolate; }
 .trk-map .leaflet-container { background: #1f1915; font-family: inherit; }
 :root.light-nav .trk-map .leaflet-container { background: #efe8de; }
 .trk-chip {
@@ -1092,3 +1092,6 @@
 .track-btn { padding: .7rem .85rem; border-radius: 1.25rem; background: rgba(var(--fg-rgb), .05); box-shadow: inset 0 0 0 1px rgba(var(--fg-rgb), .08); transition: background .2s, transform .2s; }
 .track-btn:hover { background: rgba(var(--fg-rgb), .08); }
 .track-btn:active { transform: scale(.98); }
+.trk-sheet { background: var(--app-bg); box-shadow: 0 -14px 30px -18px rgb(0 0 0 / .6); }
+.trk-tiles-dark { filter: invert(1) hue-rotate(180deg) brightness(.9) contrast(.9) saturate(.6); }
+.trk-map .leaflet-control-attribution { margin-top: calc(max(.75rem, env(safe-area-inset-top)) + .15rem); margin-right: .75rem; font-size: 9px; border-radius: 6px; }
