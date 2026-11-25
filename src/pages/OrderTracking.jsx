@@ -90,6 +90,21 @@ const STATUSES = [
   { id:'delivered',  label:'Delivered', icon:CheckCircle2,  desc:'Order successfully delivered' },
 ];
 
+// The order's photo: its first food that has one
+const orderPhoto = (order) => order.items?.find(i => i.image_url)?.image_url || order.restaurant_image || null;
+
+// One section per restaurant, like the cart, newest restaurant first
+function groupByRestaurant(orders) {
+  const groups = [];
+  for (const o of orders) {
+    const id = o.restaurant_id ?? o.restaurant_name ?? 'other';
+    let g = groups.find(x => x.id === id);
+    if (!g) groups.push(g = { id, name: o.restaurant_name || 'Restaurant', orders: [] });
+    g.orders.push(o);
+  }
+  return groups;
+}
+
 export default function OrderTracking() {
   const navigate = useNavigate();
   const [orders,     setOrders]     = useState([]);
@@ -245,7 +260,7 @@ export default function OrderTracking() {
   );
 
   return (
-    <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
+    <div className="space-y-6 pb-20 lg:pb-0 animate-fade-up">
       <div className="flex items-center justify-between">
         <h1 className="text-2xl font-heading font-bold text-white">Track Orders</h1>
         <div className="flex items-center gap-2">
@@ -261,67 +276,77 @@ export default function OrderTracking() {
         </div>
       </div>
 
-      {orders.map((order) => {
+      {groupByRestaurant(orders).map(g => (
+      <section key={g.id} className="space-y-3">
+        <div className="flex items-center gap-3">
+          <span className="w-9 h-9 rounded-full glass-orange flex items-center justify-center flex-shrink-0">
+            <Store className="w-4 h-4 text-ember-300" />
+          </span>
+          <span className="flex-1 min-w-0">
+            <span className="block text-white font-heading font-bold truncate">{g.name}</span>
+            <span className="block text-forest-200/60 text-xs">{g.orders.length} order{g.orders.length === 1 ? '' : 's'}</span>
+          </span>
+        </div>
+      {g.orders.map((order) => {
         const curIdx = Math.max(0, getStatusIdx(order.status));
         const isDone = order.status === 'delivered';
         const isCancelled = ['cancelled','refunded'].includes(order.status);
         const isOpen = openIds.has(order.id);
 
         return (
-          <div key={order.id} className="glass rounded-3xl overflow-hidden">
+          <div key={order.id}>
 
-            {/* Order row: tap to show or hide the progress */}
+            {/* Order row, shaped like a cart line: round photo off the left edge. Tap to open. */}
             <div role="button" tabIndex={0} aria-expanded={isOpen} aria-controls={`order-body-${order.id}`}
               onClick={() => toggleOpen(order.id)}
               onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleOpen(order.id); } }}
-              className="p-5 flex flex-wrap items-start justify-between gap-4 cursor-pointer select-none"
-              style={isOpen ? { borderBottom:'1px solid rgba(var(--fg-rgb),.07)' } : undefined}>
-              <div className="space-y-1">
-                <div className="flex items-center gap-2.5">
-                  <p className="text-white font-bold text-base">Order #{order.id}</p>
-                  <span className={`text-xs px-2.5 py-0.5 rounded-full font-semibold ${
-                    isDone ? 'glass-green text-forest-200' : isCancelled ? 'text-red-300 glass' : 'glass-orange text-ember-200'}`}>
-                    {displayStatus(order.status)}
-                  </span>
-                </div>
-                <div className="flex items-center gap-1.5 text-forest-200/60 text-xs">
-                  <Store className="w-3.5 h-3.5" />
-                  <span>{order.restaurant_name}</span>
-                </div>
-                <p className="text-forest-200/30 text-xs">{new Date(order.created_at).toLocaleString('en-PH')}</p>
+              className={`cart-line ${isOpen ? 'is-picked' : ''} relative ml-11 min-h-[7rem] py-3.5 pr-4 pl-[4.25rem] cursor-pointer select-none`}>
+              <div className="cart-line-photo">
+                {orderPhoto(order)
+                  ? <img src={orderPhoto(order)} alt="" draggable="false" />
+                  : <span className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-7 h-7 text-ember-300/70" /></span>}
               </div>
-              <div className="text-right">
-                {Number(order.credit_used) > 0 ? (
-                  <>
-                    <p className="text-ember-400 font-heading font-bold text-2xl">₱{Math.max(0, Number(order.total) - Number(order.credit_used)).toFixed(2)}</p>
-                    <p className="text-forest-200/50 text-xs">to pay · ₱{Number(order.credit_used).toFixed(2)} store credit used</p>
-                  </>
-                ) : (
-                  <p className="text-ember-400 font-heading font-bold text-2xl">₱{Number(order.total).toFixed(2)}</p>
-                )}
-                {!isDone && order.estimated_delivery && (
-                  <p className="text-forest-200/60 text-xs flex items-center gap-1 justify-end mt-1">
-                    <Clock className="w-3 h-3" />
-                    <span>ETA: {new Date(order.estimated_delivery).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}</span>
-                  </p>
-                )}
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-white font-heading font-bold text-[.95rem] truncate">Order #{order.id}</p>
+                <span className={`text-[11px] px-2.5 py-0.5 rounded-full font-semibold flex-shrink-0 ${
+                  isDone ? 'glass-green text-forest-200' : isCancelled ? 'text-red-300 glass' : 'glass-orange text-ember-200'}`}>
+                  {displayStatus(order.status)}
+                </span>
               </div>
-              {/* Collapsed: a small progress bar and a hint */}
-              <div className="w-full flex items-center gap-3">
-                {!isCancelled && (
-                  <div className="flex-1 h-2 rounded-full clay-sunk overflow-hidden" aria-hidden="true">
-                    <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
-                      style={{ width:`${Math.max(8, (curIdx / (STATUSES.length - 1)) * 100)}%` }} />
-                  </div>
-                )}
-                <span className={`text-forest-300 text-xs font-semibold flex items-center gap-1 flex-shrink-0 ${isCancelled ? 'ml-auto' : ''}`}>
-                  {isOpen ? 'Hide' : 'See progress'}
+              <p className="text-forest-200/60 text-xs mt-0.5 truncate">
+                {order.items?.length ? order.items.map(i => `${i.quantity}× ${i.name}`).join(', ') : new Date(order.created_at).toLocaleString('en-PH')}
+              </p>
+              <div className="flex items-end justify-between gap-2 mt-1.5">
+                <div className="min-w-0">
+                  {Number(order.credit_used) > 0 ? (
+                    <>
+                      <p className="text-white font-heading font-extrabold"><span className="text-ember-500 text-sm mr-0.5">₱</span>{Math.max(0, Number(order.total) - Number(order.credit_used)).toFixed(2)}</p>
+                      <p className="text-forest-200/50 text-[11px]">to pay · ₱{Number(order.credit_used).toFixed(2)} credit used</p>
+                    </>
+                  ) : (
+                    <p className="text-white font-heading font-extrabold"><span className="text-ember-500 text-sm mr-0.5">₱</span>{Number(order.total).toFixed(2)}</p>
+                  )}
+                  {!isDone && !isCancelled && order.estimated_delivery && (
+                    <p className="text-forest-200/60 text-[11px] flex items-center gap-1">
+                      <Clock className="w-3 h-3" />
+                      ETA {new Date(order.estimated_delivery).toLocaleTimeString('en-PH', { hour:'2-digit', minute:'2-digit' })}
+                    </p>
+                  )}
+                </div>
+                <span className="text-forest-300 text-xs font-semibold flex items-center gap-0.5 flex-shrink-0">
+                  {isOpen ? 'Hide' : 'Details'}
                   <ChevronDown className={`w-4 h-4 transition-transform duration-300 ${isOpen ? 'rotate-180' : ''}`} />
                 </span>
               </div>
+              {!isCancelled && (
+                <div className="mt-2 h-1.5 rounded-full clay-sunk overflow-hidden" aria-hidden="true">
+                  <div className="h-full rounded-full bg-gradient-to-r from-forest-500 to-ember-500 transition-all duration-700"
+                    style={{ width:`${Math.max(8, (curIdx / (STATUSES.length - 1)) * 100)}%` }} />
+                </div>
+              )}
             </div>
 
-            {isOpen && (<div id={`order-body-${order.id}`} className="animate-fade-up">
+            {isOpen && (<div id={`order-body-${order.id}`} className="glass rounded-3xl overflow-hidden mt-3 animate-fade-up">
 
             {order.status === 'pending' && (
               <div className="px-5 pt-4 flex items-center justify-between gap-3">
@@ -465,32 +490,21 @@ export default function OrderTracking() {
                       {order.restaurant_name} · {order.items.length} item{order.items.length !== 1 ? 's' : ''}
                     </p>
                   </div>
-                  <div className="divide-y divide-white/5">
+                  <div className="space-y-3 p-3">
                     {order.items.map((item, i) => (
-                      <div key={i} className="flex items-center gap-3 px-4 py-3">
-                        {/* Food image */}
-                        <div className="w-14 h-14 rounded-xl overflow-hidden flex-shrink-0 glass">
+                      <div key={i} className="cart-line relative ml-9 min-h-[5rem] flex items-center gap-3 py-2.5 pr-4 pl-[3.5rem]">
+                        <div className="cart-line-photo is-sm">
                           {item.image_url
-                            ? <img src={item.image_url} alt={item.name}
-                                className="w-full h-full object-cover" />
-                            : <div className="w-full h-full flex items-center justify-center">
-                                <UtensilsCrossed className="w-5 h-5 text-forest-300/30" />
-                              </div>
-                          }
+                            ? <img src={item.image_url} alt="" />
+                            : <span className="w-full h-full flex items-center justify-center"><UtensilsCrossed className="w-5 h-5 text-forest-300/40" /></span>}
                         </div>
-                        {/* Name + notes */}
                         <div className="flex-1 min-w-0">
-                          <p className="text-white text-sm font-semibold truncate">{item.name}</p>
-                          {item.notes && (
-                            <p className="text-ember-300/70 text-xs mt-0.5 truncate">Note: {item.notes}</p>
-                          )}
-                          <p className="text-forest-200/50 text-xs mt-0.5">
-                            ₱{Number(item.price).toFixed(2)} × {item.quantity}
-                          </p>
+                          <p className="text-white text-sm font-heading font-bold truncate">{item.name}</p>
+                          {item.notes && <p className="text-ember-300/70 text-xs mt-0.5 truncate">Note: {item.notes}</p>}
+                          <p className="text-forest-200/60 text-xs mt-0.5">₱{Number(item.price).toFixed(2)} × {item.quantity}</p>
                         </div>
-                        {/* Line total */}
-                        <p className="text-ember-400 font-heading font-bold text-sm flex-shrink-0">
-                          ₱{(Number(item.price) * item.quantity).toFixed(2)}
+                        <p className="text-white font-heading font-extrabold text-sm flex-shrink-0">
+                          <span className="text-ember-500 text-xs mr-0.5">₱</span>{(Number(item.price) * item.quantity).toFixed(2)}
                         </p>
                       </div>
                     ))}
@@ -540,6 +554,8 @@ export default function OrderTracking() {
           </div>
         );
       })}
+      </section>
+      ))}
       {cancelOrder && (
         <CancelOrderDialog order={cancelOrder} onClose={() => setCancelOrder(null)}
           onCancelled={() => { setCancelOrder(null); fetchOrders(true); }} />

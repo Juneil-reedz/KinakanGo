@@ -866,6 +866,7 @@
   border: 3px solid #f7931e; background: #2a221d;
   box-shadow: 0 0 0 4px rgb(255 255 255 / .06), 0 14px 24px -12px rgb(0 0 0 / .85);
 }
+.cart-line-photo.is-sm { left: -2.25rem; width: 4.5rem; height: 4.5rem; border-width: 2px; }
 .cart-line-photo img { width: 100%; height: 100%; object-fit: cover; pointer-events: none; }
 /* Marked for checkout: orange edge and a check; a slow press squeezes the card */
 .cart-line { transition: box-shadow .25s, scale .25s, background .25s; }
