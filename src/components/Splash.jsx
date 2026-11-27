@@ -1,6 +1,7 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import KinakanLogo from './KinakanLogo';
+import { playSplashJingle } from '../utils/splashSound';
 
 // Opening screen, about 5 seconds: the brand badge builds itself (sunset, Bud
 // Bongao rising from the sea, the bridge, then our rider driving in with a
@@ -17,18 +18,34 @@ export default function Splash() {
   const staff = /^\/(owner|rider|admin)(\/|$)/.test(pathname);
   const [phase, setPhase] = useState(() => (staff || seen() ? 'done' : 'show'));
 
+  const sound = useRef(null);
+
+  // Start the scene (and its jingle) once
   useEffect(() => {
     if (phase !== 'show') return;
     try { sessionStorage.setItem(KEY, '1'); } catch { /* private mode */ }
-    const t1 = setTimeout(() => setPhase('out'), SHOW_MS);
-    const t2 = setTimeout(() => setPhase('done'), SHOW_MS + FADE_MS);
-    return () => { clearTimeout(t1); clearTimeout(t2); };
+    if (!sound.current) sound.current = playSplashJingle(performance.now());
+    const t = setTimeout(() => setPhase(p => (p === 'show' ? 'out' : p)), SHOW_MS);
+    return () => clearTimeout(t);
   }, [phase]);
+
+  // Fade out, then remove the splash
+  useEffect(() => {
+    if (phase !== 'out') return;
+    const t = setTimeout(() => setPhase('done'), FADE_MS);
+    return () => clearTimeout(t);
+  }, [phase]);
+
+  // Free the audio once the splash is gone
+  useEffect(() => { if (phase === 'done') sound.current?.stop(); }, [phase]);
+
+  // A tap skips the scene, unless that tap was the one that switched the sound on
+  const onTap = () => { if (!sound.current?.tapUnlockedSound()) setPhase('out'); };
 
   if (phase === 'done') return null;
   return (
     <div className={`splash fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden ${phase === 'out' ? 'splash-out' : ''}`}
-      role="status" aria-label="Opening KinakanGo" onClick={() => setPhase('out')}>
+      role="status" aria-label="Opening KinakanGo" onClick={onTap}>
       <div className="sp-glow" aria-hidden="true" />
       <KinakanLogo animated className="sp-badge w-52 h-52 relative" />
 

@@ -1,6 +1,8 @@
 import { Lock, Moon, HelpCircle, ChevronRight, FileText, ShieldCheck } from 'lucide-react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useTheme } from '../context/ThemeContext';
+import { soundsOn, setSoundsOn } from '../utils/splashSound';
 
 function Toggle({ value, onChange }) {
   return (
@@ -45,6 +47,7 @@ function ToggleRow({ label, desc, value, onChange }) {
 export default function Settings() {
   const navigate   = useNavigate();
   const { isLight, toggleTheme } = useTheme();
+  const [sound, setSound] = useState(soundsOn);
 
   return (
     <div className="space-y-4 pb-20 lg:pb-0 animate-fade-up">
@@ -53,6 +56,8 @@ export default function Settings() {
       {/* Appearance */}
       <Section title="Appearance" desc="Customize how the app looks" icon={Moon} iconColor="glass">
         <ToggleRow label="Dark Mode" desc="Use the dark theme" value={!isLight} onChange={toggleTheme} />
+        <ToggleRow label="Opening Sound" desc="Play the KinakanGo jingle when the app opens" value={sound}
+          onChange={() => setSound(v => { setSoundsOn(!v); return !v; })} />
       </Section>
 
       {/* Account actions */}
