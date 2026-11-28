@@ -46,19 +46,17 @@ export default function AuthShell({ active, title, subtitle, children }) {
       onTouchStart={onTouchStart} onTouchEnd={onTouchEnd}>
       <div className="w-full max-w-md relative z-10">
         {/* Brand */}
-        <div className={`text-center page-rise ${active === 'register' ? 'mb-12' : 'mb-14'}`}>
+        <div className={`text-center page-rise ${active === 'register' ? 'mb-6' : 'mb-8'}`}>
           <h1 className="brand-wordmark text-white text-[2.6rem] leading-none select-none">
             Kinakan<span className="text-ember-500">Go</span>
           </h1>
           <p className="text-forest-200/70 text-sm mt-2 font-medium">Tap it. Get it.</p>
         </div>
 
-        {/* Card with the round plate hanging over its top edge */}
-        <div key={active} className={`auth-card relative rounded-[2rem] px-6 pb-7 pt-14 ${dir === 'left' ? 'auth-in-left' : dir === 'right' ? 'auth-in-right' : 'page-rise'}`}
+        {/* Card with the logo at its top */}
+        <div key={active} className={`auth-card relative rounded-[2rem] px-6 pb-7 pt-6 ${dir === 'left' ? 'auth-in-left' : dir === 'right' ? 'auth-in-right' : 'page-rise'}`}
           style={!dir ? { animationDelay: '.1s' } : undefined}>
-          <div className="auth-plate absolute left-1/2 -top-10 -translate-x-1/2 w-20 h-20 rounded-full flex items-center justify-center">
-            <KinakanLogo className="w-full h-full scale-[1.07]" />
-          </div>
+          <KinakanLogo className="w-20 h-20 mx-auto -mt-1 mb-1" />
           <div className="text-center mb-6">
             <h2 className="text-2xl font-heading font-bold text-white">{title}</h2>
             <p className="text-forest-200/60 text-sm mt-1">{subtitle}</p>
