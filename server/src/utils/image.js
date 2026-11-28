@@ -37,7 +37,7 @@ function firstImageError(fields) {
 // Edit forms send back the picture they were shown, which is a link to our own
 // /api/images/... route. Saving that would point the picture at itself, so it
 // means "unchanged".
-const isOwnImageLink = (v) => typeof v === 'string' && /\/api\/images\/(restaurants|menu-items|users)\/\d+/.test(v);
+const isOwnImageLink = (v) => typeof v === 'string' && /\/api\/images\/(restaurants|restaurant-covers|menu-items|users)\/\d+/.test(v);
 const unlessOwn = (v) => (isOwnImageLink(v) ? undefined : v);
 
 module.exports = { imageError, firstImageError, unlessOwn, MAX_BYTES };
