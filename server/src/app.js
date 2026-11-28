@@ -143,6 +143,9 @@ pool.query(`
   'CREATE INDEX IF NOT EXISTS notifications_user_idx ON notifications (user_id, audience, created_at DESC)'
 )).catch(err => console.warn('notifications init warning:', err.message));
 
+// Phone push notifications: subscriptions table and the server's key pair (see utils/push.js)
+require('./utils/push').init().catch(err => console.warn('push init warning:', err.message));
+
 // Codes emailed to the account holder to approve an order (see orderController)
 pool.query(`
   CREATE TABLE IF NOT EXISTS order_verifications (

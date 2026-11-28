@@ -1,6 +1,7 @@
 const router = require('express').Router();
 const pool   = require('../config/db');
 const { authenticate } = require('../middleware/auth');
+const push   = require('../utils/push');
 
 // The signed-in user's notifications for one part of the app (?audience=customer|restaurant|rider)
 router.use(authenticate);
@@ -41,6 +42,27 @@ router.get('/unread', async (req, res) => {
     [req.user.id, audience]
   );
   res.json({ unread: await unreadCount(req.user.id, audience), latest: rows[0] ? toItem(rows[0]) : null });
+});
+
+// Phone notifications: the key a device needs to subscribe, then saving or
+// removing that device's subscription
+router.get('/push/key', async (req, res) => {
+  res.json({ publicKey: await push.publicKey() });
+});
+
+router.post('/push/subscribe', async (req, res) => {
+  const sub = req.body?.subscription;
+  const ok = sub && typeof sub.endpoint === 'string' && /^https:\/\//.test(sub.endpoint) && sub.endpoint.length < 2000
+    && typeof sub.keys?.p256dh === 'string' && typeof sub.keys?.auth === 'string'
+    && sub.keys.p256dh.length < 200 && sub.keys.auth.length < 100;
+  if (!ok) return res.status(400).json({ message: 'Invalid subscription' });
+  await push.saveSubscription(req.user.id, audienceOf(req), sub);
+  res.json({ ok: true });
+});
+
+router.post('/push/unsubscribe', async (req, res) => {
+  if (typeof req.body?.endpoint === 'string') await push.removeSubscription(req.user.id, req.body.endpoint);
+  res.json({ ok: true });
 });
 
 router.post('/read-all', async (req, res) => {

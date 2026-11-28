@@ -2,9 +2,10 @@
 // download). Timed to the opening scene in Splash.jsx:
 //   0.1 s  soft whoosh as the badge pops in
 //   0.35 s a whoosh as the food box zooms in
-//   0.9 s  a rising kulintang (gong-chime) run as the box's vinta stripes fill in
-//   2.6 s  "Ki - na - kan" three kulintang notes as the name drops in
-//   3.2 s  "Go!" a chord with a little thump as it stamps on
+//   0.9 s  a quick, high bloop run as the box's vinta stripes fill in
+//   2.6 s  "Ki - na - kan": three bubbly plinks, with a tiny high voice
+//          singing "Ki-na-kan GO!" (public/sounds/kinakan-voice.mp3)
+//   3.2 s  "Go!" a whistle zips up into a bright ding, then sparkles
 // Browsers only allow sound after the person has touched the page, so if the
 // app opens without a tap the jingle starts on the first tap during the splash.
 
@@ -12,15 +13,44 @@ const PREF = 'kkg_sounds';
 export const soundsOn = () => { try { return localStorage.getItem(PREF) !== 'off'; } catch { return true; } };
 export const setSoundsOn = (on) => { try { localStorage.setItem(PREF, on ? 'on' : 'off'); } catch { /* ignore */ } };
 
+// The voice clip starts VOICE_AT seconds into the splash, so "Ki" lands on the
+// first plink and "GO" on the stamp.
+const VOICE_AT = 2.62;
+const VOICE_URL = `${import.meta.env.BASE_URL}sounds/kinakan-voice.mp3`;
+let voiceBytes = null;
+// Start downloading the clip as soon as this file loads (it is about 6 KB)
+const loadVoice = () => {
+  if (!voiceBytes) voiceBytes = fetch(VOICE_URL).then(r => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  return voiceBytes;
+};
+if (typeof window !== 'undefined' && soundsOn()) loadVoice();
+
+function scheduleVoice(ctx, start, skip, out) {
+  loadVoice().then(bytes => {
+    if (!bytes || ctx.state === 'closed') return;
+    // decodeAudioData takes the buffer away, so give it a copy
+    return new Promise((ok, fail) => ctx.decodeAudioData(bytes.slice(0), ok, fail)).then(buf => {
+      const when = start + VOICE_AT - skip;                  // ctx time the clip should start
+      const into = Math.max(0, skip - VOICE_AT) + Math.max(0, ctx.currentTime + 0.01 - when);
+      if (into >= buf.duration - 0.25) return;               // too late, nothing worth hearing left
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); g.gain.value = 1.1;
+      src.connect(g).connect(out);
+      src.start(Math.max(when, ctx.currentTime + 0.01), into);
+    });
+  }).catch(() => {});
+}
+
 // Schedules the whole jingle on `ctx`, starting at ctx time `start`.
 // `skip` seconds of the timeline that already went by are left out.
-export function scheduleJingle(ctx, start, skip = 0) {
+export function scheduleJingle(ctx, start, skip = 0, { voice = true } = {}) {
   const out = ctx.createDynamicsCompressor();
   const master = ctx.createGain();
   master.gain.value = 0.55;
   out.connect(master).connect(ctx.destination);
   const at = (t) => start + t - skip;
   const later = (t) => t >= skip;
+  if (voice) scheduleVoice(ctx, start, skip, out);
 
   // soft whoosh: filtered noise sweeping up
   if (later(0.1)) {
@@ -55,47 +85,92 @@ export function scheduleJingle(ctx, start, skip = 0) {
     src.start(t0); src.stop(t1 + 0.05);
   }
 
-  // kulintang: the gong-chime of Tawi-Tawi. A gong is a sine with bright,
-  // slightly out-of-tune overtones, a quick strike and a ringing fade.
-  const gong = (t, freq, dur, vol) => {
-    if (!later(t)) return;
-    const s = at(t);
-    [[1, vol], [2.02, vol * 0.35], [2.98, vol * 0.18], [4.16, vol * 0.07]].forEach(([mul, v]) => {
-      const o = ctx.createOscillator(); o.type = 'sine';
-      o.frequency.setValueAtTime(freq * mul * 1.012, s); o.frequency.exponentialRampToValueAtTime(freq * mul, s + 0.08);
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(v, s + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, s + dur / mul ** 0.5);
-      o.connect(g).connect(out); o.start(s); o.stop(s + dur + 0.05);
-    });
-  };
-  // the box's five vinta stripes fill in to a rising kulintang run (pentatonic)
-  [523.3, 587.3, 659.3, 784.0, 880.0].forEach((f, i) => gong(0.9 + i * 0.1, f, 0.6, 0.13));
+  addSparkle(ctx, out, at, later);
+}
 
-  // bell-like note: a sine with a soft octave shimmer
-  const bell = (t, freq, dur, vol) => {
-    if (!later(t)) return;
-    const s = at(t);
-    [[1, vol], [2, vol * 0.28], [3, vol * 0.08]].forEach(([mul, v]) => {
-      const o = ctx.createOscillator(); o.type = mul === 1 ? 'triangle' : 'sine'; o.frequency.value = freq * mul;
-      const g = ctx.createGain();
-      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(v, s + 0.012); g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
-      o.connect(g).connect(out); o.start(s); o.stop(s + dur + 0.05);
-    });
-  };
-  // "Ki - na - kan"
-  gong(2.6, 784.0, 0.5, 0.3);    // G5
-  gong(2.78, 659.3, 0.5, 0.28);  // E5
-  gong(2.96, 784.0, 0.6, 0.3);   // G5
-  // "Go!": C major chord up top, with a bass thump
-  [1046.5, 1318.5, 1568.0].forEach((f, i) => bell(3.18 + i * 0.012, f, 1.1, 0.24));
-  bell(3.18, 523.3, 1.0, 0.2);
+// --- KinakanGo's own sound kit ---------------------------------------------
+// Bright and high: little "bloop" plinks that bend up into their note, a
+// whistle that zips up on "Go!", and a sprinkle of sparkles to finish.
+
+// A bubbly plink: a sine that bends up into `freq`, with a glassy overtone.
+export function bloop(ctx, out, s, freq, vol = 0.3, dur = 0.22) {
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(freq * 0.62, s); o.frequency.exponentialRampToValueAtTime(freq, s + 0.045);
+  const o2 = ctx.createOscillator(); o2.type = 'triangle';
+  o2.frequency.setValueAtTime(freq * 1.24, s); o2.frequency.exponentialRampToValueAtTime(freq * 2, s + 0.045);
+  const g = ctx.createGain(), g2 = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(vol, s + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, s + dur);
+  g2.gain.setValueAtTime(0.0001, s); g2.gain.exponentialRampToValueAtTime(vol * 0.22, s + 0.008); g2.gain.exponentialRampToValueAtTime(0.0001, s + dur * 0.6);
+  o.connect(g).connect(out); o2.connect(g2).connect(out);
+  o.start(s); o2.start(s); o.stop(s + dur + 0.05); o2.stop(s + dur + 0.05);
+}
+
+// A bell-like ding: a sine with a soft octave shimmer.
+export function ding(ctx, out, s, freq, vol = 0.2, dur = 0.9) {
+  [[1, vol], [2, vol * 0.3], [3, vol * 0.1]].forEach(([mul, v]) => {
+    const o = ctx.createOscillator(); o.type = mul === 1 ? 'triangle' : 'sine'; o.frequency.value = freq * mul;
+    const g = ctx.createGain();
+    g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(v, s + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, s + dur / mul);
+    o.connect(g).connect(out); o.start(s); o.stop(s + dur + 0.05);
+  });
+}
+
+// A whistle that zips up from `from` to `to` Hz.
+function zip(ctx, out, s, from, to, len, vol) {
+  const o = ctx.createOscillator(); o.type = 'sine';
+  o.frequency.setValueAtTime(from, s); o.frequency.exponentialRampToValueAtTime(to, s + len);
+  const lfo = ctx.createOscillator(), lg = ctx.createGain();
+  lfo.frequency.value = 28; lg.gain.value = to * 0.012; lfo.connect(lg).connect(o.frequency);
+  const g = ctx.createGain();
+  g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(vol, s + 0.03); g.gain.setValueAtTime(vol, s + len * 0.7); g.gain.exponentialRampToValueAtTime(0.0001, s + len + 0.08);
+  o.connect(g).connect(out); o.start(s); lfo.start(s); o.stop(s + len + 0.1); lfo.stop(s + len + 0.1);
+}
+
+function addSparkle(ctx, out, at, later) {
+  // the box's five vinta stripes fill in to a quick, high bloop run
+  [1046.5, 1174.7, 1318.5, 1568.0, 1760.0].forEach((f, i) => {
+    const t = 0.9 + i * 0.09;
+    if (later(t)) bloop(ctx, out, at(t), f, 0.13, 0.18);
+  });
+  // "Ki - na - kan": three bubbly plinks as the name drops in
+  [[2.62, 1568.0], [2.8, 1318.5], [2.98, 2093.0]].forEach(([t, f]) => { if (later(t)) bloop(ctx, out, at(t), f, 0.26); });
+  // "Go!": a whistle zips up into a bright C major ding, with a little thump
+  if (later(3.06)) zip(ctx, out, at(3.06), 1046.5, 2093.0, 0.14, 0.12);
   if (later(3.18)) {
     const s = at(3.18);
+    [2093.0, 2637.0, 3136.0].forEach((f, i) => ding(ctx, out, s + i * 0.015, f, 0.16, 1.0));
+    ding(ctx, out, s, 1046.5, 0.16, 0.8);
     const o = ctx.createOscillator(); o.type = 'sine';
-    o.frequency.setValueAtTime(150, s); o.frequency.exponentialRampToValueAtTime(48, s + 0.25);
-    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.5, s + 0.01); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.32);
-    o.connect(g).connect(out); o.start(s); o.stop(s + 0.35);
+    o.frequency.setValueAtTime(220, s); o.frequency.exponentialRampToValueAtTime(70, s + 0.18);
+    const g = ctx.createGain(); g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(0.35, s + 0.008); g.gain.exponentialRampToValueAtTime(0.0001, s + 0.22);
+    o.connect(g).connect(out); o.start(s); o.stop(s + 0.25);
   }
+  // sparkles twinkling down after "Go!"
+  [[3.32, 4186], [3.4, 3520], [3.47, 3951], [3.55, 3136], [3.64, 3520]].forEach(([t, f]) => {
+    if (later(t)) ding(ctx, out, at(t), f, 0.045, 0.3);
+  });
+}
+
+// The in-app notification tone: "ki-na-GO!" in under a second.
+export function playNotifySound() {
+  if (!soundsOn()) return;
+  const AC = window.AudioContext || window.webkitAudioContext;
+  if (!AC) return;
+  try {
+    const ctx = notifyCtx || (notifyCtx = new AC());
+    if (ctx.state === 'suspended') ctx.resume().catch(() => {});
+    scheduleNotify(ctx, ctx.currentTime + 0.03);
+  } catch { /* ignore */ }
+}
+let notifyCtx = null;
+export function scheduleNotify(ctx, s) {
+  const out = ctx.createDynamicsCompressor();
+  const master = ctx.createGain(); master.gain.value = 1.0;
+  out.connect(master).connect(ctx.destination);
+  bloop(ctx, out, s, 1568.0, 0.28, 0.16);
+  bloop(ctx, out, s + 0.11, 2093.0, 0.28, 0.16);
+  zip(ctx, out, s + 0.2, 1568.0, 2637.0, 0.09, 0.08);
+  [2637.0, 3136.0, 3951.0].forEach((f, i) => ding(ctx, out, s + 0.28 + i * 0.012, f, 0.12, 0.6));
 }
 
 // Plays the jingle for a splash that began at performance.now() === startedAt.

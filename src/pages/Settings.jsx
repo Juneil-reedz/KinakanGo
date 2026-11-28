@@ -56,7 +56,7 @@ export default function Settings() {
       {/* Appearance */}
       <Section title="Appearance" desc="Customize how the app looks" icon={Moon} iconColor="glass">
         <ToggleRow label="Dark Mode" desc="Use the dark theme" value={!isLight} onChange={toggleTheme} />
-        <ToggleRow label="Opening Sound" desc="Play the KinakanGo jingle when the app opens" value={sound}
+        <ToggleRow label="Sounds" desc="The KinakanGo jingle when the app opens, and the notification tone" value={sound}
           onChange={() => setSound(v => { setSoundsOn(!v); return !v; })} />
       </Section>
 
