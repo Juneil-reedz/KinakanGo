@@ -1,6 +1,7 @@
 const pool = require('../config/db');
 const { restaurantNameTaken, nameTakenMessage } = require('../utils/restaurantName');
 const { firstImageError, unlessOwn } = require('../utils/image');
+const { imageUrlSql, resolveImageUrls } = require('../routes/images');
 
 async function list(req, res) {
   const { search, cuisine, isOpen, includeClosed, sortBy } = req.query;
@@ -27,6 +28,7 @@ async function list(req, res) {
 
   const { rows } = await pool.query(
     `SELECT id, name, description, address, cuisine, image_url,
+            ${imageUrlSql('restaurants', 'restaurant-covers', 'cover_url')} AS cover_url,
             is_open, rating, review_count, delivery_fee, min_order
      FROM restaurants WHERE ${where.join(' AND ')}
      ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`,
@@ -35,6 +37,7 @@ async function list(req, res) {
   const { rows: countRows } = await pool.query(
     `SELECT COUNT(*) AS total FROM restaurants WHERE ${where.join(' AND ')}`, params
   );
+  rows.forEach(r => resolveImageUrls(req, r, ['cover_url']));
   res.json({ data: rows, total: parseInt(countRows[0].total), page, limit });
 }
 

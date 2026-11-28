@@ -6,6 +6,7 @@ const pool   = require('../config/db');
 // instead of embedding hundreds of KB of base64 per row.
 const SOURCES = {
   restaurants:  'SELECT image_url FROM restaurants WHERE id = $1',
+  'restaurant-covers': 'SELECT cover_url AS image_url FROM restaurants WHERE id = $1',
   'menu-items': 'SELECT image_url FROM menu_items  WHERE id = $1',
   users:        'SELECT avatar_url AS image_url FROM users WHERE id = $1',
 };
