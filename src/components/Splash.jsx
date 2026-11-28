@@ -3,9 +3,9 @@ import { useLocation } from 'react-router-dom';
 import KinakanLogo from './KinakanLogo';
 import { playSplashJingle } from '../utils/splashSound';
 
-// Opening screen, about 5 seconds: the brand badge builds itself (sunset, Bud
-// Bongao rising from the sea, the bridge, then our rider driving in with a
-// steaming food box), the name drops in letter by letter and "Go!" stamps on.
+// Opening screen, about 5 seconds: the emblem builds itself (a vinta sails in
+// over the waves, its sail unfurls stripe by stripe and the okir prow curls),
+// the name drops in letter by letter and "Go!" stamps on.
 // Then it fades to the app: Login when signed out, Home when signed in.
 // Shown once each time the app is opened, and not on the staff panels.
 const KEY = 'kkg_splash_seen';

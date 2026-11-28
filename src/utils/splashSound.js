@@ -1,8 +1,9 @@
 // The KinakanGo opening jingle, made with the Web Audio API (no audio file to
 // download). Timed to the opening scene in Splash.jsx:
 //   0.1 s  soft whoosh as the badge pops in
-//   1.7 s  the rider's scooter putts in
-//   2.6 s  "Ki - na - kan" three bright notes as the name drops in
+//   0.35 s a wash of water as the vinta sails in
+//   0.95 s a rising kulintang (gong-chime) run as the sail's stripes unfurl
+//   2.6 s  "Ki - na - kan" three kulintang notes as the name drops in
 //   3.2 s  "Go!" a chord with a little thump as it stamps on
 // Browsers only allow sound after the person has touched the page, so if the
 // app opens without a tap the jingle starts on the first tap during the splash.
@@ -35,35 +36,40 @@ export function scheduleJingle(ctx, start, skip = 0) {
     src.connect(bp).connect(g).connect(out); src.start(at(0.1)); src.stop(at(0.72));
   }
 
-  // scooter: a buzzy low engine that revs up as it drives in, with a putt-putt wobble
-  if (later(1.7)) {
-    const t0 = at(1.7), t1 = at(2.75);
-    const eng = ctx.createOscillator(); eng.type = 'sawtooth';
-    eng.frequency.setValueAtTime(62, t0); eng.frequency.exponentialRampToValueAtTime(118, t0 + 0.55); eng.frequency.exponentialRampToValueAtTime(78, t1);
-    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.value = 700;
-    const putt = ctx.createGain(); putt.gain.value = 0.5;
-    const lfo = ctx.createOscillator(); lfo.frequency.setValueAtTime(18, t0); lfo.frequency.linearRampToValueAtTime(30, t0 + 0.55);
-    const lfoAmt = ctx.createGain(); lfoAmt.gain.value = 0.5;
-    lfo.connect(lfoAmt).connect(putt.gain);
+  // the vinta sailing in: a soft wash of water drifting left to right
+  if (later(0.35)) {
+    const t0 = at(0.35), t1 = at(1.6);
+    const len = Math.floor(ctx.sampleRate * 1.4);
+    const buf = ctx.createBuffer(1, len, ctx.sampleRate);
+    const d = buf.getChannelData(0);
+    let last = 0;
+    for (let i = 0; i < len; i++) { last = (last + 0.02 * (Math.random() * 2 - 1)) / 1.02; d[i] = last * 3.5; }
+    const src = ctx.createBufferSource(); src.buffer = buf;
+    const lp = ctx.createBiquadFilter(); lp.type = 'lowpass'; lp.frequency.setValueAtTime(500, t0); lp.frequency.linearRampToValueAtTime(1400, t0 + 0.6); lp.frequency.linearRampToValueAtTime(600, t1);
     const g = ctx.createGain();
-    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.22, t0 + 0.35); g.gain.setValueAtTime(0.22, t1 - 0.3); g.gain.exponentialRampToValueAtTime(0.0001, t1);
+    g.gain.setValueAtTime(0.0001, t0); g.gain.exponentialRampToValueAtTime(0.35, t0 + 0.45); g.gain.exponentialRampToValueAtTime(0.0001, t1);
     const pan = ctx.createStereoPanner ? ctx.createStereoPanner() : null;
-    if (pan) { pan.pan.setValueAtTime(-0.8, t0); pan.pan.linearRampToValueAtTime(0.2, t1); }
-    eng.connect(lp).connect(putt).connect(g);
+    if (pan) { pan.pan.setValueAtTime(-0.7, t0); pan.pan.linearRampToValueAtTime(0.3, t1); }
+    src.connect(lp).connect(g);
     (pan ? g.connect(pan) : g).connect(out);
-    eng.start(t0); lfo.start(t0); eng.stop(t1 + 0.05); lfo.stop(t1 + 0.05);
-    // a little horn "beep-beep" as it arrives
-    [[2.5, 0.07], [2.62, 0.1]].forEach(([t, dur]) => {
-      if (!later(t)) return;
-      const o = ctx.createOscillator(); o.type = 'square'; o.frequency.value = 520;
-      const o2 = ctx.createOscillator(); o2.type = 'square'; o2.frequency.value = 655;
-      const f = ctx.createBiquadFilter(); f.type = 'lowpass'; f.frequency.value = 1800;
-      const hg = ctx.createGain();
-      hg.gain.setValueAtTime(0.0001, at(t)); hg.gain.exponentialRampToValueAtTime(0.07, at(t) + 0.01); hg.gain.setValueAtTime(0.07, at(t + dur)); hg.gain.exponentialRampToValueAtTime(0.0001, at(t + dur) + 0.03);
-      o.connect(f); o2.connect(f); f.connect(hg).connect(out);
-      o.start(at(t)); o2.start(at(t)); o.stop(at(t + dur) + 0.05); o2.stop(at(t + dur) + 0.05);
-    });
+    src.start(t0); src.stop(t1 + 0.05);
   }
+
+  // kulintang: the gong-chime of Tawi-Tawi. A gong is a sine with bright,
+  // slightly out-of-tune overtones, a quick strike and a ringing fade.
+  const gong = (t, freq, dur, vol) => {
+    if (!later(t)) return;
+    const s = at(t);
+    [[1, vol], [2.02, vol * 0.35], [2.98, vol * 0.18], [4.16, vol * 0.07]].forEach(([mul, v]) => {
+      const o = ctx.createOscillator(); o.type = 'sine';
+      o.frequency.setValueAtTime(freq * mul * 1.012, s); o.frequency.exponentialRampToValueAtTime(freq * mul, s + 0.08);
+      const g = ctx.createGain();
+      g.gain.setValueAtTime(0.0001, s); g.gain.exponentialRampToValueAtTime(v, s + 0.006); g.gain.exponentialRampToValueAtTime(0.0001, s + dur / mul ** 0.5);
+      o.connect(g).connect(out); o.start(s); o.stop(s + dur + 0.05);
+    });
+  };
+  // the sail's five stripes unfurl to a rising kulintang run (pentatonic)
+  [523.3, 587.3, 659.3, 784.0, 880.0].forEach((f, i) => gong(0.95 + i * 0.12, f, 0.6, 0.13));
 
   // bell-like note: a sine with a soft octave shimmer
   const bell = (t, freq, dur, vol) => {
@@ -77,9 +83,9 @@ export function scheduleJingle(ctx, start, skip = 0) {
     });
   };
   // "Ki - na - kan"
-  bell(2.6, 784.0, 0.35, 0.32);   // G5
-  bell(2.78, 659.3, 0.35, 0.3);   // E5
-  bell(2.96, 784.0, 0.4, 0.32);   // G5
+  gong(2.6, 784.0, 0.5, 0.3);    // G5
+  gong(2.78, 659.3, 0.5, 0.28);  // E5
+  gong(2.96, 784.0, 0.6, 0.3);   // G5
   // "Go!": C major chord up top, with a bass thump
   [1046.5, 1318.5, 1568.0].forEach((f, i) => bell(3.18 + i * 0.012, f, 1.1, 0.24));
   bell(3.18, 523.3, 1.0, 0.2);
