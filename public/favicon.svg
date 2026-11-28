@@ -1,28 +1,41 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs>
-    <clipPath id="sail"><path d="M17 12.5 L47 8 Q49 25 46 41.5 L19 41.5 Q21 27 17 12.5Z"/></clipPath>
-  </defs>
+  <defs><clipPath id="f"><path d="M20 27h24v25H20z"/></clipPath></defs>
   <circle cx="32" cy="32" r="31" fill="#1c1410"/>
   <circle cx="32" cy="32" r="28.6" fill="none" stroke="#f7b048" stroke-width="1" opacity=".55"/>
-  <!-- vinta sail: stripes -->
-  <g clip-path="url(#sail)">
-    <rect x="16.0" y="0" width="6.6" height="50" fill="#e23b3b"/>
-    <rect x="22.4" y="0" width="6.6" height="50" fill="#ffc63d"/>
-    <rect x="28.8" y="0" width="6.6" height="50" fill="#1f9d55"/>
-    <rect x="35.2" y="0" width="6.6" height="50" fill="#2a9fd6"/>
-    <rect x="41.6" y="0" width="6.6" height="50" fill="#f7931e"/>
+  <g transform="translate(3 0)">
+  <!-- speed lines -->
+  <g stroke-width="2.6" stroke-linecap="round">
+    <path d="M6 33h9" stroke="#e23b3b"/>
+    <path d="M3.5 39.5h11.5" stroke="#ffc63d"/>
+    <path d="M7 46h8" stroke="#2a9fd6"/>
   </g>
-  <!-- spars -->
-  <path d="M15.5 13 L48.5 7.6" stroke="#f3e3c8" stroke-width="2" stroke-linecap="round"/>
-  <path d="M17.5 41.8 H47.5" stroke="#f3e3c8" stroke-width="2" stroke-linecap="round"/>
-  <path d="M32 41.8 V45" stroke="#f3e3c8" stroke-width="2"/>
-  <!-- hull = bowl, with okir prow -->
-  <path d="M9 45 H53 C52 52 44 56.5 31 56.5 S10 52 9 45Z" fill="#f7931e"/>
-  <path d="M9 45 H53" stroke="#ffc27a" stroke-width="1.6" stroke-linecap="round"/>
-  <path d="M53 45 C57 44 59.5 41 58.5 38 C57.6 35.4 54.4 35.6 54.2 38 C54 39.6 55.8 40.2 56.6 39.2" fill="none" stroke="#f7931e" stroke-width="2" stroke-linecap="round"/>
-  <path d="M9 45 C6 44 4.8 42 5.6 40.4" fill="none" stroke="#f7931e" stroke-width="2" stroke-linecap="round"/>
-  <path d="M14.0 47.6 l2.2 3 l2.2 -3zM18.4 47.6 l2.2 3 l2.2 -3zM22.8 47.6 l2.2 3 l2.2 -3zM27.2 47.6 l2.2 3 l2.2 -3zM31.6 47.6 l2.2 3 l2.2 -3zM36.0 47.6 l2.2 3 l2.2 -3zM40.4 47.6 l2.2 3 l2.2 -3zM44.8 47.6 l2.2 3 l2.2 -3z" fill="#c9620a"/>
-  <path d="M13.6 47.6 H50.4" stroke="#c9620a" stroke-width=".9"/>
-  <!-- sea -->
-  <path d="M13 59.5c2.4-1.3 4.8-1.3 7.2 0s4.8 1.3 7.2 0 4.8-1.3 7.2 0 4.8 1.3 7.2 0 4.8-1.3 7.2 0" fill="none" stroke="#2a9fd6" stroke-width="1.6" stroke-linecap="round"/>
+  <!-- steam -->
+  <g fill="none" stroke="#f3e3c8" stroke-width="1.8" stroke-linecap="round" opacity=".85">
+    <path d="M29 16c-1.8-1.8 1.8-3.4 0-5.4"/>
+    <path d="M36 15c-1.8-1.8 1.8-3.4 0-5.4"/>
+  </g>
+  <!-- box: front stripes -->
+  <g clip-path="url(#f)">
+    <rect x="20" y="27" width="4.8" height="25" fill="#e23b3b"/>
+    <rect x="24.8" y="27" width="4.8" height="25" fill="#ffc63d"/>
+    <rect x="29.6" y="27" width="4.8" height="25" fill="#1f9d55"/>
+    <rect x="34.4" y="27" width="4.8" height="25" fill="#2a9fd6"/>
+    <rect x="39.2" y="27" width="4.8" height="25" fill="#f7931e"/>
+  </g>
+  <!-- side -->
+  <path d="M44 27l8-6v25l-8 6z" fill="#b8460f"/>
+  <path d="M44 33.5l8-6M44 40l8-6M44 46.5l8-6" stroke="#8f340a" stroke-width="1"/>
+  <!-- lid -->
+  <path d="M20 27l8-6h24l-8 6z" fill="#f3e3c8"/>
+  <path d="M27 24.3h17" stroke="#c9b496" stroke-width="1.4" stroke-linecap="round"/>
+  <!-- tumpal band on front -->
+  <path d="M20 31.5h24v-1.2H20z" fill="#1c1410" opacity=".35"/>
+  <path d="M20 30.3l2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2z" fill="#1c1410" opacity=".55"/>
+  <!-- label: bowl -->
+  <circle cx="32" cy="42" r="6.2" fill="#1c1410"/>
+  <path d="M27.6 41.2h8.8c0 2.6-2 4.4-4.4 4.4s-4.4-1.8-4.4-4.4z" fill="#f7931e"/>
+  <path d="M30 39.6c-.8-.8.8-1.5 0-2.4M33.4 39.6c-.8-.8.8-1.5 0-2.4" stroke="#f3e3c8" stroke-width=".9" stroke-linecap="round" fill="none"/>
+  </g>
+  <!-- ground -->
+  <path d="M17 55.5h38" stroke="#f3e3c8" stroke-width="1.2" stroke-linecap="round" opacity=".25"/>
 </svg>

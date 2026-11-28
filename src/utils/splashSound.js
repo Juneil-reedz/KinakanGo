@@ -1,8 +1,8 @@
 // The KinakanGo opening jingle, made with the Web Audio API (no audio file to
 // download). Timed to the opening scene in Splash.jsx:
 //   0.1 s  soft whoosh as the badge pops in
-//   0.35 s a wash of water as the vinta sails in
-//   0.95 s a rising kulintang (gong-chime) run as the sail's stripes unfurl
+//   0.35 s a whoosh as the food box zooms in
+//   0.9 s  a rising kulintang (gong-chime) run as the box's vinta stripes fill in
 //   2.6 s  "Ki - na - kan" three kulintang notes as the name drops in
 //   3.2 s  "Go!" a chord with a little thump as it stamps on
 // Browsers only allow sound after the person has touched the page, so if the
@@ -36,7 +36,7 @@ export function scheduleJingle(ctx, start, skip = 0) {
     src.connect(bp).connect(g).connect(out); src.start(at(0.1)); src.stop(at(0.72));
   }
 
-  // the vinta sailing in: a soft wash of water drifting left to right
+  // the box zooming in: a soft whoosh drifting left to right
   if (later(0.35)) {
     const t0 = at(0.35), t1 = at(1.6);
     const len = Math.floor(ctx.sampleRate * 1.4);
@@ -68,8 +68,8 @@ export function scheduleJingle(ctx, start, skip = 0) {
       o.connect(g).connect(out); o.start(s); o.stop(s + dur + 0.05);
     });
   };
-  // the sail's five stripes unfurl to a rising kulintang run (pentatonic)
-  [523.3, 587.3, 659.3, 784.0, 880.0].forEach((f, i) => gong(0.95 + i * 0.12, f, 0.6, 0.13));
+  // the box's five vinta stripes fill in to a rising kulintang run (pentatonic)
+  [523.3, 587.3, 659.3, 784.0, 880.0].forEach((f, i) => gong(0.9 + i * 0.1, f, 0.6, 0.13));
 
   // bell-like note: a sine with a soft octave shimmer
   const bell = (t, freq, dur, vol) => {
