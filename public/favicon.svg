@@ -1,41 +1,37 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <defs><clipPath id="f"><path d="M20 27h24v25H20z"/></clipPath></defs>
+  <defs><clipPath id="f"><path d="M16 34h26v20H16z"/></clipPath></defs>
   <circle cx="32" cy="32" r="31" fill="#1c1410"/>
   <circle cx="32" cy="32" r="28.6" fill="none" stroke="#f7b048" stroke-width="1" opacity=".55"/>
-  <g transform="translate(3 0)">
-  <!-- speed lines -->
+  <path d="M15 54.5h40" stroke="#f3e3c8" stroke-width="1.2" stroke-linecap="round" opacity=".25"/>
+  <g transform="translate(3 -2)">
   <g stroke-width="2.6" stroke-linecap="round">
-    <path d="M6 33h9" stroke="#e23b3b"/>
-    <path d="M3.5 39.5h11.5" stroke="#ffc63d"/>
-    <path d="M7 46h8" stroke="#2a9fd6"/>
+    <path d="M3 37h9" stroke="#e23b3b"/>
+    <path d="M1 43.5h11" stroke="#ffc63d"/>
+    <path d="M4 50h8" stroke="#2a9fd6"/>
   </g>
-  <!-- steam -->
-  <g fill="none" stroke="#f3e3c8" stroke-width="1.8" stroke-linecap="round" opacity=".85">
-    <path d="M29 16c-1.8-1.8 1.8-3.4 0-5.4"/>
-    <path d="M36 15c-1.8-1.8 1.8-3.4 0-5.4"/>
-  </g>
-  <!-- box: front stripes -->
+  <!-- handle -->
+  <path d="M24 22.5V15.5q0-1.5 1.5-1.5h17q1.5 0 1.5 1.5v7z" fill="#f3e3c8"/>
+  <rect x="29" y="16.3" width="10" height="3.2" rx="1.6" fill="#1c1410"/>
+  <!-- roof: front panel and gable end -->
+  <path d="M16 34l5-12h26l-5 12z" fill="#f7931e"/>
+  <path d="M21 22h26" stroke="#ffc27a" stroke-width="1.2" stroke-linecap="round"/>
+  <path d="M42 34l5-12 5 6z" fill="#c9620a"/>
+  <!-- body: front vinta stripes -->
   <g clip-path="url(#f)">
-    <rect x="20" y="27" width="4.8" height="25" fill="#e23b3b"/>
-    <rect x="24.8" y="27" width="4.8" height="25" fill="#ffc63d"/>
-    <rect x="29.6" y="27" width="4.8" height="25" fill="#1f9d55"/>
-    <rect x="34.4" y="27" width="4.8" height="25" fill="#2a9fd6"/>
-    <rect x="39.2" y="27" width="4.8" height="25" fill="#f7931e"/>
+    <rect x="16" y="34" width="5.3" height="20" fill="#e23b3b"/>
+    <rect x="21.2" y="34" width="5.3" height="20" fill="#ffc63d"/>
+    <rect x="26.4" y="34" width="5.3" height="20" fill="#1f9d55"/>
+    <rect x="31.6" y="34" width="5.3" height="20" fill="#2a9fd6"/>
+    <rect x="36.8" y="34" width="5.3" height="20" fill="#f7931e"/>
   </g>
-  <!-- side -->
-  <path d="M44 27l8-6v25l-8 6z" fill="#b8460f"/>
-  <path d="M44 33.5l8-6M44 40l8-6M44 46.5l8-6" stroke="#8f340a" stroke-width="1"/>
-  <!-- lid -->
-  <path d="M20 27l8-6h24l-8 6z" fill="#f3e3c8"/>
-  <path d="M27 24.3h17" stroke="#c9b496" stroke-width="1.4" stroke-linecap="round"/>
-  <!-- tumpal band on front -->
-  <path d="M20 31.5h24v-1.2H20z" fill="#1c1410" opacity=".35"/>
-  <path d="M20 30.3l2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2 2.4 3.2 2.4-3.2z" fill="#1c1410" opacity=".55"/>
-  <!-- label: bowl -->
-  <circle cx="32" cy="42" r="6.2" fill="#1c1410"/>
-  <path d="M27.6 41.2h8.8c0 2.6-2 4.4-4.4 4.4s-4.4-1.8-4.4-4.4z" fill="#f7931e"/>
-  <path d="M30 39.6c-.8-.8.8-1.5 0-2.4M33.4 39.6c-.8-.8.8-1.5 0-2.4" stroke="#f3e3c8" stroke-width=".9" stroke-linecap="round" fill="none"/>
+  <!-- body side -->
+  <path d="M42 34l10-6v20l-10 6z" fill="#b8460f"/>
+  <!-- tumpal band -->
+  <path d="M16 34l2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4z" fill="#1c1410" opacity=".5"/>
+  <path d="M16 34h26" stroke="#1c1410" stroke-width=".8" opacity=".6"/>
+  <!-- label -->
+  <circle cx="29" cy="45.5" r="5.4" fill="#1c1410"/>
+  <path d="M25.2 44.8h7.6c0 2.3-1.7 3.8-3.8 3.8s-3.8-1.5-3.8-3.8z" fill="#f7931e"/>
+  <path d="M27.6 43.4c-.7-.7.7-1.3 0-2.1M30.4 43.4c-.7-.7.7-1.3 0-2.1" stroke="#f3e3c8" stroke-width=".8" stroke-linecap="round" fill="none"/>
   </g>
-  <!-- ground -->
-  <path d="M17 55.5h38" stroke="#f3e3c8" stroke-width="1.2" stroke-linecap="round" opacity=".25"/>
 </svg>

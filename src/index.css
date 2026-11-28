@@ -1128,8 +1128,7 @@
 .sp-ring { stroke-dasharray: 100; animation: sp-draw .9s .1s ease-out backwards; }
 .sp-box { transform-origin: 50% 100%; animation: sp-zoom-in .9s .35s cubic-bezier(.2, .9, .3, 1.1) backwards, sp-ride 1.2s 1.3s ease-in-out infinite; }
 .sp-speedline { transform-origin: 100% 50%; animation: sp-streak .35s cubic-bezier(.22, 1, .36, 1) backwards; }
-.sp-steamline { stroke-dasharray: 100; animation: sp-steam-in .6s ease-out backwards; }
-@keyframes sp-steam-in { from { stroke-dashoffset: 100; opacity: 0; } 25% { opacity: 1; } to { stroke-dashoffset: 0; } }
+.sp-handle { transform-origin: 50% 100%; animation: sp-unfurl .4s cubic-bezier(.34, 1.56, .64, 1) backwards; }
 .sp-stripe { transform-origin: 50% 100%; animation: sp-unfurl .45s cubic-bezier(.34, 1.56, .64, 1) backwards; }
 .sp-letter { animation: sp-letter .5s cubic-bezier(.34, 1.56, .64, 1) backwards; }
 .sp-go { animation: sp-stamp .55s 3.15s cubic-bezier(.34, 1.8, .64, 1) both; }

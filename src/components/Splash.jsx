@@ -3,9 +3,9 @@ import { useLocation } from 'react-router-dom';
 import KinakanLogo from './KinakanLogo';
 import { playSplashJingle } from '../utils/splashSound';
 
-// Opening screen, about 5 seconds: the emblem builds itself (the food box zooms
-// in, its vinta stripes fill in one by one, speed lines streak out behind it
-// and steam rises), the name drops in letter by letter and "Go!" stamps on.
+// Opening screen, about 5 seconds: the emblem builds itself (the takeout box
+// zooms in, its vinta stripes fill in one by one, speed lines streak out behind
+// it and the handle pops up), the name drops in letter by letter and "Go!" stamps on.
 // Then it fades to the app: Login when signed out, Home when signed in.
 // Shown once each time the app is opened, and not on the staff panels.
 const KEY = 'kkg_splash_seen';
