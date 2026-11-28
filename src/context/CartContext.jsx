@@ -126,9 +126,13 @@ export const CartProvider = ({ children }) => {
   // clearCart(restaurantId) removes all of one restaurant's food (used by reorder).
   const clearCart = (id) => {
     setPromoCode('');
+    // Fix which restaurant we mean now: setRestaurantId below moves the ref to
+    // another restaurant before the setAllItems update runs, and reading the
+    // ref there kept every food when the whole restaurant was ordered.
+    const rid = id === undefined ? restaurantRef.current : id;
     const gone = id === undefined
-      ? (i) => sameRest(i.restaurantId, restaurantRef.current) && isPicked(i.id)
-      : (i) => sameRest(i.restaurantId, id);
+      ? (i) => sameRest(i.restaurantId, rid) && isPicked(i.id)
+      : (i) => sameRest(i.restaurantId, rid);
     const next = allItems.filter(i => !gone(i));
     setPicked([]);
     if (!next.some(i => sameRest(i.restaurantId, restaurantRef.current))) setRestaurantId(next.length ? next[0].restaurantId : null);
