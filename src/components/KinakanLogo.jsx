@@ -1,58 +1,62 @@
 import { useId } from 'react';
 
-// KinakanGo badge: a rider with a steaming food box crossing the bridge in
-// front of Bud Bongao at sunset, from the brand's own animation.
+// KinakanGo emblem: a takeout box with a carry handle, on its way. The box wears
+// the striped colours of the Tawi-Tawi vinta sail with a band of tumpal
+// triangles (from Sama and Tausug weaving), a food label, and speed lines.
 // `animated` adds the class hooks the opening splash animates (see .sp-* in index.css).
+const STRIPES = ['#e23b3b', '#ffc63d', '#1f9d55', '#2a9fd6', '#f7931e'];
+const SPEED = [['M3 37h9', '#e23b3b'], ['M1 43.5h11', '#ffc63d'], ['M4 50h8', '#2a9fd6']];
+const TUMPAL = 'M16 34l2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4 2.6 3.4 2.6-3.4z';
+
 export default function KinakanLogo({ className = 'w-12 h-12', animated = false, title = 'KinakanGo' }) {
   const id = useId().replace(/:/g, '');
   const a = (name) => (animated ? name : undefined);
+  const delay = (s) => (animated ? { animationDelay: `${s}s` } : undefined);
   return (
     <svg viewBox="0 0 64 64" className={className} role="img" aria-label={title}>
       <defs>
-        <clipPath id={`${id}c`}><circle cx="32" cy="32" r="30" /></clipPath>
-        <linearGradient id={`${id}s`} x1="0" y1="0" x2="0" y2="1">
-          <stop offset="0" stopColor="#ffc35c" /><stop offset="1" stopColor="#f7931e" />
-        </linearGradient>
+        <clipPath id={`${id}f`}><path d="M16 34h26v20H16z" /></clipPath>
+        <clipPath id={`${id}o`}><circle cx="32" cy="32" r="31" /></clipPath>
       </defs>
-      <g clipPath={`url(#${id}c)`}>
-        <rect className={a('sp-sky')} width="64" height="64" fill={`url(#${id}s)`} />
-        <circle className={a('sp-sun')} cx="46" cy="17" r="5" fill="#fff4e6" opacity=".9" />
-        {/* Bud Bongao */}
-        <g className={a('sp-mountain')}>
-          <path d="M-2 47C4 42 8 38 11 35c2-2 4-2 6-4.5l3-4.5c1.5-2 2.6-2.4 3.6-4.6L26.5 15c1-2 2.8-2 3.8 0l2.6 5.2c1.2 2.2 3 3 5 4.6 4.6 3.8 8 9.6 12 22.2z" fill="#1d7a43" />
-          <path d="M28.4 13.6c.6 0 1.3.5 1.9 1.4l2.6 5.2c1.2 2.2 3 3 5 4.6 4.6 3.8 8 9.6 12 22.2H35c-.6-7-2-13-4.2-19-.9-2.6-1.6-6.4-2.4-14.4z" fill="#135c31" />
-        </g>
-        {/* sea */}
-        <g className={a('sp-sea')}>
-          <rect y="46" width="64" height="18" fill="#2a9fd6" />
-          <path className={a('sp-wave')} d="M-14 54c3-1.6 6-1.6 9 0s6 1.6 9 0 6-1.6 9 0 6 1.6 9 0 6-1.6 9 0 6 1.6 9 0 6-1.6 9 0 6 1.6 9 0 6-1.6 9 0" fill="none" stroke="#8fd3f4" strokeWidth="1.6" strokeLinecap="round" />
-          <path className={a('sp-wave2')} d="M-8 59.5c3-1.4 6-1.4 9 0s6 1.4 9 0 6-1.4 9 0 6 1.4 9 0 6-1.4 9 0 6 1.4 9 0 6-1.4 9 0 6 1.4 9 0" fill="none" stroke="#8fd3f4" strokeWidth="1.4" strokeLinecap="round" opacity=".7" />
-        </g>
-        {/* bridge */}
-        <g className={a('sp-bridge')} fill="#fff4e6">
-          <rect x="-2" y="46.2" width="68" height="2.6" />
-          <path d="M14 48.8v3.4M30 48.8v3.4M46 48.8v3.4" stroke="#fff4e6" strokeWidth="2" />
-        </g>
-        {/* rider with a steaming food box */}
-        <g className={a('sp-rider')}>
-          <g transform="translate(30.5 24.6) scale(.43)">
-            <g>
-              <path className={a('sp-steam')} d="M8 5c-3-3 3-5.5 0-9M15 5c-3-3 3-5.5 0-9" fill="none" stroke="#fff4e6" strokeWidth="3.4" strokeLinecap="round" />
-              <rect x="3" y="15" width="15" height="13" rx="2.5" fill="#fff4e6" />
-              <path d="M9 34 H30 L37 25 H46 L51 36 Z" fill="#fff4e6" />
-              <path d="M44 25 L52 41" stroke="#fff4e6" strokeWidth="4" strokeLinecap="round" />
-              <path d="M41 15 H47" stroke="#2a211b" strokeWidth="3.5" strokeLinecap="round" />
-              <path d="M27 15 L22 29 L33 31 L35 38" fill="none" stroke="#2a211b" strokeWidth="5.5" strokeLinecap="round" strokeLinejoin="round" />
-              <path d="M28 17 L42 16" stroke="#2a211b" strokeWidth="4" strokeLinecap="round" />
-              <circle cx="29" cy="8" r="6" fill="#2a211b" />
-              <path d="M24 7 A6 6 0 0 1 35 6.5 Z" fill="#f7931e" />
+      <circle cx="32" cy="32" r="31" fill="#1c1410" />
+      <circle className={a('sp-ring')} cx="32" cy="32" r="28.6" fill="none" stroke="#f7b048" strokeWidth="1" opacity=".55" pathLength="100" />
+      <path d="M15 54.5h40" stroke="#f3e3c8" strokeWidth="1.2" strokeLinecap="round" opacity=".25" />
+      <g clipPath={`url(#${id}o)`}>
+        <g transform="translate(3 -2)">
+          {/* speed lines */}
+          <g strokeWidth="2.6" strokeLinecap="round">
+            {SPEED.map(([d, c], i) => (
+              <path key={c} className={a('sp-speedline')} style={delay(1.05 + i * 0.1)} d={d} stroke={c} />
+            ))}
+          </g>
+          <g className={a('sp-box')}>
+            {/* carry handle */}
+            <g className={a('sp-handle')} style={delay(1.45)}>
+              <path d="M24 22.5V15.5q0-1.5 1.5-1.5h17q1.5 0 1.5 1.5v7z" fill="#f3e3c8" />
+              <rect x="29" y="16.3" width="10" height="3.2" rx="1.6" fill="#1c1410" />
             </g>
-            <circle cx="14" cy="42" r="7.5" fill="#2a211b" /><circle cx="14" cy="42" r="2.8" fill="#fff4e6" />
-            <circle cx="52" cy="42" r="7.5" fill="#2a211b" /><circle cx="52" cy="42" r="2.8" fill="#fff4e6" />
+            {/* gable top: front panel and end */}
+            <path d="M16 34l5-12h26l-5 12z" fill="#f7931e" />
+            <path d="M21 22h26" stroke="#ffc27a" strokeWidth="1.2" strokeLinecap="round" />
+            <path d="M42 34l5-12 5 6z" fill="#c9620a" />
+            {/* front: vinta stripes */}
+            <g clipPath={`url(#${id}f)`}>
+              {STRIPES.map((c, i) => (
+                <rect key={c} className={a('sp-stripe')} style={delay(0.9 + i * 0.1)} x={16 + i * 5.2} y="34" width="5.3" height="20" fill={c} />
+              ))}
+            </g>
+            {/* side */}
+            <path d="M42 34l10-6v20l-10 6z" fill="#b8460f" />
+            {/* tumpal band */}
+            <path d={TUMPAL} fill="#1c1410" opacity=".5" />
+            <path d="M16 34h26" stroke="#1c1410" strokeWidth=".8" opacity=".6" />
+            {/* label: a steaming bowl */}
+            <circle cx="29" cy="45.5" r="5.4" fill="#1c1410" />
+            <path d="M25.2 44.8h7.6c0 2.3-1.7 3.8-3.8 3.8s-3.8-1.5-3.8-3.8z" fill="#f7931e" />
+            <path d="M27.6 43.4c-.7-.7.7-1.3 0-2.1M30.4 43.4c-.7-.7.7-1.3 0-2.1" stroke="#f3e3c8" strokeWidth=".8" strokeLinecap="round" fill="none" />
           </g>
         </g>
       </g>
-      <circle className={a('sp-ring')} cx="32" cy="32" r="30" fill="none" stroke="#fff4e6" strokeWidth="2.4" pathLength="100" />
     </svg>
   );
 }
