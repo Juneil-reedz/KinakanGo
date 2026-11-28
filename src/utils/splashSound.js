@@ -5,6 +5,9 @@
 //   0.9 s  a rising kulintang (gong-chime) run as the box's vinta stripes fill in
 //   2.6 s  "Ki - na - kan" three kulintang notes as the name drops in
 //   3.2 s  "Go!" a chord with a little thump as it stamps on
+// On top of that a girl's voice says "Nom nom nom! Hee-hee-hee! Ki-na-kan GO!"
+// (public/sounds/kinakan-voice.mp3), lined up so "Ki" lands on the name drop
+// and "GO" on the stamp.
 // Browsers only allow sound after the person has touched the page, so if the
 // app opens without a tap the jingle starts on the first tap during the splash.
 
@@ -14,13 +17,46 @@ export const setSoundsOn = (on) => { try { localStorage.setItem(PREF, on ? 'on' 
 
 // Schedules the whole jingle on `ctx`, starting at ctx time `start`.
 // `skip` seconds of the timeline that already went by are left out.
-export function scheduleJingle(ctx, start, skip = 0) {
+// The voice clip starts VOICE_AT seconds into the splash.
+const VOICE_AT = 0.44;
+const VOICE_URL = `${import.meta.env.BASE_URL}sounds/kinakan-voice.mp3`;
+let voiceBytes = null;
+// Start downloading the clip as soon as this file loads (it is about 24 KB)
+const loadVoice = () => {
+  if (!voiceBytes) voiceBytes = fetch(VOICE_URL).then(r => (r.ok ? r.arrayBuffer() : null)).catch(() => null);
+  return voiceBytes;
+};
+if (typeof window !== 'undefined' && soundsOn()) loadVoice();
+
+// Plays the voice clip on `ctx`, if it arrives in time. Returns nothing.
+function scheduleVoice(ctx, start, skip, out) {
+  loadVoice().then(bytes => {
+    if (!bytes || ctx.state === 'closed') return;
+    // decodeAudioData takes the buffer away, so give it a copy
+    return new Promise((ok, fail) => ctx.decodeAudioData(bytes.slice(0), ok, fail)).then(buf => {
+      const offset = skip - VOICE_AT;            // how far into the clip we are
+      const when = start + VOICE_AT - skip;      // ctx time the clip should start
+      const late = Math.max(0, ctx.currentTime + 0.01 - when); // decode took too long
+      const into = Math.max(0, offset) + late;
+      if (into >= buf.duration - 0.3) return;    // nothing worth hearing is left
+      const src = ctx.createBufferSource(); src.buffer = buf;
+      const g = ctx.createGain(); g.gain.value = 1.6;
+      src.connect(g).connect(out);
+      src.start(Math.max(when, ctx.currentTime + 0.01), into);
+    });
+  }).catch(() => {});
+}
+
+export function scheduleJingle(ctx, start, skip = 0, { voice = true } = {}) {
   const out = ctx.createDynamicsCompressor();
   const master = ctx.createGain();
   master.gain.value = 0.55;
   out.connect(master).connect(ctx.destination);
   const at = (t) => start + t - skip;
   const later = (t) => t >= skip;
+  if (voice) scheduleVoice(ctx, start, skip, out);
+  // the voice sings "Ki-na-kan" itself, so the gongs step back a little
+  const duck = voice ? 0.55 : 1;
 
   // soft whoosh: filtered noise sweeping up
   if (later(0.1)) {
@@ -69,7 +105,7 @@ export function scheduleJingle(ctx, start, skip = 0) {
     });
   };
   // the box's five vinta stripes fill in to a rising kulintang run (pentatonic)
-  [523.3, 587.3, 659.3, 784.0, 880.0].forEach((f, i) => gong(0.9 + i * 0.1, f, 0.6, 0.13));
+  [523.3, 587.3, 659.3, 784.0, 880.0].forEach((f, i) => gong(0.9 + i * 0.1, f, 0.6, 0.13 * duck));
 
   // bell-like note: a sine with a soft octave shimmer
   const bell = (t, freq, dur, vol) => {
@@ -83,9 +119,9 @@ export function scheduleJingle(ctx, start, skip = 0) {
     });
   };
   // "Ki - na - kan"
-  gong(2.6, 784.0, 0.5, 0.3);    // G5
-  gong(2.78, 659.3, 0.5, 0.28);  // E5
-  gong(2.96, 784.0, 0.6, 0.3);   // G5
+  gong(2.6, 784.0, 0.5, 0.3 * duck);    // G5
+  gong(2.78, 659.3, 0.5, 0.28 * duck);  // E5
+  gong(2.96, 784.0, 0.6, 0.3 * duck);   // G5
   // "Go!": C major chord up top, with a bass thump
   [1046.5, 1318.5, 1568.0].forEach((f, i) => bell(3.18 + i * 0.012, f, 1.1, 0.24));
   bell(3.18, 523.3, 1.0, 0.2);
