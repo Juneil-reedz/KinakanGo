@@ -321,6 +321,14 @@ pool.query(`
 pool.query('ALTER TABLE restaurants ALTER COLUMN cover_url TYPE TEXT')
   .catch(err => console.warn('restaurants cover_url column warning:', err.message));
 
+// No two restaurants may share a name ("Kape Tawi" = "kape-tawi" = "KAPE TAWI").
+// The controllers check first and give a friendly message; this index makes the
+// database itself refuse a duplicate, even if two sign-ups race each other.
+pool.query(`
+  CREATE UNIQUE INDEX IF NOT EXISTS restaurants_unique_name
+    ON restaurants ((regexp_replace(lower(name), '[^a-z0-9]', '', 'g')))
+`).catch(err => console.warn('restaurants unique name index warning (duplicate names already exist?):', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');
@@ -384,6 +392,10 @@ app.use('/api/rider-pay',    riderPayRoutes);
 app.use((err, _req, res, _next) => {
   // Errors thrown on purpose with a 4xx status carry a message meant for the user
   if (err.status >= 400 && err.status < 500) return res.status(err.status).json({ error: err.message });
+  // A second restaurant with the same name, caught by the database's unique index
+  if (err.code === '23505' && err.constraint === 'restaurants_unique_name') {
+    return res.status(409).json({ error: 'A restaurant with this name already exists. Please choose a different name.' });
+  }
   console.error(err);
   res.status(500).json({ error: 'Internal server error' });
 });
