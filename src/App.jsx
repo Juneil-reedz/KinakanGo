@@ -1,5 +1,5 @@
-import { useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useEffect, useRef } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation, useNavigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { CartProvider } from './context/CartContext';
 import { DialogProvider } from './context/DialogContext';
@@ -131,6 +131,25 @@ function RiderFeed({ children }) {
   return <NotificationFeedProvider request={riderRequest} audience="rider" enabled={!!rider}>{children}</NotificationFeedProvider>;
 }
 
+// A tapped phone notification while the app is already open: go to its page
+function PushNavigator() {
+  const navigate = useNavigate();
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const base = import.meta.env.BASE_URL.replace(/\/$/, '');
+    const onMsg = (e) => {
+      if (e.data?.type !== 'kkg-open' || !e.data.url) return;
+      const u = new URL(e.data.url);
+      if (u.origin !== window.location.origin) return;
+      const path = u.pathname.startsWith(base) ? u.pathname.slice(base.length) || '/' : u.pathname;
+      navigate(path + u.search);
+    };
+    navigator.serviceWorker.addEventListener('message', onMsg);
+    return () => navigator.serviceWorker.removeEventListener('message', onMsg);
+  }, [navigate]);
+  return null;
+}
+
 function App() {
   return (
     <ThemeProvider>
@@ -144,6 +163,7 @@ function App() {
               <AdminProvider>
                 <Router basename={import.meta.env.BASE_URL.replace(/\/$/, '')}>
                   <Splash />
+                  <PushNavigator />
                   <Routes>
                   {/* Welcome Route */}
                   <Route path="/welcome" element={<Welcome />} />

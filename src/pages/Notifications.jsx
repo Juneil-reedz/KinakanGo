@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { Bell, CheckCheck, Trash2, X, CheckCircle2, AlertCircle, AlertTriangle, Info, ChevronRight } from 'lucide-react';
 import { useNotificationFeed } from '../context/NotificationFeed';
 import { useDialog } from '../context/DialogContext';
+import PushPrompt from '../components/PushPrompt';
 
 const TYPE_STYLE = {
   success: { icon: CheckCircle2,  cls: 'glass-green text-forest-300' },
@@ -36,7 +37,7 @@ function targetOf(n) {
 
 export default function Notifications() {
   const navigate = useNavigate();
-  const { items, loading, load, markRead, markAllRead, remove, clearAll } = useNotificationFeed();
+  const { items, loading, load, markRead, markAllRead, remove, clearAll, audience, turnOnPush } = useNotificationFeed();
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => { load().finally(() => setLoaded(true)); }, [load]);
@@ -85,6 +86,8 @@ export default function Notifications() {
           </div>
         )}
       </div>
+
+      {turnOnPush && <PushPrompt inline audience={audience} onEnable={turnOnPush} />}
 
       {!loaded && loading ? (
         <div className="space-y-2">

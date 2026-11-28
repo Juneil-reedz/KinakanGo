@@ -1,5 +1,8 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { useNotification } from './NotificationContext';
+import { playNotifySound } from '../utils/splashSound';
+import { enablePush, pushStatus } from '../utils/push';
+import PushPrompt from '../components/PushPrompt';
 
 // Server notifications for one part of the app (customer, restaurant panel or rider panel).
 // `request` is that part's authenticated fetch helper; `audience` picks which notifications.
@@ -24,6 +27,7 @@ export function NotificationFeedProvider({ request, audience, enabled = true, ba
       setUnread(n);
       if (latest) {
         if (lastSeenId.current !== null && latest.id > lastSeenId.current && !latest.read) {
+          playNotifySound();
           addNotification(latest.title, latest.type === 'error' ? 'error' : latest.type === 'warning' ? 'warning' : latest.type === 'success' ? 'success' : 'info');
         }
         lastSeenId.current = Math.max(lastSeenId.current ?? 0, latest.id);
@@ -60,6 +64,13 @@ export function NotificationFeedProvider({ request, audience, enabled = true, ba
     };
   }, [enabled, poll]);
 
+  // Phone notifications: turn them on for this device, and keep the server's
+  // record of this device fresh when they're already on
+  const turnOnPush = useCallback(() => enablePush(request, audience), [request, audience]);
+  useEffect(() => {
+    if (enabled && pushStatus() === 'on') enablePush(request, audience, { ask: false }).catch(() => {});
+  }, [enabled, request, audience]);
+
   const markRead = useCallback(async (id) => {
     setItems(prev => prev.map(n => (n.id === id ? { ...n, read: true } : n)));
     setUnread(n => Math.max(0, n - 1));
@@ -84,8 +95,9 @@ export function NotificationFeedProvider({ request, audience, enabled = true, ba
   }, [request, q]);
 
   return (
-    <NotificationFeedContext.Provider value={{ items, unread, loading, load, markRead, markAllRead, remove, clearAll, basePath }}>
+    <NotificationFeedContext.Provider value={{ items, unread, loading, load, markRead, markAllRead, remove, clearAll, basePath, audience, turnOnPush }}>
       {children}
+      {enabled && <PushPrompt audience={audience} onEnable={turnOnPush} />}
     </NotificationFeedContext.Provider>
   );
 }
