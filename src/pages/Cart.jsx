@@ -1,4 +1,5 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { restaurantsApi } from '../services/api';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../context/CartContext';
 import { Minus, Plus, ShoppingCart, Truck, Tag, ChevronRight, Trash2, Store, Check } from 'lucide-react';
@@ -111,6 +112,17 @@ export default function Cart() {
     g.items.push(item);
   }
   const many = groups.length > 1;
+  // Each restaurant's round logo, fetched once per restaurant in the cart
+  const [logos, setLogos] = useState({});
+  const groupIds = groups.map(g => String(g.id)).join(',');
+  useEffect(() => {
+    groupIds.split(',').filter(id => id && id !== 'undefined' && !(id in logos)).forEach(id => {
+      setLogos(l => ({ ...l, [id]: null }));
+      restaurantsApi.getOne(id)
+        .then(r => setLogos(l => ({ ...l, [id]: r?.image_url || r?.data?.image_url || null })))
+        .catch(() => {});
+    });
+  }, [groupIds]); // eslint-disable-line react-hooks/exhaustive-deps
   const { restaurant, food: subtotal, discount, deliveryFee, tax, total, credit, promoCode, setPromoCode, promoError, promoChecking } = useCartTotals();
   const minOrder = Number(restaurant?.min_order || 0);
   const belowMin = minOrder > 0 && subtotal < minOrder;
@@ -169,9 +181,13 @@ export default function Cart() {
           return (
             <section key={g.id} className={`cart-group ${active ? 'is-active' : ''}`}>
               <div className="flex items-center gap-3 mb-3">
-                <span className="w-9 h-9 rounded-full glass-orange flex items-center justify-center flex-shrink-0">
-                  <Store className="w-4 h-4 text-ember-300" />
-                </span>
+                {logos[String(g.id)] ? (
+                  <img src={logos[String(g.id)]} alt="" className="w-10 h-10 rounded-full object-cover flex-shrink-0 ring-2 ring-white/10" />
+                ) : (
+                  <span className="w-10 h-10 rounded-full glass-orange flex items-center justify-center flex-shrink-0">
+                    <Store className="w-4 h-4 text-ember-300" />
+                  </span>
+                )}
                 <span className="flex-1 min-w-0">
                   <span className="block text-white font-heading font-bold truncate">{g.name}</span>
                   <span className="block text-forest-200/60 text-xs">{count} item{count === 1 ? '' : 's'} · ₱{sum.toFixed(2)}</span>
