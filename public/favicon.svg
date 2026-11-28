@@ -1,7 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs><clipPath id="f"><path d="M16 34h26v20H16z"/></clipPath></defs>
   <circle cx="32" cy="32" r="31" fill="#1c1410"/>
-  <circle cx="32" cy="32" r="28.6" fill="none" stroke="#f7b048" stroke-width="1" opacity=".55"/>
   <path d="M15 54.5h40" stroke="#f3e3c8" stroke-width="1.2" stroke-linecap="round" opacity=".25"/>
   <g transform="translate(3 -2)">
   <g stroke-width="2.6" stroke-linecap="round">
