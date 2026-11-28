@@ -1,6 +1,6 @@
 import { useEffect } from 'react';
 
-export default function Toast({ message, type = 'info', onClose, duration = 5000 }) {
+export default function Toast({ message, type = 'info', onClose, onOpen, duration = 5000 }) {
   useEffect(() => {
     if (duration > 0) {
       const timer = setTimeout(() => {
@@ -29,7 +29,11 @@ export default function Toast({ message, type = 'info', onClose, duration = 5000
       className={`${types[type]} px-6 py-4 rounded-lg shadow-lg flex items-center space-x-3 min-w-[300px] max-w-md animate-slide-in`}
     >
       <span className="text-2xl">{icons[type]}</span>
-      <p className="flex-1 font-medium">{message}</p>
+      {onOpen ? (
+        <button type="button" onClick={() => { onOpen(); onClose(); }} className="flex-1 font-medium text-left underline-offset-2 hover:underline">
+          {message}
+        </button>
+      ) : <p className="flex-1 font-medium">{message}</p>}
       <button
         onClick={onClose}
         className="text-white hover:opacity-75 transition-opacity"

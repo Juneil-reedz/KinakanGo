@@ -17,9 +17,10 @@ export const NotificationProvider = ({ children }) => {
     setToasts(prev => prev.filter(t => t.id !== id));
   }, []);
 
-  const addNotification = useCallback((message, type = 'info', duration = 5000) => {
+  // onOpen (optional): tapping the toast's text runs it, e.g. to open what it's about
+  const addNotification = useCallback((message, type = 'info', duration = 5000, onOpen) => {
     const id = Date.now() + Math.random();
-    setToasts(prev => [...prev, { id, message, type, duration }]);
+    setToasts(prev => [...prev, { id, message, type, duration, onOpen }]);
     return id;
   }, []);
 

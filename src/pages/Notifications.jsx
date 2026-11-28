@@ -4,6 +4,7 @@ import { Bell, CheckCheck, Trash2, X, CheckCircle2, AlertCircle, AlertTriangle, 
 import { useNotificationFeed } from '../context/NotificationFeed';
 import { useDialog } from '../context/DialogContext';
 import PushPrompt from '../components/PushPrompt';
+import { notificationTarget } from '../utils/notificationTarget';
 
 const TYPE_STYLE = {
   success: { icon: CheckCircle2,  cls: 'glass-green text-forest-300' },
@@ -24,17 +25,6 @@ const dayLabel = (date) => {
 const timeLabel = (date) => new Date(date).toLocaleTimeString('en-PH', { hour: '2-digit', minute: '2-digit' });
 
 // Shared by the customer app and the restaurant / rider panels (each provides its own feed)
-// Older notifications only point at a list page; send them to the order they
-// mention ("Order #27 delivered") so tapping shows what it is about.
-function targetOf(n) {
-  const id = (/#(\d+)/.exec(`${n.title || ''} ${n.message || ''}`) || [])[1];
-  if (!id) return n.link;
-  if (n.link === '/owner/orders') return `/owner/orders?order=${id}`;
-  if (n.link === '/owner/issues') return `/owner/issues?order=${id}`;
-  if (n.link === '/orders') return `/order-receipt/${id}`;
-  return n.link;
-}
-
 export default function Notifications() {
   const navigate = useNavigate();
   const { items, loading, load, markRead, markAllRead, remove, clearAll, audience, turnOnPush } = useNotificationFeed();
@@ -57,7 +47,7 @@ export default function Notifications() {
 
   const open = (n) => {
     if (!n.read) markRead(n.id);
-    const link = targetOf(n);
+    const link = notificationTarget(n);
     if (link) navigate(link);
   };
 

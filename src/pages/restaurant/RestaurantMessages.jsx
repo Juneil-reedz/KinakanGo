@@ -1,4 +1,5 @@
 import { useEffect, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { restaurantRequest } from '../../context/RestaurantContext';
 import { useNotification } from '../../context/NotificationContext';
 import { Check, Inbox, MessageSquare, Pencil, Reply, Send, Trash2, User } from 'lucide-react';
@@ -40,6 +41,17 @@ export default function RestaurantMessages() {
   }, {})).sort((a, b) => new Date(b.latest.created_at) - new Date(a.latest.created_at));
 
   const selectedConversation = conversations.find(c => c.key === selectedKey) || conversations[0] || null;
+
+  // Opened from a "New message from ..." notification (?with=<their user id>): show that conversation
+  const [params, setParams] = useSearchParams();
+  const withUser = params.get('with');
+  useEffect(() => {
+    if (!withUser || !messages.length) return;
+    const key = `user:${withUser}`;
+    if (messages.some(m => conversationKey(m) === key)) { setSelectedKey(key); }
+    setParams(p => { p.delete('with'); return p; }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [withUser, messages.length]);
   const thread = selectedConversation
     ? [...selectedConversation.messages].sort((a, b) => new Date(a.created_at) - new Date(b.created_at))
     : [];

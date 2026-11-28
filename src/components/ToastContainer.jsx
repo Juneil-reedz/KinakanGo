@@ -9,6 +9,7 @@ export default function ToastContainer({ toasts, removeToast }) {
           message={toast.message}
           type={toast.type}
           duration={toast.duration}
+          onOpen={toast.onOpen}
           onClose={() => removeToast(toast.id)}
         />
       ))}

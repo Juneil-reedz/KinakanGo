@@ -135,7 +135,7 @@ router.post('/', async (req, res) => {
       const from = senderRestaurants[0]?.name || req.user.name || 'Someone';
       await notify(recipient.recipient_user_id, {
         audience: recipient.isRestaurant ? 'restaurant' : 'customer', type: 'info',
-        link: recipient.isRestaurant ? '/owner/messages' : '/messages',
+        link: `${recipient.isRestaurant ? '/owner/messages' : '/messages'}?with=${req.user.id}`,
         title: `New message from ${from}`, message: subject && subject !== 'New message' ? subject : String(body).slice(0, 120),
       });
     }
