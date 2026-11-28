@@ -29,6 +29,7 @@ export default function RestaurantSettings() {
     gcash_name:   '',
     is_open:      true,
     image_url:    '',
+    cover_url:    '',
     delivery_fee: '',
     min_order:    '',
   });
@@ -44,6 +45,7 @@ export default function RestaurantSettings() {
       gcash_name:   restaurant.gcash_name   || '',
       is_open:      restaurant.is_open      ?? true,
       image_url:    restaurant.image_url    || '',
+      cover_url:    restaurant.cover_url    || '',
       delivery_fee: restaurant.delivery_fee != null ? String(Number(restaurant.delivery_fee)) : '',
       min_order:    restaurant.min_order    != null ? String(Number(restaurant.min_order))    : '',
     });
@@ -65,6 +67,7 @@ export default function RestaurantSettings() {
         gcashName:   form.gcash_name   || null,
         isOpen:      form.is_open,
         imageUrl:    form.image_url   || null,
+        coverUrl:    form.cover_url,
         deliveryFee: form.delivery_fee === '' ? null : Number(form.delivery_fee),
         minOrder:    form.min_order    === '' ? null : Number(form.min_order),
       });
@@ -84,6 +87,29 @@ export default function RestaurantSettings() {
       </div>
 
       <form onSubmit={save} className="space-y-4">
+
+        {/* Cover photo: the background of the store's page */}
+        <div className="glass rounded-2xl p-5">
+          <p className="text-white font-semibold">Cover Photo</p>
+          <p className="text-forest-200/50 text-xs mt-0.5 mb-4">The wide picture at the top of your store page, behind your logo.</p>
+          <button type="button" onClick={() => pickImage(b64 => f('cover_url', b64))}
+            className="w-full glass rounded-xl overflow-hidden hover:glass-orange transition-all aspect-[16/9]">
+            {form.cover_url ? (
+              <img src={form.cover_url} alt="cover" className="w-full h-full object-cover" />
+            ) : (
+              <div className="flex flex-col items-center justify-center h-full gap-2 text-forest-300/50">
+                <ImagePlus className="w-7 h-7" />
+                <span className="text-xs">Tap to upload a cover photo</span>
+              </div>
+            )}
+          </button>
+          {form.cover_url && (
+            <button type="button" onClick={() => f('cover_url', '')}
+              className="mt-1 text-xs text-red-400/70 hover:text-red-400 transition-colors">
+              Remove cover photo
+            </button>
+          )}
+        </div>
 
         {/* Logo */}
         <div className="glass rounded-2xl p-5">

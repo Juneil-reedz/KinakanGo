@@ -317,6 +317,10 @@ pool.query(`
   if (rows.length) console.log(`food cut-outs: ${done} of ${rows.length} photos`);
 }).catch(err => console.warn('food cut-out backfill warning:', err.message));
 
+// Store cover photos are saved as data URLs, which don't fit the old 500-character column
+pool.query('ALTER TABLE restaurants ALTER COLUMN cover_url TYPE TEXT')
+  .catch(err => console.warn('restaurants cover_url column warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');

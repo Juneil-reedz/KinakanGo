@@ -860,6 +860,16 @@
 
 /* ── Store page hero: photo hangs off the bottom of the card ── */
 .store-hero:hover, .store-hero:active { transform: none; }
+.store-cover {
+  height: 11.5rem; border-radius: 1.75rem; overflow: hidden; position: relative;
+  background: radial-gradient(120% 100% at 30% 0%, #f7931e, #8a3c0c 55%, #2a1a10);
+  box-shadow: inset 0 0 0 1px rgb(255 255 255 / .08), 0 18px 30px -20px rgb(0 0 0 / .9);
+}
+.store-cover img { width: 100%; height: 100%; object-fit: cover; }
+/* No cover photo yet: the store's own logo, blown up and blurred */
+.store-cover img.is-blur { filter: blur(22px) saturate(1.3) brightness(.8); transform: scale(1.4); }
+/* Darker toward the bottom so the logo stands out */
+.store-cover::after { content: ''; position: absolute; inset: 0; background: linear-gradient(to bottom, transparent 35%, rgb(0 0 0 / .45)); }
 .store-hero-photo {
   position: absolute; left: 50%; bottom: -4.5rem; translate: -50% 0;
   width: 9.5rem; height: 9.5rem; border-radius: 9999px; overflow: hidden;
