@@ -26,7 +26,7 @@ async function list(req, res) {
   }
 
   const { rows } = await pool.query(
-    `SELECT id, name, description, address, cuisine, image_url, cover_url,
+    `SELECT id, name, description, address, cuisine, image_url,
             is_open, rating, review_count, delivery_fee, min_order
      FROM restaurants WHERE ${where.join(' AND ')}
      ORDER BY ${orderBy} LIMIT $${idx++} OFFSET $${idx++}`,
@@ -88,7 +88,7 @@ async function update(req, res) {
        address      = COALESCE($3,  address),
        cuisine      = COALESCE($4,  cuisine),
        image_url    = COALESCE($5,  image_url),
-       cover_url    = COALESCE($6,  cover_url),
+       cover_url    = CASE WHEN $6::text = '' THEN NULL ELSE COALESCE($6, cover_url) END,
        delivery_fee = COALESCE($7,  delivery_fee),
        min_order    = COALESCE($8,  min_order),
        is_open      = COALESCE($9,  is_open),

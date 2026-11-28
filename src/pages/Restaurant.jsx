@@ -95,22 +95,13 @@ export default function Restaurant() {
         <ArrowLeft className="w-4 h-4" /> Restaurants
       </button>
 
-      {/* Restaurant hero: a food-card style panel with the round photo
-          hanging off its bottom edge, then the name and description below */}
-      <div className="store-hero food-card relative mx-auto max-w-xl px-5 pt-4 pb-[5.5rem]">
-        <div className="flex items-center justify-center gap-2 flex-wrap text-xs">
-          <span className="flex items-center gap-1 text-ember-400 font-semibold">
-            <Star className="w-3.5 h-3.5 fill-current" />{Number(restaurant.rating ?? 0).toFixed(1)}
-            <span className="text-forest-200/50 font-normal">({restaurant.review_count ?? 0})</span>
-          </span>
-          <span className="text-white/20">•</span>
-          <span className="flex items-center gap-1 text-forest-200/70">
-            <Truck className="w-3.5 h-3.5" />₱{restaurant.delivery_fee} delivery
-          </span>
-          {restaurant.cuisine && (<>
-            <span className="text-white/20">•</span>
-            <span className="text-forest-200/70 capitalize">{restaurant.cuisine}</span>
-          </>)}
+      {/* Cover photo as the card's background, the round logo on its bottom edge,
+          then the name and details under the logo */}
+      <div className="store-hero relative mx-auto max-w-xl">
+        <div className="store-cover">
+          {restaurant.cover_url
+            ? <img src={restaurant.cover_url} alt="" />
+            : restaurant.image_url && <img src={restaurant.image_url} alt="" className="is-blur" />}
         </div>
         <div className="store-hero-photo">
           {restaurant.image_url
@@ -124,6 +115,20 @@ export default function Restaurant() {
       <div className="text-center px-4 pt-[5.25rem]">
         <h1 className="text-2xl font-heading font-bold text-white">{restaurant.name}</h1>
         {restaurant.description && <p className="text-forest-200/70 text-sm mt-1 max-w-md mx-auto">{restaurant.description}</p>}
+        <div className="flex items-center justify-center gap-2 flex-wrap text-xs mt-2.5">
+          <span className="flex items-center gap-1 text-ember-400 font-semibold">
+            <Star className="w-3.5 h-3.5 fill-current" />{Number(restaurant.rating ?? 0).toFixed(1)}
+            <span className="text-forest-200/50 font-normal">({restaurant.review_count ?? 0})</span>
+          </span>
+          <span className="text-white/20">•</span>
+          <span className="flex items-center gap-1 text-forest-200/70">
+            <Truck className="w-3.5 h-3.5" />₱{restaurant.delivery_fee} delivery
+          </span>
+          {restaurant.cuisine && (<>
+            <span className="text-white/20">•</span>
+            <span className="text-forest-200/70 capitalize">{restaurant.cuisine}</span>
+          </>)}
+        </div>
       </div>
 
       {/* Category pills */}
