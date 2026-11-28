@@ -48,7 +48,9 @@ export default function Splash() {
     <div className={`splash fixed inset-0 z-[200] flex flex-col items-center justify-center overflow-hidden ${phase === 'out' ? 'splash-out' : ''}`}
       role="status" aria-label="Opening KinakanGo" onClick={onTap}>
       <div className="sp-glow" aria-hidden="true" />
-      <KinakanLogo animated className="sp-badge w-52 h-52 relative" />
+      <div className="sp-badge w-52 h-52 relative rounded-full">
+        <KinakanLogo animated className="w-full h-full block" />
+      </div>
 
       <h1 className="brand-wordmark text-white text-[3rem] leading-none mt-7 select-none flex items-end" aria-label="KinakanGo">
         {NAME.map((ch, i) => (
