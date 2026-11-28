@@ -19,7 +19,6 @@ export default function KinakanLogo({ className = 'w-12 h-12', animated = false,
         <clipPath id={`${id}o`}><circle cx="32" cy="32" r="31" /></clipPath>
       </defs>
       <circle cx="32" cy="32" r="31" fill="#1c1410" />
-      <circle className={a('sp-ring')} cx="32" cy="32" r="28.6" fill="none" stroke="#f7b048" strokeWidth="1" opacity=".55" pathLength="100" />
       <path d="M15 54.5h40" stroke="#f3e3c8" strokeWidth="1.2" strokeLinecap="round" opacity=".25" />
       <g clipPath={`url(#${id}o)`}>
         <g transform="translate(3 -2)">
