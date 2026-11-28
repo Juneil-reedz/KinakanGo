@@ -731,8 +731,7 @@ async function sendOrderReceipt(orderId) {
     subject: `KinakanGo receipt · Order #${o.id}`,
     html: `
       <div style="font-family:sans-serif;max-width:520px;margin:0 auto;padding:24px;color:#1a1a1a">
-        <h2 style="margin:0;color:#e8540a">KinakanGo</h2>
-        <p style="margin:4px 0 20px;color:#666">Order receipt</p>
+        <h2 style="margin:0 0 20px;color:#1a1a1a">Order receipt</h2>
         <table style="width:100%;font-size:14px;margin-bottom:16px">
           <tr><td style="color:#666">Order</td><td style="text-align:right"><strong>#${o.id}</strong></td></tr>
           <tr><td style="color:#666">Placed</td><td style="text-align:right">${placed}</td></tr>

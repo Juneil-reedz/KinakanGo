@@ -143,6 +143,7 @@ function PushNavigator() {
       if (u.origin !== window.location.origin) return;
       const path = u.pathname.startsWith(base) ? u.pathname.slice(base.length) || '/' : u.pathname;
       navigate(path + u.search);
+      e.ports?.[0]?.postMessage('ok'); // tell the service worker we handled it
     };
     navigator.serviceWorker.addEventListener('message', onMsg);
     return () => navigator.serviceWorker.removeEventListener('message', onMsg);

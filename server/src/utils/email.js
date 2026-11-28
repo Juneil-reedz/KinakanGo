@@ -31,7 +31,36 @@ async function sendOnce({ to, subject, html }) {
   }
 }
 
+// Every email gets the KinakanGo header (logo + name) and a small footer.
+// The logo is the app icon served by the web app (emails can't show SVG).
+const APP_URL = (process.env.APP_URL || 'https://kinakan-go.vercel.app').replace(/\/$/, '');
+
+function brandEmail(inner) {
+  return `<!doctype html><html><body style="margin:0;padding:0;background:#f6f1ea">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f1ea;padding:24px 12px">
+    <tr><td align="center">
+      <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden">
+        <tr><td style="background:#1a1512;padding:18px 24px">
+          <a href="${APP_URL}" style="text-decoration:none">
+            <table role="presentation" cellpadding="0" cellspacing="0"><tr>
+              <td><img src="${APP_URL}/icons/icon-192.png" width="44" height="44" alt="KinakanGo" style="display:block;border-radius:12px;border:0"></td>
+              <td style="padding-left:12px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.5px">
+                <span style="color:#ffffff">Kinakan</span><span style="color:#f7931e">Go</span>
+              </td>
+            </tr></table>
+          </a>
+        </td></tr>
+        <tr><td>${inner}</td></tr>
+        <tr><td style="padding:14px 24px 20px;border-top:1px solid #eee;font-family:Arial,Helvetica,sans-serif;font-size:12px;color:#999;text-align:center">
+          KinakanGo &middot; Bongao, Tawi-Tawi &middot; <a href="${APP_URL}" style="color:#e8540a;text-decoration:none">Open KinakanGo</a>
+        </td></tr>
+      </table>
+    </td></tr>
+  </table></body></html>`;
+}
+
 async function sendEmail(msg) {
+  msg = { ...msg, html: brandEmail(msg.html) };
   for (let i = 1; ; i++) {
     try {
       return await sendOnce(msg);
@@ -45,4 +74,4 @@ async function sendEmail(msg) {
   }
 }
 
-module.exports = { sendEmail };
+module.exports = { sendEmail, brandEmail };

@@ -1,4 +1,6 @@
 import { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { notificationTarget } from '../utils/notificationTarget';
 import { useNotification } from './NotificationContext';
 import { playNotifySound } from '../utils/splashSound';
 import { enablePush, pushStatus } from '../utils/push';
@@ -13,6 +15,7 @@ const NotificationFeedContext = createContext(null);
 
 export function NotificationFeedProvider({ request, audience, enabled = true, basePath = '', children }) {
   const { addNotification } = useNotification();
+  const navigate = useNavigate();
   const [items, setItems]     = useState([]);
   const [unread, setUnread]   = useState(0);
   const [loading, setLoading] = useState(false);
@@ -28,14 +31,19 @@ export function NotificationFeedProvider({ request, audience, enabled = true, ba
       if (latest) {
         if (lastSeenId.current !== null && latest.id > lastSeenId.current && !latest.read) {
           playNotifySound();
-          addNotification(latest.title, latest.type === 'error' ? 'error' : latest.type === 'warning' ? 'warning' : latest.type === 'success' ? 'success' : 'info');
+          const target = notificationTarget(latest);
+          addNotification(latest.title, latest.type === 'error' ? 'error' : latest.type === 'warning' ? 'warning' : latest.type === 'success' ? 'success' : 'info', 6000,
+            target ? () => {
+              request(`/notifications/${latest.id}/read`, { method: 'PATCH' }).catch(() => {});
+              navigate(target);
+            } : undefined);
         }
         lastSeenId.current = Math.max(lastSeenId.current ?? 0, latest.id);
       } else if (lastSeenId.current === null) {
         lastSeenId.current = 0;
       }
     } catch { /* offline or signed out: try again next tick */ }
-  }, [request, q, enabled, addNotification]);
+  }, [request, q, enabled, addNotification, navigate]);
 
   const load = useCallback(async () => {
     if (!enabled) return;

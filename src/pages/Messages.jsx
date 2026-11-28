@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { createPortal } from 'react-dom';
 import { ArrowLeft, Check, CheckCheck, MessageSquare, Pencil, Plus, Send, Trash2, User, X } from 'lucide-react';
 import { messagesApi } from '../services/api';
@@ -82,6 +83,17 @@ export default function Messages() {
   }, {})).sort((a, b) => new Date(b.latest.created_at || b.latest.createdAt) - new Date(a.latest.created_at || a.latest.createdAt));
 
   const selectedConversation = conversations.find(c => c.key === selectedKey) || conversations[0] || null;
+
+  // Opened from a "New message from ..." notification (?with=<their user id>): show that conversation
+  const [params, setParams] = useSearchParams();
+  const withUser = params.get('with');
+  useEffect(() => {
+    if (!withUser || !messages.length) return;
+    const key = `user:${withUser}`;
+    if (messages.some(m => conversationKey(m) === key)) { setSelectedKey(key); setMobileThreadOpen(true); }
+    setParams(p => { p.delete('with'); return p; }, { replace: true });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [withUser, messages.length]);
   const thread = selectedConversation
     ? [...selectedConversation.messages].sort((a, b) => new Date(a.created_at || a.createdAt) - new Date(b.created_at || b.createdAt))
     : [];

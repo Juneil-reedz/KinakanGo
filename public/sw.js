@@ -7,7 +7,7 @@ self.addEventListener('activate', (e) => e.waitUntil(self.clients.claim()));
 
 const HOME = { customer: '/notifications', restaurant: '/owner/notifications', rider: '/rider/notifications' };
 
-// Same as targetOf() on the Notifications page: older links only point at a
+// Same as notificationTarget() in src/utils/notificationTarget.js: older links only point at a
 // list, so send "Order #27 ..." straight to that order.
 function targetOf(d) {
   const id = (/#(\d+)/.exec(`${d.title || ''} ${d.body || ''}`) || [])[1];
@@ -39,12 +39,18 @@ self.addEventListener('notificationclick', (e) => {
   e.waitUntil((async () => {
     const wins = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
     const win = wins.find(w => w.url.startsWith(self.registration.scope));
-    if (win) {
-      await win.focus();
-      // let the open app move to the page itself (keeps the app's state)
-      win.postMessage({ type: 'kkg-open', url });
-      return;
-    }
+    if (!win) { await self.clients.openWindow(url); return; }
+    await win.focus().catch(() => {});
+    // Ask the open app to go there itself (keeps its state). If it doesn't
+    // answer quickly (on iPhone a paused app can miss it), load the page.
+    const answered = await new Promise((resolve) => {
+      const ch = new MessageChannel();
+      const t = setTimeout(() => resolve(false), 1500);
+      ch.port1.onmessage = () => { clearTimeout(t); resolve(true); };
+      try { win.postMessage({ type: 'kkg-open', url }, [ch.port2]); } catch { clearTimeout(t); resolve(false); }
+    });
+    if (answered) return;
+    try { if (win.navigate) { await win.navigate(url); return; } } catch { /* not ours to navigate */ }
     await self.clients.openWindow(url);
   })());
 });
