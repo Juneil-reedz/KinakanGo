@@ -1,5 +1,6 @@
 const pool = require('../config/db');
 const { firstImageError, unlessOwn } = require('../utils/image');
+const { cutOutFood } = require('../utils/foodCutout');
 
 async function listAll(req, res) {
   const { category, search, sortBy } = req.query;
@@ -97,13 +98,22 @@ async function ownCategory(categoryId, restaurantId) {
   return rows[0]?.id ?? null;
 }
 
+// A newly uploaded food photo gets its background cut out (see utils/foodCutout).
+// If that fails for any reason the photo is kept as it was uploaded.
+async function withoutBackground(imgUrl) {
+  if (typeof imgUrl !== 'string' || !imgUrl.startsWith('data:')) return imgUrl;
+  try { return (await cutOutFood(imgUrl)) || imgUrl; }
+  catch (err) { console.warn('food cut-out failed:', err.message); return imgUrl; }
+}
+
 async function createItem(req, res) {
   const bad = validateItem(req.body, true);
   if (bad) return res.status(400).json({ error: bad });
   const { name, description, price, image, imageUrl, category, categoryId, isVegetarian, prepTimeMins } = req.body;
-  const imgUrl = image || imageUrl || null;
+  let imgUrl = image || imageUrl || null;
   const badImage = firstImageError({ 'Food photo': imgUrl });
   if (badImage) return res.status(400).json({ error: badImage });
+  imgUrl = await withoutBackground(imgUrl);
 
   // Resolve or create category row from text name
   let catId = await ownCategory(categoryId, req.params.restaurantId);
@@ -125,8 +135,8 @@ async function createItem(req, res) {
 
   const { rows } = await pool.query(
     `INSERT INTO menu_items
-       (restaurant_id, category_id, name, description, price, image_url, is_vegetarian, prep_time_mins)
-     VALUES ($1,$2,$3,$4,$5,$6,$7,$8)
+       (restaurant_id, category_id, name, description, price, image_url, is_vegetarian, prep_time_mins, image_processed)
+     VALUES ($1,$2,$3,$4,$5,$6,$7,$8,true)
      RETURNING *`,
     [req.params.restaurantId, catId, String(name).trim(), description || null,
      price, imgUrl, isVegetarian || false, prepTimeMins ?? 15]
@@ -139,9 +149,10 @@ async function updateItem(req, res) {
   const bad = validateItem(req.body, false);
   if (bad) return res.status(400).json({ error: bad });
   const { name, description, price, image, imageUrl, category, categoryId, isVegetarian, prepTimeMins, isAvailable } = req.body;
-  const imgUrl = unlessOwn(image !== undefined ? image : imageUrl);
+  let imgUrl = unlessOwn(image !== undefined ? image : imageUrl);
   const badImage = firstImageError({ 'Food photo': imgUrl });
   if (badImage) return res.status(400).json({ error: badImage });
+  imgUrl = await withoutBackground(imgUrl);
 
   // Resolve or create category row from text name
   let catId = await ownCategory(categoryId, req.params.restaurantId);
@@ -170,7 +181,8 @@ async function updateItem(req, res) {
        category_id    = COALESCE($5, category_id),
        is_vegetarian  = COALESCE($6, is_vegetarian),
        prep_time_mins = COALESCE($7, prep_time_mins),
-       is_available   = COALESCE($8, is_available)
+       is_available   = COALESCE($8, is_available),
+       image_processed = image_processed OR $4::text IS NOT NULL
      WHERE id = $9 AND restaurant_id = $10 AND is_archived = false
      RETURNING *`,
     [name != null ? String(name).trim() : null, description ?? null, price ?? null, imgUrl ?? null, catId,

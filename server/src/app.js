@@ -294,6 +294,29 @@ pool.query(`
     ADD COLUMN IF NOT EXISTS rating_count INT          NOT NULL DEFAULT 0
 `)).catch(err => console.warn('reviews init warning:', err.message));
 
+// Food photos without a background: new uploads are cut out in menuController;
+// photos saved before that are cut out here, one at a time, after start-up.
+pool.query(`
+  ALTER TABLE menu_items ADD COLUMN IF NOT EXISTS image_processed BOOLEAN NOT NULL DEFAULT false
+`).then(() => new Promise(r => setTimeout(r, 15000))).then(async () => {
+  const { cutOutFood } = require('./utils/foodCutout');
+  const { rows } = await pool.query(
+    `SELECT id FROM menu_items WHERE image_processed = false AND image_url LIKE 'data:%' ORDER BY id`);
+  let done = 0;
+  for (const { id } of rows) {
+    const { rows: [item] } = await pool.query('SELECT image_url FROM menu_items WHERE id = $1', [id]);
+    if (!item) continue;
+    let cut = null;
+    try { cut = await cutOutFood(item.image_url); } catch (err) { console.warn(`food cut-out ${id} failed:`, err.message); }
+    // Only if the owner hasn't changed the photo in the meantime
+    await pool.query(
+      `UPDATE menu_items SET image_url = COALESCE($1, image_url), image_processed = true
+       WHERE id = $2 AND image_url = $3`, [cut, id, item.image_url]);
+    if (cut) done++;
+  }
+  if (rows.length) console.log(`food cut-outs: ${done} of ${rows.length} photos`);
+}).catch(err => console.warn('food cut-out backfill warning:', err.message));
+
 const authRoutes   = require('./routes/auth');
 const userRoutes   = require('./routes/users');
 const restaurantRoutes = require('./routes/restaurants');
