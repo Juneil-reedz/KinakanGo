@@ -1161,3 +1161,18 @@
 @media (prefers-reduced-motion: reduce) { .legal-sheet { animation: none; } }
 .sp-tap { animation: sp-up .5s .4s ease backwards, sp-tap-pulse 1.6s 1s ease-in-out infinite; }
 @keyframes sp-tap-pulse { 50% { opacity: .45; } }
+
+/* ── Food photos float: no circle behind them ──
+   The server cuts the background out of each food photo (server/src/utils/foodCutout.js),
+   so the dish is shown whole on the page with a soft shadow under it. */
+:is(.food-card-photo, .fd-plate, .fd-hero, .cart-line-photo) {
+  border-radius: 0; border: 0; background: none; box-shadow: none; overflow: visible;
+}
+:is(.food-card-photo, .fd-plate, .fd-hero, .cart-line-photo) img { object-fit: contain; position: relative; z-index: 1; }
+:is(.food-card-photo, .fd-plate, .fd-hero, .cart-line-photo)::after {
+  content: ''; position: absolute; left: 14%; right: 14%; bottom: 1%; height: 12%;
+  border-radius: 50%; background: radial-gradient(closest-side, rgb(0 0 0 / .55), transparent);
+  pointer-events: none;
+}
+:root.light :is(.food-card-photo, .fd-plate, .fd-hero, .cart-line-photo)::after { background: radial-gradient(closest-side, rgb(90 55 25 / .3), transparent); }
+.food-card:hover .food-card-photo img { transform: scale(1.06) rotate(-4deg); }
