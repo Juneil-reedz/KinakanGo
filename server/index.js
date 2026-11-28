@@ -1,4 +1,7 @@
 require('dotenv').config();
+// Prefer IPv4: on some hosts the IPv6 route to outside services (email, push)
+// hangs on the first connection after the server starts
+require('dns').setDefaultResultOrder('ipv4first');
 const app  = require('./src/app');
 const pool = require('./src/config/db');
 
