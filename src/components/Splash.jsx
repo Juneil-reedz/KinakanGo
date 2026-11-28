@@ -19,12 +19,13 @@ export default function Splash() {
   const [phase, setPhase] = useState(() => (staff || seen() ? 'done' : 'show'));
 
   const sound = useRef(null);
+  const [needsTap, setNeedsTap] = useState(false); // sound is waiting for a tap
 
   // Start the scene (and its jingle) once
   useEffect(() => {
     if (phase !== 'show') return;
     try { sessionStorage.setItem(KEY, '1'); } catch { /* private mode */ }
-    if (!sound.current) sound.current = playSplashJingle(performance.now());
+    if (!sound.current) sound.current = playSplashJingle(performance.now(), { onLocked: setNeedsTap });
     const t = setTimeout(() => setPhase(p => (p === 'show' ? 'out' : p)), SHOW_MS);
     return () => clearTimeout(t);
   }, [phase]);
@@ -59,6 +60,11 @@ export default function Splash() {
         </span>
       </h1>
       <p className="sp-tag text-forest-200/75 text-sm mt-3 font-medium tracking-wide">Tap it. Get it. <span className="text-ember-400">Bongao&rsquo;s food, delivered.</span></p>
+      {needsTap && (
+        <p className="sp-tap absolute bottom-10 left-0 right-0 text-center text-forest-200/60 text-xs font-medium">
+          Tap anywhere for sound
+        </p>
+      )}
     </div>
   );
 }
