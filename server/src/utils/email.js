@@ -32,18 +32,19 @@ async function sendOnce({ to, subject, html }) {
 }
 
 // Every email gets the KinakanGo header (logo + name) and a small footer.
-// The logo is the app icon served by the web app (emails can't show SVG).
+// The logo is the box emblem on a see-through background (icons/email-logo.png,
+// made from favicon.svg), so no square shows behind it in light or dark mode.
 const APP_URL = (process.env.APP_URL || 'https://kinakan-go.vercel.app').replace(/\/$/, '');
 
 function brandEmail(inner) {
-  return `<!doctype html><html><body style="margin:0;padding:0;background:#f6f1ea">
+  return `<!doctype html><html><head><meta name="color-scheme" content="light dark"><meta name="supported-color-schemes" content="light dark"></head><body style="margin:0;padding:0;background:#f6f1ea">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f1ea;padding:24px 12px">
     <tr><td align="center">
       <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:560px;background:#ffffff;border-radius:18px;overflow:hidden">
         <tr><td style="background:#1a1512;padding:18px 24px">
           <a href="${APP_URL}" style="text-decoration:none">
             <table role="presentation" cellpadding="0" cellspacing="0"><tr>
-              <td><img src="${APP_URL}/icons/icon-192.png" width="44" height="44" alt="KinakanGo" style="display:block;border-radius:12px;border:0"></td>
+              <td><img src="${APP_URL}/icons/email-logo.png" width="48" height="48" alt="KinakanGo" style="display:block;border:0"></td>
               <td style="padding-left:12px;font-family:Arial,Helvetica,sans-serif;font-size:24px;font-weight:800;letter-spacing:-0.5px">
                 <span style="color:#ffffff">Kinakan</span><span style="color:#f7931e">Go</span>
               </td>
