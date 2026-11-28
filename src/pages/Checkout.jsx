@@ -104,6 +104,7 @@ export default function Checkout() {
   const [codeError, setCodeError] = useState('');
   const [sending, setSending]     = useState(false);
   const [resendIn, setResendIn]   = useState(0);
+  const [slow, setSlow]           = useState(false); // sending takes long (server waking up)
 
   useEffect(() => {
     if (resendIn <= 0) return;
@@ -114,6 +115,8 @@ export default function Checkout() {
   const sendCode = async () => {
     setSending(true);
     setCodeError('');
+    setSlow(false);
+    const slowTimer = setTimeout(() => setSlow(true), 5000);
     try {
       const res = await ordersApi.requestCode({ restaurantId, items: orderItems() });
       setVerify({ sentTo: res.sentTo });
@@ -130,7 +133,9 @@ export default function Checkout() {
       verify || err?.data?.retryAfter ? setCodeError(msg) : addNotification(msg, 'error');
       return false;
     } finally {
+      clearTimeout(slowTimer);
       setSending(false);
+      setSlow(false);
     }
   };
 
@@ -437,6 +442,11 @@ export default function Checkout() {
                 ? <><div className="w-5 h-5 rounded-full border-2 border-white/30 border-t-white animate-spin" /> {sending ? 'Sending code…' : 'Placing Order…'}</>
                 : <>Place Order <ChevronRight className="w-5 h-5" /></>}
             </button>
+            {sending && slow && (
+              <p className="text-forest-200/60 text-xs text-center mt-2" role="status">
+                Still sending your code. This can take up to a minute when the app has been idle. Please keep this page open.
+              </p>
+            )}
           </div>
         </div>
       </form>
