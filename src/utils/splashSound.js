@@ -96,31 +96,53 @@ export function scheduleJingle(ctx, start, skip = 0) {
 // Returns { stop, tapUnlockedSound }: stop() ends it if the splash goes away;
 // tapUnlockedSound() says whether the latest tap was used to turn the sound on
 // (so the splash doesn't treat that same tap as "skip").
+// onLocked(true|false) tells the splash whether it is waiting for a tap to play.
 const NOOP = { stop: () => {}, tapUnlockedSound: () => false };
-export function playSplashJingle(startedAt) {
+export function playSplashJingle(startedAt, { onLocked } = {}) {
   if (!soundsOn()) return NOOP;
   const AC = window.AudioContext || window.webkitAudioContext;
   if (!AC) return NOOP;
+  // iPhone: play through the media channel, so the ringer's silent switch
+  // doesn't mute it (Safari 17+; older versions ignore this)
+  try { if (navigator.audioSession) navigator.audioSession.type = 'playback'; } catch { /* ignore */ }
   let ctx;
   try { ctx = new AC(); } catch { return NOOP; }
   let started = false, unlockTap = false;
+  // iOS only lets audio start inside a finished tap (touchend / click), not on touchstart
+  const events = ['touchend', 'pointerup', 'click', 'keydown'];
+  const detach = () => events.forEach(e => window.removeEventListener(e, unlock, true));
   const begin = () => {
     if (started || ctx.state !== 'running') return;
     started = true;
-    const skip = Math.max(0, (performance.now() - startedAt) / 1000);
-    if (skip < 3.3) scheduleJingle(ctx, ctx.currentTime + 0.02, skip);
+    detach();
+    onLocked?.(false);
+    const elapsed = Math.max(0, (performance.now() - startedAt) / 1000);
+    // Late tap: still give them the "Go!" ending rather than nothing
+    const skip = elapsed < 3.1 ? elapsed : 3.1;
+    if (elapsed < 4.6) scheduleJingle(ctx, ctx.currentTime + 0.02, skip);
   };
-  const unlock = () => {
-    events.forEach(e => window.removeEventListener(e, unlock, { capture: true }));
+  function unlock() {
+    if (started) return;
     unlockTap = true;
-    ctx.resume().then(begin).catch(() => {});
-  };
-  const events = ['pointerdown', 'touchstart', 'keydown'];
-  ctx.resume().then(begin).catch(() => {});
-  if (ctx.state !== 'running') events.forEach(e => window.addEventListener(e, unlock, { once: true, capture: true }));
+    // A tiny silent sound inside the tap is what really wakes audio on older iPhones
+    try {
+      const b = ctx.createBuffer(1, 1, 22050), src = ctx.createBufferSource();
+      src.buffer = b; src.connect(ctx.destination); src.start(0);
+    } catch { /* ignore */ }
+    const r = ctx.resume();
+    if (r && r.then) r.then(begin).catch(() => {}); else begin();
+  }
+  const r0 = ctx.resume();
+  if (r0 && r0.then) r0.then(begin).catch(() => {});
+  if (ctx.state !== 'running') {
+    events.forEach(e => window.addEventListener(e, unlock, true));
+    // Only show the hint if the browser really is holding the sound back
+    setTimeout(() => { if (!started) onLocked?.(true); }, 250);
+  }
   return {
     stop() {
-      events.forEach(e => window.removeEventListener(e, unlock, { capture: true }));
+      detach();
+      onLocked?.(false);
       // let the last notes ring out a moment, then free the audio device
       setTimeout(() => { try { ctx.close(); } catch { /* ignore */ } }, 1500);
     },
