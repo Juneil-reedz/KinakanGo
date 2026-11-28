@@ -1111,7 +1111,6 @@
 /* Sign in / Sign up */
 .auth-card { background: rgba(var(--fg-rgb), .05); box-shadow: inset 0 0 0 1px rgba(var(--fg-rgb), .08), 0 30px 60px -30px rgb(0 0 0 / .55);
   -webkit-backdrop-filter: blur(6px); backdrop-filter: blur(6px); }
-.auth-plate { box-shadow: 0 0 0 6px var(--app-bg), 0 14px 28px -8px rgb(247 147 30 / .6); }
 @keyframes auth-in-left  { from { opacity: 0; transform: translateX(60px); }  to { opacity: 1; transform: none; } }
 @keyframes auth-in-right { from { opacity: 0; transform: translateX(-60px); } to { opacity: 1; transform: none; } }
 .auth-in-left  { animation: auth-in-left  .45s cubic-bezier(.22, 1, .36, 1) backwards; }
@@ -1125,7 +1124,7 @@
   background: radial-gradient(circle, rgb(247 147 30 / .28), transparent 65%); animation: sp-glow 2.4s .3s ease-out backwards; pointer-events: none; }
 /* a round box-shadow, not filter: drop-shadow. iPhone Safari draws a drop-shadow
    on an animated SVG as a square behind the badge. */
-.sp-badge { box-shadow: 0 18px 30px rgb(0 0 0 / .45); animation: sp-badge-in .7s cubic-bezier(.34, 1.56, .64, 1) backwards, sp-badge-pulse .6s 3.95s ease-in-out; }
+.sp-badge { animation: sp-badge-in .7s cubic-bezier(.34, 1.56, .64, 1) backwards, sp-badge-pulse .6s 3.95s ease-in-out; }
 .sp-badge * { transform-box: fill-box; }
 .sp-box { transform-origin: 50% 100%; animation: sp-zoom-in .9s .35s cubic-bezier(.2, .9, .3, 1.1) backwards, sp-ride 1.2s 1.3s ease-in-out infinite; }
 .sp-speedline { transform-origin: 100% 50%; animation: sp-streak .35s cubic-bezier(.22, 1, .36, 1) backwards; }
